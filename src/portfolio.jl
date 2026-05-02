@@ -27,6 +27,7 @@ mutable struct PortfolioMetadata <: IS.InfrastructureSystemsType
     name::Union{Nothing, String}
     description::Union{Nothing, String}
     data_source::Union{Nothing, String}
+    reserve_margin::Union{Nothing, Float64}
 end
 
 """
@@ -78,7 +79,7 @@ mutable struct Portfolio <: IS.ComponentContainer
             investment_schedule,
             time_series_directory,
             financial_data,
-            PortfolioMetadata(name, description, data_source),
+            PortfolioMetadata(name, description, data_source, nothing),
             internal,
         )
     end
