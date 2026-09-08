@@ -12,7 +12,7 @@ supply() = SupplyTechnology{PSY.ThermalStandard}(;
     available=true,
     power_systems_type=string(PSY.ThermalStandard),
     financial_data=tech_financials(),
-    capital_costs=LinearCurve(10000.0),
+    capital_costs=PSIP.CapitalCost(LinearCurve(10000.0), 0.0),
     operation_costs=ThermalGenerationCost(CostCurve(LinearCurve(10.0)), 100.0, 0.0, 0.0),
     unit_size=100.0,
     capacity_limits=(min=0.0, max=500.0),
@@ -20,6 +20,7 @@ supply() = SupplyTechnology{PSY.ThermalStandard}(;
     time_limits=(up=600.0, down=1200.0),
     start_fuel_mmbtu_per_mw=5.0,
     lifetime=30,
+    outage_factor=(planned=0.0, forced=0.0),
 )
 
 storage() = StorageTechnology{PSY.EnergyReservoirStorage}(;
@@ -34,35 +35,71 @@ storage() = StorageTechnology{PSY.EnergyReservoirStorage}(;
     capacity_limits_discharge=(min=0.0, max=200.0),
     capacity_limits_energy=(min=0.0, max=1000.0),
     duration_limits=(min=60.0, max=600.0),
-    capital_costs_energy=LinearCurve(3000.0),
-    capital_costs_charge=LinearCurve(1000.0),
-    capital_costs_discharge=LinearCurve(2000.0),
+    capital_costs=PSIP.StorageCapitalCost(
+        LinearCurve(1000.0),
+        LinearCurve(2000.0),
+        LinearCurve(3000.0),
+        0.0,
+    ),
     operation_costs=StorageCost(),
+    storage_tech=StorageTech.LIB,
     lifetime=15,
 )
 
 agg_transport() = AggregateTransportTechnology{PSY.ACBranch}(;
     name="agg",
     available=true,
-    power_systems_type=string(PSY.Line),
-    start_region=Zone(; name="z1"),
-    end_region=Zone(; name="z2"),
+    power_systems_type=string(PSY.ACBranch),
+    start_region=PSY.Area(; name="z1", base_power=100.0),
+    end_region=PSY.Area(; name="z2", base_power=100.0),
     financial_data=tech_financials(),
     capacity_limits=(min=0.0, max=800.0),
     unit_size=40.0,
-    capital_costs=LinearCurve(500.0),
+    capital_costs=PSIP.CapitalCost(LinearCurve(500.0), 0.0),
 )
 
 acline() = NodalACTransportTechnology{PSY.ACBranch}(;
     name="ac",
     available=true,
-    power_systems_type=string(PSY.Line),
-    start_node=Node(; name="n1"),
-    end_node=Node(; name="n2"),
+    power_systems_type=string(PSY.ACBranch),
+    start_node=PSY.ACBus(;
+        number=911,
+        name="n1",
+        available=true,
+        bustype=PSY.ACBusTypes.PQ,
+        angle=0.0,
+        magnitude=1.0,
+        voltage_limits=(min=0.9, max=1.1),
+        base_voltage=138.0,
+        area=PSY.Area(; name="n1_area", base_power=100.0),
+        load_zone=PSY.LoadZone(;
+            name="n1_lz",
+            peak_active_power=0.0,
+            peak_reactive_power=0.0,
+            base_power=100.0,
+        ),
+    ),
+    end_node=PSY.ACBus(;
+        number=912,
+        name="n2",
+        available=true,
+        bustype=PSY.ACBusTypes.PQ,
+        angle=0.0,
+        magnitude=1.0,
+        voltage_limits=(min=0.9, max=1.1),
+        base_voltage=138.0,
+        area=PSY.Area(; name="n2_area", base_power=100.0),
+        load_zone=PSY.LoadZone(;
+            name="n2_lz",
+            peak_active_power=0.0,
+            peak_reactive_power=0.0,
+            base_power=100.0,
+        ),
+    ),
     financial_data=tech_financials(),
     capacity_limits=(min=0.0, max=600.0),
     unit_size=50.0,
-    capital_costs=LinearCurve(1000.0),
+    capital_costs=PSIP.CapitalCost(LinearCurve(1000.0), 0.0),
     resistance=2.0,
     reactance=3.0,
     voltage=230.0,
@@ -71,13 +108,45 @@ acline() = NodalACTransportTechnology{PSY.ACBranch}(;
 hvdc() = NodalHVDCTransportTechnology{PSY.ACBranch}(;
     name="hvdc",
     available=true,
-    power_systems_type=string(PSY.Line),
-    start_node=Node(; name="n3"),
-    end_node=Node(; name="n4"),
+    power_systems_type=string(PSY.ACBranch),
+    start_node=PSY.ACBus(;
+        number=913,
+        name="n3",
+        available=true,
+        bustype=PSY.ACBusTypes.PQ,
+        angle=0.0,
+        magnitude=1.0,
+        voltage_limits=(min=0.9, max=1.1),
+        base_voltage=138.0,
+        area=PSY.Area(; name="n3_area", base_power=100.0),
+        load_zone=PSY.LoadZone(;
+            name="n3_lz",
+            peak_active_power=0.0,
+            peak_reactive_power=0.0,
+            base_power=100.0,
+        ),
+    ),
+    end_node=PSY.ACBus(;
+        number=914,
+        name="n4",
+        available=true,
+        bustype=PSY.ACBusTypes.PQ,
+        angle=0.0,
+        magnitude=1.0,
+        voltage_limits=(min=0.9, max=1.1),
+        base_voltage=138.0,
+        area=PSY.Area(; name="n4_area", base_power=100.0),
+        load_zone=PSY.LoadZone(;
+            name="n4_lz",
+            peak_active_power=0.0,
+            peak_reactive_power=0.0,
+            base_power=100.0,
+        ),
+    ),
     financial_data=tech_financials(),
     capacity_limits=(min=0.0, max=700.0),
     unit_size=60.0,
-    capital_costs=LinearCurve(1500.0),
+    capital_costs=PSIP.CapitalCost(LinearCurve(1500.0), 0.0),
 )
 
 demand_req() = DemandRequirement{PSY.PowerLoad}(;
@@ -103,12 +172,6 @@ demand_side() = DemandSideTechnology{PSY.PowerLoad}(;
     max_demand_delay=360.0,
 )
 
-retro() = AggregateRetrofitPotential(;
-    retrofit_id=1,
-    retrofit_potential=150.0,
-    retrofit_fraction=0.5,
-)
-
 carbon_caps() =
     CarbonCaps(; name="carbon_caps", available=true, max_tons_mwh=2.0e-6, max_mtons=50.0)
 
@@ -125,36 +188,13 @@ colocated() = ColocatedSupplyStorageTechnology{PSY.ThermalStandard}(;
     power_systems_type=string(PSY.ThermalStandard),
     available=true,
     financial_data=tech_financials(),
-    capital_costs_solar=LinearCurve(1000.0),
-    capital_costs_wind=LinearCurve(1100.0),
-    capital_costs_energy=LinearCurve(3000.0),
-    capital_costs_power=LinearCurve(1200.0),
-    capital_costs_inverter=LinearCurve(1300.0),
-    operation_costs_solar=RenewableGenerationCost(
-        CostCurve(LinearCurve(5.0)),
-        CostCurve(LinearCurve(0.0)),
-        10.0,
-    ),
-    operation_costs_wind=RenewableGenerationCost(
-        CostCurve(LinearCurve(6.0)),
-        CostCurve(LinearCurve(0.0)),
-        11.0,
-    ),
-    operation_costs_energy=StorageCost(; fixed=4.0),
-    operation_costs_power=StorageCost(; fixed=5.0),
+    capital_costs_inverter=PSIP.CapitalCost(LinearCurve(1300.0), 0.0),
     operation_costs_inverter=CostCurve(LinearCurve(6.0)),
-    capacity_limits_solar=(min=0.0, max=300.0),
-    capacity_limits_wind=(min=0.0, max=400.0),
-    capacity_power_limits=(min=0.0, max=500.0),
-    capacity_energy_limits=(min=0.0, max=2000.0),
-    duration_limits=(min=60.0, max=480.0),
-    max_inverter_capacity=600.0,
-    min_inverter_capacity=50.0,
-    lifetime_solar=25,
-    lifetime_wind=20,
-    lifetime_storage=15,
+    inverter_capacity_limits=(min=50.0, max=600.0),
     inverter_efficiency=0.95,
     inverter_supply_ratio=1.2,
+    supply_technology=supply(),
+    storage_technology=storage(),
 )
 
 # ---------------------------------------------------------------------------
@@ -426,7 +466,6 @@ end
 
 @testset "SupplyTechnology getters/setters" begin
     t = supply()
-    # unit_size (mw)
     check_scalar(
         u -> PSIP.get_unit_size(t, u),
         (v, u) -> PSIP.set_unit_size!(t, v, u),
@@ -435,7 +474,6 @@ end
         base=100.0,
         ratio=1000.0,
     )
-    # start_fuel_mmbtu_per_mw (mmbtu_per_mw) — bug fixed on this branch
     check_scalar(
         u -> PSIP.get_start_fuel_mmbtu_per_mw(t, u),
         (v, u) -> PSIP.set_start_fuel_mmbtu_per_mw!(t, v, u),
@@ -444,7 +482,6 @@ end
         base=5.0,
         ratio=0.001,
     )
-    # capacity_limits (mw, MinMax)
     check_minmax(
         u -> PSIP.get_capacity_limits(t, u),
         (v, u) -> PSIP.set_capacity_limits!(t, v, u),
@@ -454,13 +491,6 @@ end
         mx=500.0,
         ratio=1000.0,
     )
-    # co2 (t_per_mmbtu, Dict{ThermalFuels,Float64}) — newly wired conversion;
-    # SiennaSchemas declares x-unit t/MMBtu, but PSIP never marked this field
-    # `needs_conversion` before this branch, so it silently never converted.
-    PSIP.set_co2!(t, Dict(ThermalFuels.OTHER => 0.05), tonne / MMBtu)
-    @test PSIP.get_co2(t, tonne / MMBtu)[ThermalFuels.OTHER] ≈ 0.05
-    @test PSIP.get_co2(t, u"kg" / MMBtu)[ThermalFuels.OTHER] ≈ 50.0
-    # ramp_limits (mw_per_min, UpDown)
     check_updown(
         u -> PSIP.get_ramp_limits(t, u),
         (v, u) -> PSIP.set_ramp_limits!(t, v, u),
@@ -470,7 +500,6 @@ end
         down=2.0,
         ratio=1 / 60,
     )
-    # time_limits (min, UpDown) — natural unit follows SiennaSchemas (minutes)
     check_updown(
         u -> PSIP.get_time_limits(t, u),
         (v, u) -> PSIP.set_time_limits!(t, v, u),
@@ -480,27 +509,13 @@ end
         down=1200.0,
         ratio=1 / 60,
     )
-    # capital_costs (usd_per_mw, ValueCurve)
-    check_valuecurve(
-        u -> PSIP.get_capital_costs(t, u),
-        (v, u) -> PSIP.set_capital_costs!(t, v, u),
-        conversion_unit(u"MW", USD),
-        conversion_unit(u"kW", USD);
-        prop=10000.0,
-        ratio=1e-3,
-    )
-    # operation_costs (usd_per_mwh, OperationalCost)
-    oc = PSIP.get_operation_costs(t, conversion_unit(u"MW" * u"hr", USD))
-    @test oc.variable.value_curve.function_data.proportional_term ≈ 10.0
-    @test oc.fixed ≈ 100.0
-    oc2 = PSIP.get_operation_costs(t, conversion_unit(u"kW" * u"hr", USD))
-    @test oc2.variable.value_curve.function_data.proportional_term ≈ 0.01
-    # lifetime (yr, Int)
-    @test PSIP.get_lifetime(t, u"yr") == 30
-    PSIP.set_lifetime!(t, 20, u"yr")
-    @test PSIP.get_lifetime(t, u"yr") == 20
-    # _unitful companion returns a Quantity
-    @test PSIP.get_unit_size_unitful(t, u"MW") == 100.0u"MW"
+    PSIP.set_outage_factor!(t, (planned=0.08, forced=0.0))
+    @test PSIP.get_outage_factor(t) == (planned=0.08, forced=0.0)
+
+    cc = PSIP.CapitalCost(LinearCurve(10000.0), 5.0)
+    PSIP.set_capital_costs!(t, cc)
+    @test PSIP.get_capital_cost(PSIP.get_capital_costs(t)) == LinearCurve(10000.0)
+    @test PSIP.get_interconnection_cost(PSIP.get_capital_costs(t)) == 5.0
 end
 
 @testset "StorageTechnology getters/setters" begin
@@ -556,7 +571,6 @@ end
         mx=1000.0,
         ratio=1000.0,
     )
-    # duration_limits (min, MinMax) — natural unit follows SiennaSchemas (minutes)
     check_minmax(
         u -> PSIP.get_duration_limits(t, u),
         (v, u) -> PSIP.set_duration_limits!(t, v, u),
@@ -566,144 +580,44 @@ end
         mx=600.0,
         ratio=1 / 60,
     )
-    check_valuecurve(
-        u -> PSIP.get_capital_costs_energy(t, u),
-        (v, u) -> PSIP.set_capital_costs_energy!(t, v, u),
-        conversion_unit(u"MW" * u"hr", USD),
-        conversion_unit(u"kW" * u"hr", USD);
-        prop=3000.0,
-        ratio=1e-3,
+
+    sc = PSIP.StorageCapitalCost(
+        LinearCurve(1000.0),
+        LinearCurve(2000.0),
+        LinearCurve(3000.0),
+        7.0,
     )
-    check_valuecurve(
-        u -> PSIP.get_capital_costs_charge(t, u),
-        (v, u) -> PSIP.set_capital_costs_charge!(t, v, u),
-        conversion_unit(u"MW", USD),
-        conversion_unit(u"kW", USD);
-        prop=1000.0,
-        ratio=1e-3,
-    )
-    check_valuecurve(
-        u -> PSIP.get_capital_costs_discharge(t, u),
-        (v, u) -> PSIP.set_capital_costs_discharge!(t, v, u),
-        conversion_unit(u"MW", USD),
-        conversion_unit(u"kW", USD);
-        prop=2000.0,
-        ratio=1e-3,
-    )
-    @test PSIP.get_lifetime(t, u"yr") == 15
-    PSIP.set_lifetime!(t, 25, u"yr")
-    @test PSIP.get_lifetime(t, u"yr") == 25
+    PSIP.set_capital_costs!(t, sc)
+    sc2 = PSIP.get_capital_costs(t)
+    @test PSIP.get_charge_capital_cost(sc2) == LinearCurve(1000.0)
+    @test PSIP.get_discharge_capital_cost(sc2) == LinearCurve(2000.0)
+    @test PSIP.get_energy_capital_cost(sc2) == LinearCurve(3000.0)
+    @test PSIP.get_interconnection_cost(sc2) == 7.0
 end
 
-@testset "AggregateTransportTechnology getters/setters" begin
-    t = agg_transport()
-    check_scalar(
-        u -> PSIP.get_unit_size(t, u),
-        (v, u) -> PSIP.set_unit_size!(t, v, u),
-        u"MW",
-        u"kW";
-        base=40.0,
-        ratio=1000.0,
-    )
-    check_minmax(
-        u -> PSIP.get_capacity_limits(t, u),
-        (v, u) -> PSIP.set_capacity_limits!(t, v, u),
-        u"MW",
-        u"kW";
-        mn=0.0,
-        mx=800.0,
-        ratio=1000.0,
-    )
-    check_valuecurve(
-        u -> PSIP.get_capital_costs(t, u),
-        (v, u) -> PSIP.set_capital_costs!(t, v, u),
-        conversion_unit(u"MW", USD),
-        conversion_unit(u"kW", USD);
-        prop=500.0,
-        ratio=1e-3,
-    )
-end
-
-@testset "NodalACTransportTechnology getters/setters" begin
-    t = acline()
-    check_scalar(
-        u -> PSIP.get_unit_size(t, u),
-        (v, u) -> PSIP.set_unit_size!(t, v, u),
-        u"MW",
-        u"kW";
-        base=50.0,
-        ratio=1000.0,
-    )
-    check_minmax(
-        u -> PSIP.get_capacity_limits(t, u),
-        (v, u) -> PSIP.set_capacity_limits!(t, v, u),
-        u"MW",
-        u"kW";
-        mn=0.0,
-        mx=600.0,
-        ratio=1000.0,
-    )
-    check_valuecurve(
-        u -> PSIP.get_capital_costs(t, u),
-        (v, u) -> PSIP.set_capital_costs!(t, v, u),
-        conversion_unit(u"MW", USD),
-        conversion_unit(u"kW", USD);
-        prop=1000.0,
-        ratio=1e-3,
-    )
-    check_scalar(
-        u -> PSIP.get_resistance(t, u),
-        (v, u) -> PSIP.set_resistance!(t, v, u),
-        u"Ω",
-        u"mΩ";
-        base=2.0,
-        ratio=1000.0,
-    )
-    check_scalar(
-        u -> PSIP.get_reactance(t, u),
-        (v, u) -> PSIP.set_reactance!(t, v, u),
-        u"Ω",
-        u"mΩ";
-        base=3.0,
-        ratio=1000.0,
-    )
-    check_scalar(
-        u -> PSIP.get_voltage(t, u),
-        (v, u) -> PSIP.set_voltage!(t, v, u),
-        u"kV",
-        u"V";
-        base=230.0,
-        ratio=1000.0,
-    )
-end
-
-@testset "NodalHVDCTransportTechnology getters/setters" begin
-    t = hvdc()
-    check_scalar(
-        u -> PSIP.get_unit_size(t, u),
-        (v, u) -> PSIP.set_unit_size!(t, v, u),
-        u"MW",
-        u"kW";
-        base=60.0,
-        ratio=1000.0,
-    )
-    check_minmax(
-        u -> PSIP.get_capacity_limits(t, u),
-        (v, u) -> PSIP.set_capacity_limits!(t, v, u),
-        u"MW",
-        u"kW";
-        mn=0.0,
-        mx=700.0,
-        ratio=1000.0,
-    )
-    check_valuecurve(
-        u -> PSIP.get_capital_costs(t, u),
-        (v, u) -> PSIP.set_capital_costs!(t, v, u),
-        conversion_unit(u"MW", USD),
-        conversion_unit(u"kW", USD);
-        prop=1500.0,
-        ratio=1e-3,
-    )
+@testset "Transport technology getters/setters" begin
+    for t in (agg_transport(), acline(), hvdc())
+        check_scalar(
+            u -> PSIP.get_unit_size(t, u),
+            (v, u) -> PSIP.set_unit_size!(t, v, u),
+            u"MW",
+            u"kW";
+            base=PSIP.get_unit_size(t, u"MW"),
+            ratio=1000.0,
+        )
+        check_minmax(
+            u -> PSIP.get_capacity_limits(t, u),
+            (v, u) -> PSIP.set_capacity_limits!(t, v, u),
+            u"MW",
+            u"kW";
+            mn=0.0,
+            mx=PSIP.get_capacity_limits(t, u"MW").max,
+            ratio=1000.0,
+        )
+        PSIP.set_capital_costs!(t, PSIP.CapitalCost(LinearCurve(1500.0), 3.0))
+        @test PSIP.get_capital_cost(PSIP.get_capital_costs(t)) == LinearCurve(1500.0)
+        @test PSIP.get_interconnection_cost(PSIP.get_capital_costs(t)) == 3.0
+    end
 end
 
 @testset "DemandRequirement getters/setters" begin
@@ -724,8 +638,6 @@ end
         prop=50.0,
         ratio=1e-3,
     )
-
-    # value_of_lost_load is now a ValueCurve (usd_per_mwh); bug fixed on this branch.
     check_scalar(
         u -> PSIP.get_value_of_lost_load(t, u),
         (v, u) -> PSIP.set_value_of_lost_load!(t, v, u),
@@ -746,7 +658,6 @@ end
         base=250.0,
         ratio=1000.0,
     )
-    # max_demand_advance/delay (min) — natural unit follows SiennaSchemas (minutes)
     check_scalar(
         u -> PSIP.get_max_demand_advance(t, u),
         (v, u) -> PSIP.set_max_demand_advance!(t, v, u),
@@ -763,66 +674,31 @@ end
         base=360.0,
         ratio=1 / 60,
     )
-    # price_per_unit (USD/t) — basis change, not a scale factor; follows SiennaSchemas.
-    # Shares the :usd_per_t symbol with CarbonTax's scalar field, so units here
-    # are a bare currency-per-mass rate, not an (x_unit, y_unit) pair.
+end
+
+@testset "Supplemental attribute getters/setters" begin
+    r = RetirementPotential(eligible_generators=["g1"], retirement_cost=LinearCurve(100.0))
+    x = RetrofitPotential(eligible_generators=["g1"], retrofit_cost=LinearCurve(150.0))
     check_valuecurve(
-        u -> PSIP.get_price_per_unit(t, u),
-        (v, u) -> PSIP.set_price_per_unit!(t, v, u),
-        USD / tonne,
-        USD / u"kg";
-        prop=3000.0,
+        u -> PSIP.get_retirement_cost(r, u),
+        (v, u) -> PSIP.set_retirement_cost!(r, v, u),
+        conversion_unit(u"MW", USD),
+        conversion_unit(u"kW", USD);
+        prop=100.0,
         ratio=1e-3,
     )
     check_valuecurve(
-        u -> PSIP.get_curtailment_cost(t, u),
-        (v, u) -> PSIP.set_curtailment_cost!(t, v, u),
-        conversion_unit(u"MW" * u"hr", USD),
-        conversion_unit(u"kW" * u"hr", USD);
-        prop=30.0,
-        ratio=1e-3,
-    )
-    check_valuecurve(
-        u -> PSIP.get_shift_variable_cost(t, u),
-        (v, u) -> PSIP.set_shift_variable_cost!(t, v, u),
-        conversion_unit(u"MW" * u"hr", USD),
-        conversion_unit(u"kW" * u"hr", USD);
-        prop=12.0,
+        u -> PSIP.get_retrofit_cost(x, u),
+        (v, u) -> PSIP.set_retrofit_cost!(x, v, u),
+        conversion_unit(u"MW", USD),
+        conversion_unit(u"kW", USD);
+        prop=150.0,
         ratio=1e-3,
     )
 end
 
-@testset "AggregateRetrofitPotential getters/setters" begin
-    t = retro()
-    # AggregateRetrofitPotential <: SupplementalAttribute; unit-aware dispatch now
-    # covers it via the `_UNIT_AWARE` union (bug fixed on this branch).
-    check_scalar(
-        u -> PSIP.get_retrofit_potential(t, u),
-        (v, u) -> PSIP.set_retrofit_potential!(t, v, u),
-        u"MW",
-        u"kW";
-        base=150.0,
-        ratio=1000.0,
-    )
-end
-
-@testset "AggregateRetirementPotential getters/setters" begin
-    # newly wired conversion; SiennaSchemas declares x-unit MW, but PSIP never
-    # marked this field `needs_conversion` before this branch.
-    t = AggregateRetirementPotential(retirement_potential=100.0)
-    check_scalar(
-        u -> PSIP.get_retirement_potential(t, u),
-        (v, u) -> PSIP.set_retirement_potential!(t, v, u),
-        u"MW",
-        u"kW";
-        base=100.0,
-        ratio=1000.0,
-    )
-end
-
-@testset "CarbonCaps getters/setters" begin
+@testset "Carbon and capacity requirement getters/setters" begin
     t = carbon_caps()
-    # max_mtons (mt) — emissions mass, natural unit follows SiennaSchemas (Mt)
     check_scalar(
         u -> PSIP.get_max_mtons(t, u),
         (v, u) -> PSIP.set_max_mtons!(t, v, u),
@@ -831,8 +707,6 @@ end
         base=50.0,
         ratio=1.0e6,
     )
-    # max_tons_mwh (mt_per_mwh) — emissions rate per energy, natural unit follows
-    # SiennaSchemas (Mt/MWh)
     check_scalar(
         u -> PSIP.get_max_tons_mwh(t, u),
         (v, u) -> PSIP.set_max_tons_mwh!(t, v, u),
@@ -841,38 +715,30 @@ end
         base=2.0e-6,
         ratio=1e-3,
     )
-end
 
-@testset "CarbonTax getters/setters" begin
-    t = carbon_tax()
-    # tax_dollars_per_ton (usd_per_t) — emissions cost
+    tax = carbon_tax()
     check_scalar(
-        u -> PSIP.get_tax_dollars_per_ton(t, u),
-        (v, u) -> PSIP.set_tax_dollars_per_ton!(t, v, u),
+        u -> PSIP.get_tax_dollars_per_ton(tax, u),
+        (v, u) -> PSIP.set_tax_dollars_per_ton!(tax, v, u),
         USD / tonne,
         USD / u"kg";
         base=50.0,
         ratio=1e-3,
     )
-end
 
-@testset "MaximumCapacityRequirements getters/setters" begin
-    t = max_capacity_req()
+    maxc = max_capacity_req()
+    minc = min_capacity_req()
     check_scalar(
-        u -> PSIP.get_max_capacity_mw(t, u),
-        (v, u) -> PSIP.set_max_capacity_mw!(t, v, u),
+        u -> PSIP.get_max_capacity_mw(maxc, u),
+        (v, u) -> PSIP.set_max_capacity_mw!(maxc, v, u),
         u"MW",
         u"kW";
         base=400.0,
         ratio=1000.0,
     )
-end
-
-@testset "MinimumCapacityRequirements getters/setters" begin
-    t = min_capacity_req()
     check_scalar(
-        u -> PSIP.get_min_capacity_mw(t, u),
-        (v, u) -> PSIP.set_min_capacity_mw!(t, v, u),
+        u -> PSIP.get_min_capacity_mw(minc, u),
+        (v, u) -> PSIP.set_min_capacity_mw!(minc, v, u),
         u"MW",
         u"kW";
         base=100.0,
@@ -882,149 +748,14 @@ end
 
 @testset "ColocatedSupplyStorageTechnology getters/setters" begin
     t = colocated()
-    # --- MinMax power/energy limits ---
     check_minmax(
-        u -> PSIP.get_capacity_limits_solar(t, u),
-        (v, u) -> PSIP.set_capacity_limits_solar!(t, v, u),
+        u -> PSIP.get_inverter_capacity_limits(t, u),
+        (v, u) -> PSIP.set_inverter_capacity_limits!(t, v, u),
         u"MW",
         u"kW";
-        mn=0.0,
-        mx=300.0,
+        mn=50.0,
+        mx=600.0,
         ratio=1000.0,
-    )
-    check_minmax(
-        u -> PSIP.get_capacity_limits_wind(t, u),
-        (v, u) -> PSIP.set_capacity_limits_wind!(t, v, u),
-        u"MW",
-        u"kW";
-        mn=0.0,
-        mx=400.0,
-        ratio=1000.0,
-    )
-    check_minmax(
-        u -> PSIP.get_capacity_power_limits(t, u),
-        (v, u) -> PSIP.set_capacity_power_limits!(t, v, u),
-        u"MW",
-        u"kW";
-        mn=0.0,
-        mx=500.0,
-        ratio=1000.0,
-    )
-    check_minmax(
-        u -> PSIP.get_capacity_energy_limits(t, u),
-        (v, u) -> PSIP.set_capacity_energy_limits!(t, v, u),
-        u"MW" * u"hr",
-        u"kW" * u"hr";
-        mn=0.0,
-        mx=2000.0,
-        ratio=1000.0,
-    )
-    # duration_limits (min, MinMax) — natural unit follows SiennaSchemas (minutes)
-    check_minmax(
-        u -> PSIP.get_duration_limits(t, u),
-        (v, u) -> PSIP.set_duration_limits!(t, v, u),
-        u"minute",
-        u"hr";
-        mn=60.0,
-        mx=480.0,
-        ratio=1 / 60,
-    )
-    # --- scalar power (inverter) ---
-    check_scalar(
-        u -> PSIP.get_max_inverter_capacity(t, u),
-        (v, u) -> PSIP.set_max_inverter_capacity!(t, v, u),
-        u"MW",
-        u"kW";
-        base=600.0,
-        ratio=1000.0,
-    )
-    check_scalar(
-        u -> PSIP.get_min_inverter_capacity(t, u),
-        (v, u) -> PSIP.set_min_inverter_capacity!(t, v, u),
-        u"MW",
-        u"kW";
-        base=50.0,
-        ratio=1000.0,
-    )
-    # --- ValueCurve capital costs ---
-    check_valuecurve(
-        u -> PSIP.get_capital_costs_solar(t, u),
-        (v, u) -> PSIP.set_capital_costs_solar!(t, v, u),
-        conversion_unit(u"MW", USD),
-        conversion_unit(u"kW", USD);
-        prop=1000.0,
-        ratio=1e-3,
-    )
-    check_valuecurve(
-        u -> PSIP.get_capital_costs_wind(t, u),
-        (v, u) -> PSIP.set_capital_costs_wind!(t, v, u),
-        conversion_unit(u"MW", USD),
-        conversion_unit(u"kW", USD);
-        prop=1100.0,
-        ratio=1e-3,
-    )
-    check_valuecurve(
-        u -> PSIP.get_capital_costs_power(t, u),
-        (v, u) -> PSIP.set_capital_costs_power!(t, v, u),
-        conversion_unit(u"MW", USD),
-        conversion_unit(u"kW", USD);
-        prop=1200.0,
-        ratio=1e-3,
-    )
-    check_valuecurve(
-        u -> PSIP.get_capital_costs_inverter(t, u),
-        (v, u) -> PSIP.set_capital_costs_inverter!(t, v, u),
-        conversion_unit(u"MW", USD),
-        conversion_unit(u"kW", USD);
-        prop=1300.0,
-        ratio=1e-3,
-    )
-    check_valuecurve(
-        u -> PSIP.get_capital_costs_energy(t, u),
-        (v, u) -> PSIP.set_capital_costs_energy!(t, v, u),
-        conversion_unit(u"MW" * u"hr", USD),
-        conversion_unit(u"kW" * u"hr", USD);
-        prop=3000.0,
-        ratio=1e-3,
-    )
-    # --- OperationalCost: RenewableGenerationCost (solar/wind, usd_per_mwh) ---
-    check_variable_fixed_cost(
-        u -> PSIP.get_operation_costs_solar(t, u),
-        (v, u) -> PSIP.set_operation_costs_solar!(t, v, u),
-        conversion_unit(u"MW" * u"hr", USD),
-        conversion_unit(u"kW" * u"hr", USD);
-        var_prop=5.0,
-        fixed=10.0,
-        ratio=1e-3,
-    )
-    check_variable_fixed_cost(
-        u -> PSIP.get_operation_costs_wind(t, u),
-        (v, u) -> PSIP.set_operation_costs_wind!(t, v, u),
-        conversion_unit(u"MW" * u"hr", USD),
-        conversion_unit(u"kW" * u"hr", USD);
-        var_prop=6.0,
-        fixed=11.0,
-        ratio=1e-3,
-    )
-    # --- OperationalCost: StorageCost (energy/power) + inverter CostCurve, all usd_per_mwh ---
-    check_storage_cost(
-        u -> PSIP.get_operation_costs_energy(t, u),
-        (v, u) -> PSIP.set_operation_costs_energy!(t, v, u),
-        conversion_unit(u"MW" * u"hr", USD),
-        conversion_unit(u"kW" * u"hr", USD);
-        fixed=4.0,
-        ratio=1e-3,
-    )
-    # operation_costs_power: basis change (USD/MW -> USD/MWh), not a scale factor;
-    # follows SiennaSchemas. fixed=5.0 kept as-is: already a plausible USD/MWh
-    # O&M rate (same order as the operation_costs_energy sibling's 4.0).
-    check_storage_cost(
-        u -> PSIP.get_operation_costs_power(t, u),
-        (v, u) -> PSIP.set_operation_costs_power!(t, v, u),
-        conversion_unit(u"MW" * u"hr", USD),
-        conversion_unit(u"kW" * u"hr", USD);
-        fixed=5.0,
-        ratio=1e-3,
     )
     check_cost_curve(
         u -> PSIP.get_operation_costs_inverter(t, u),
@@ -1034,16 +765,10 @@ end
         prop=6.0,
         ratio=1e-3,
     )
-    # --- lifetimes (yr, Int) ---
-    for (get, set, base) in (
-        (PSIP.get_lifetime_solar, PSIP.set_lifetime_solar!, 25),
-        (PSIP.get_lifetime_wind, PSIP.set_lifetime_wind!, 20),
-        (PSIP.get_lifetime_storage, PSIP.set_lifetime_storage!, 15),
-    )
-        @test get(t, u"yr") == base
-        set(t, base + 5, u"yr")
-        @test get(t, u"yr") == base + 5
-    end
+
+    PSIP.set_capital_costs_inverter!(t, PSIP.CapitalCost(LinearCurve(1300.0), 4.0))
+    @test PSIP.get_capital_cost(PSIP.get_capital_costs_inverter(t)) == LinearCurve(1300.0)
+    @test PSIP.get_interconnection_cost(PSIP.get_capital_costs_inverter(t)) == 4.0
 end
 
 @testset "display_units_arg" begin
@@ -1106,15 +831,13 @@ end
         checked_fields = [
             ("SupplyTechnology", "time_limits"),
             ("StorageTechnology", "duration_limits"),
-            ("ColocatedSupplyStorageTechnology", "duration_limits"),
             ("DemandSideTechnology", "max_demand_delay"),
             ("DemandSideTechnology", "max_demand_advance"),
             ("CarbonCaps", "max_mtons"),
             ("CarbonCaps", "max_tons_mwh"),
             ("DemandSideTechnology", "price_per_unit"),
-            ("ColocatedSupplyStorageTechnology", "operation_costs_power"),
-            ("AggregateRetirementPotential", "retirement_potential"),
-            ("SupplyTechnology", "co2"),
+            ("RetirementPotential", "retirement_cost"),
+            ("RetrofitPotential", "retrofit_cost"),
         ]
 
         for (type_name, field_name) in checked_fields

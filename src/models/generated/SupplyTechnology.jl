@@ -45,7 +45,7 @@ Candidate generation technology for a region. Can represent either a thermal or 
 - `operation_costs::PSY.OperationalCost`: (default: `ThermalGenerationCost(nothing)`) Fixed and variable O&M costs for a technology
 - `unit_size::Float64`: (default: `0.0`) Used for discrete investment decisions. Size of each unit being built (MW)
 - `capacity_limits::Union{MinMax, Dict{PSY.Topology, MinMax}}`: (default: `(min = 0.0, max = 1e8)`) Minimum and maximum allowable installed capacity for a technology (MW)
-- `outage_factor::OutageFactors`: (default: `(max = 0.0, min = 0.0)`) Planned (`max`) and forced (`min`) outage factors for a technology, each a fraction of total availability.
+- `outage_factor::OutageFactors`: (default: `(planned = 0.0, forced = 0.0)`) Planned and forced outage factors for a technology, each a fraction of total availability.
 - `min_generation_fraction::Float64`: (default: `0.0`) Minimum generation as a fraction of total capacity
 - `ramp_limits::UpDown`: (default: `(up=1.0, down=1.0)`) Maximum decrease and increase in output between operation periods. Fraction of nameplate capacity per hour
 - `time_limits::UpDown`: (default: `(up=60.0, down=60.0)`) Minimum amount of time a resource has to stay in the committed or shutdown state (minutes). Units: min.
@@ -81,7 +81,7 @@ mutable struct SupplyTechnology{T <: PSY.Generator} <: ResourceTechnology
     unit_size::Float64
     "Minimum and maximum allowable installed capacity for a technology (MW)"
     capacity_limits::Union{MinMax, Dict{PSY.Topology, MinMax}}
-    "Planned (`max`) and forced (`min`) outage factors for a technology, each a fraction of total availability."
+    "Planned and forced outage factors for a technology, each a fraction of total availability."
     outage_factor::OutageFactors
     "Minimum generation as a fraction of total capacity"
     min_generation_fraction::Float64
@@ -104,7 +104,7 @@ mutable struct SupplyTechnology{T <: PSY.Generator} <: ResourceTechnology
 end
 
 
-function SupplyTechnology{T}(; name, power_systems_type, region=Vector(), available=true, prime_mover_type=PrimeMovers.OT, fuel=[ThermalFuels.OTHER], cofire_start_limits=Dict(), cofire_level_limits=Dict(), capital_costs=CapitalCost(nothing), operation_costs=ThermalGenerationCost(nothing), unit_size=0.0, capacity_limits=(min = 0.0, max = 1e8), outage_factor=(max = 0.0, min = 0.0), min_generation_fraction=0.0, ramp_limits=(up=1.0, down=1.0), time_limits=(up=60.0, down=60.0), start_fuel_mmbtu_per_mw=0.0, lifetime=100, requirements=Vector(), financial_data, ext=Dict(), internal=InfrastructureSystemsInternal(), ) where T <: PSY.Generator
+function SupplyTechnology{T}(; name, power_systems_type, region=Vector(), available=true, prime_mover_type=PrimeMovers.OT, fuel=[ThermalFuels.OTHER], cofire_start_limits=Dict(), cofire_level_limits=Dict(), capital_costs=CapitalCost(nothing), operation_costs=ThermalGenerationCost(nothing), unit_size=0.0, capacity_limits=(min = 0.0, max = 1e8), outage_factor=(planned = 0.0, forced = 0.0), min_generation_fraction=0.0, ramp_limits=(up=1.0, down=1.0), time_limits=(up=60.0, down=60.0), start_fuel_mmbtu_per_mw=0.0, lifetime=100, requirements=Vector(), financial_data, ext=Dict(), internal=InfrastructureSystemsInternal(), ) where T <: PSY.Generator
     SupplyTechnology{T}(name, power_systems_type, region, available, prime_mover_type, fuel, cofire_start_limits, cofire_level_limits, capital_costs, operation_costs, unit_size, capacity_limits, outage_factor, min_generation_fraction, ramp_limits, time_limits, start_fuel_mmbtu_per_mw, lifetime, requirements, financial_data, ext, internal, )
 end
 

@@ -11,8 +11,8 @@ This file is auto-generated. Do not edit.
         region::Vector{PSY.Topology}
         available::Bool
         financial_data::TechnologyFinancialData
-        supply_technology::Int64
-        storage_technology::Int64
+        supply_technology::SupplyTechnology
+        storage_technology::StorageTechnology
         inverter_capacity_limits::MinMax
         capital_costs_inverter::CapitalCost
         operation_costs_inverter::IS.ProductionVariableCostCurve
@@ -31,8 +31,8 @@ Supply Technology that supports a StorageTechnology co-located with wind and sol
 - `region::Vector{PSY.Topology}`: (default: `Vector()`) Zone or node where the technology operates
 - `available::Bool`: (default: `true`) Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)
 - `financial_data::TechnologyFinancialData`: Struct containing relevant financial information for a technology
-- `supply_technology::Int64`: Id of the underlying supply technology (e.g. wind or solar) co-located with storage
-- `storage_technology::Int64`: Id of the underlying storage technology co-located with the supply technology
+- `supply_technology::SupplyTechnology`: The underlying supply technology (e.g. wind or solar) co-located with storage
+- `storage_technology::StorageTechnology`: The underlying storage technology co-located with the supply technology
 - `inverter_capacity_limits::MinMax`: (default: `(min = 0.0, max = 1e8)`) Limits on inverter capacity (MW)
 - `capital_costs_inverter::CapitalCost`: Capital and interconnection cost for investing in inverter capacity (USD/MW)
 - `operation_costs_inverter::IS.ProductionVariableCostCurve`: Operational costs for using inverter in co-located systems
@@ -53,10 +53,10 @@ mutable struct ColocatedSupplyStorageTechnology{T <: PSY.Generator} <: ResourceT
     available::Bool
     "Struct containing relevant financial information for a technology"
     financial_data::TechnologyFinancialData
-    "Id of the underlying supply technology (e.g. wind or solar) co-located with storage"
-    supply_technology::Int64
-    "Id of the underlying storage technology co-located with the supply technology"
-    storage_technology::Int64
+    "The underlying supply technology (e.g. wind or solar) co-located with storage"
+    supply_technology::SupplyTechnology
+    "The underlying storage technology co-located with the supply technology"
+    storage_technology::StorageTechnology
     "Limits on inverter capacity (MW)"
     inverter_capacity_limits::MinMax
     "Capital and interconnection cost for investing in inverter capacity (USD/MW)"
@@ -159,8 +159,8 @@ function from_openapi(po::PI.ColocatedSupplyStorageTechnology, refs::OpenAPIRefs
         region = resolve_refs(refs, po.region, PSY.Topology),
         available = po.available,
         financial_data = convert_nested_data(po.financial_data),
-        supply_technology = po.supply_technology,
-        storage_technology = po.storage_technology,
+        supply_technology = resolve_ref(refs, po.supply_technology, SupplyTechnology),
+        storage_technology = resolve_ref(refs, po.storage_technology, StorageTechnology),
         inverter_capacity_limits = _minmax_from_po(po.inverter_capacity_limits),
         capital_costs_inverter = convert_nested_data(po.capital_costs_inverter),
         operation_costs_inverter = convert_cost(po.operation_costs_inverter)::IS.ProductionVariableCostCurve,
@@ -178,8 +178,8 @@ function to_openapi(value::ColocatedSupplyStorageTechnology{T}, refs::OpenAPIRef
         region = component_ids(refs, get_region(value)),
         available = get_available(value),
         financial_data = convert_nested_data_to_openapi(get_financial_data(value)),
-        supply_technology = get_supply_technology(value),
-        storage_technology = get_storage_technology(value),
+        supply_technology = component_id(refs, get_supply_technology(value)),
+        storage_technology = component_id(refs, get_storage_technology(value)),
         inverter_capacity_limits = _minmax_po(get_inverter_capacity_limits(value, IS.NU)),
         capital_costs_inverter = convert_nested_data_to_openapi(get_capital_costs_inverter(value)),
         operation_costs_inverter = convert_cost_to_openapi(get_operation_costs_inverter(value, IS.NU)),

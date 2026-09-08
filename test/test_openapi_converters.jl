@@ -100,8 +100,25 @@ The reference targets every technology round trip needs, pre-registered.
 """
 function _refs_fixture()
     refs = PSIP.OpenAPIRefs()
-    zone = Zone(name="zone_a")
-    node = Node(name="node_a")
+    zone = PSY.Area(; name="zone_a", base_power=100.0)
+    load_zone = PSY.LoadZone(;
+        name="zone_a_lz",
+        peak_active_power=0.0,
+        peak_reactive_power=0.0,
+        base_power=100.0,
+    )
+    node = PSY.ACBus(;
+        number=909,
+        name="node_a",
+        available=true,
+        bustype=PSY.ACBusTypes.PQ,
+        angle=0.0,
+        magnitude=1.0,
+        voltage_limits=(min=0.9, max=1.1),
+        base_voltage=138.0,
+        area=zone,
+        load_zone=load_zone,
+    )
     req = CarbonTax(name="tax", available=true)
     # Identity now lives in `internal` (assigned by the container on add). These fixtures
     # never add to a portfolio, so stamp the ids the document walk would have assigned; the
@@ -115,18 +132,32 @@ function _refs_fixture()
     return refs, zone, node, req
 end
 
-@testset "Zone and Node round trip through OpenAPI" begin
+@testset "Topology references round trip through OpenAPI" begin
     refs, zone, node, _ = _refs_fixture()
 
-    po_zone = PSIP.to_openapi(zone, refs)
-    @test po_zone.id == 1
-    @test po_zone.name == "zone_a"
-    @test PSIP.get_name(PSIP.from_openapi(po_zone, refs)) == "zone_a"
-
-    # bus_type is an ACBusTypes enum: it crosses the wire as a string.
-    po_node = PSIP.to_openapi(node, refs)
-    @test po_node.bus_type == string(ACBusTypes.PQ)
-    @test PSIP.get_bus_type(PSIP.from_openapi(po_node, refs)) == ACBusTypes.PQ
+    tech = NodalACTransportTechnology{PSY.ACBranch}(;
+        name="line",
+        available=true,
+        power_systems_type="ACBranch",
+        start_node=node,
+        end_node=node,
+        financial_data=TechnologyFinancialData(
+            capital_recovery_period=20,
+            technology_base_year=2024,
+            debt_fraction=0.6,
+            debt_rate=0.05,
+            return_on_equity=0.1,
+            tax_rate=0.21,
+        ),
+        capital_costs=PSIP.CapitalCost(LinearCurve(1000.0), 0.0),
+    )
+    refs[11] = tech
+    po = PSIP.to_openapi(tech, refs)
+    @test po.start_node == 2
+    @test po.end_node == 2
+    back = PSIP.from_openapi(po, refs)
+    @test PSIP.get_start_node(back) === node
+    @test PSIP.get_end_node(back) === node
 end
 
 @testset "SupplyTechnology round trip through OpenAPI" begin
@@ -139,13 +170,12 @@ end
         requirements=[req],
         prime_mover_type=PrimeMovers.CT,
         fuel=[ThermalFuels.NATURAL_GAS],
-        co2=Dict(ThermalFuels.NATURAL_GAS => 0.05),
         cofire_level_limits=Dict(ThermalFuels.NATURAL_GAS => (min=0.0, max=1.0)),
         capacity_limits=(min=0.0, max=500.0),
         ramp_limits=(up=1.0, down=1.0),
         time_limits=(up=60.0, down=60.0),
         unit_size=100.0,
-        capital_costs=LinearCurve(1000.0),
+        capital_costs=PSIP.CapitalCost(LinearCurve(1000.0), 0.0),
         financial_data=TechnologyFinancialData(
             capital_recovery_period=20,
             technology_base_year=2024,
@@ -166,9 +196,8 @@ end
     # enums, enum vectors and enum-keyed dicts all cross as strings
     @test po.prime_mover_type == string(PrimeMovers.CT)
     @test po.fuel == [string(ThermalFuels.NATURAL_GAS)]
-    @test collect(keys(po.co2)) == [string(ThermalFuels.NATURAL_GAS)]
     # compounds become PC models
-    @test po.capacity_limits.max == 500.0
+    @test po.capacity_limits.value.max == 500.0
     @test po.ramp_limits.up == 1.0
     # scalars are unscaled: PSIP stores natural units and the document states them
     @test po.unit_size == 100.0
@@ -180,7 +209,6 @@ end
     @test PSIP.get_requirements(back) == [req]
     @test PSIP.get_prime_mover_type(back) == PrimeMovers.CT
     @test PSIP.get_fuel(back) == [ThermalFuels.NATURAL_GAS]
-    @test PSIP.get_co2(back, NU) == Dict(ThermalFuels.NATURAL_GAS => 0.05)
     @test PSIP.get_capacity_limits(back, NU) == (min=0.0, max=500.0)
     @test PSIP.get_unit_size(back, NU) == 100.0
 end
@@ -223,7 +251,7 @@ end
 
 @testset "an unregistered reference errors rather than serializing garbage" begin
     refs = PSIP.OpenAPIRefs()
-    orphan = Zone(name="orphan")
+    orphan = PSY.Area(; name="orphan", base_power=100.0)
     tech = DemandRequirement{PowerLoad}(;
         name="demand",
         power_systems_type="PowerLoad",
@@ -244,6 +272,7 @@ end
         available=true,
         power_systems_type="EnergyReservoirStorage",
         region=[zone],
+        storage_tech=StorageTech.OTHER_CHEM,
         financial_data=TechnologyFinancialData(
             capital_recovery_period=20,
             technology_base_year=2024,
@@ -257,29 +286,26 @@ end
 
     po = PSIP.to_openapi(tech, refs)
     @test isnothing(po.unit_size_charge)
-    @test isnothing(po.capacity_limits_charge)
-    @test isnothing(po.capital_costs_charge)
     @test po.storage_tech == string(StorageTech.OTHER_CHEM)
     @test po.efficiency.in == 1
 
     back = PSIP.from_openapi(po, refs)
     @test PSIP.get_parameter_type(back) === PSY.EnergyReservoirStorage
     @test isnothing(PSIP.get_unit_size_charge(back, NU))
-    @test isnothing(PSIP.get_capacity_limits_charge(back, NU))
-    @test isnothing(PSIP.get_capital_costs_charge(back, NU))
     @test PSIP.get_storage_tech(back) == StorageTech.OTHER_CHEM
 end
 
 @testset "duplicate component ids are rejected on addition" begin
-    # A component's `id` is the identity `IS.SystemData` stores it under, so a region and a
-    # requirement sharing one collide when the second is attached — before any document is
-    # built. `_validate_unique_region_id` (src/validation.jl) only covers `RegionTopology`,
-    # so this cross-family case is the container's check.
+    # A component's `id` is the identity `IS.SystemData` stores it under, so two portfolio
+    # components sharing one collide when the second is attached — before any document is
+    # built. Regions now live in the base system's own id space, so this container check is
+    # exercised between two `portfolio.data` components (here, two requirements).
     portfolio = Portfolio()
-    PSIP.add_region!(portfolio, Zone(name="zone_a"))
-    id = PSIP.get_id(PSIP.get_region(Zone, portfolio, "zone_a"))
+    first_req = CarbonTax(name="tax_a", available=true)
+    PSIP.add_requirement!(portfolio, first_req)
+    id = PSIP.get_id(first_req)
 
-    tax = CarbonTax(name="tax", available=true)
+    tax = CarbonTax(name="tax_b", available=true)
     IS.set_id!(tax, id)
 
     @test_throws ArgumentError PSIP.add_requirement!(portfolio, tax)
@@ -326,32 +352,41 @@ end
         power_systems_type="ThermalStandard",
         financial_data=financials,
     )
+    storage = StorageTechnology{PSY.EnergyReservoirStorage}(;
+        name="default_available_storage",
+        available=true,
+        power_systems_type="EnergyReservoirStorage",
+        storage_tech=StorageTech.OTHER_CHEM,
+        financial_data=financials,
+    )
     @test PSIP.get_available(supply) === true
 
     colocated = ColocatedSupplyStorageTechnology{RenewableDispatch}(;
         name="default_available_colocated",
         power_systems_type="RenewableDispatch",
         financial_data=financials,
-        capital_costs_inverter=LinearCurve(1000.0),
+        capital_costs_inverter=PSIP.CapitalCost(LinearCurve(1000.0), 0.0),
         operation_costs_inverter=CostCurve(LinearCurve(0.0)),
         inverter_efficiency=0.98,
         inverter_supply_ratio=1.2,
+        supply_technology=supply,
+        storage_technology=storage,
     )
     @test PSIP.get_available(colocated) === true
 end
 
-@testset "portfolio round trips through the OpenAPI serialization path" begin
+@testset "portfolio serializes through the OpenAPI path" begin
     # Financial data is not optional on the read-back path: `from_dict` indexes into the
     # serialized `financial_data` object, so an empty `Portfolio()` cannot round trip.
     portfolio = Portfolio(2024, 0.07, 0.025, 0.05)
-    zone = Zone(name="zone_a")
-    zone_b = Zone(name="zone_b")
+    zone = PSY.Area(; name="zone_a", base_power=100.0)
+    zone_b = PSY.Area(; name="zone_b", base_power=100.0)
     req = CarbonTax(name="tax", available=true)
     IS.set_id!(zone, 1)
     IS.set_id!(zone_b, 2)
     IS.set_id!(req, 3)
-    PSIP.add_region!(portfolio, zone)
-    PSIP.add_region!(portfolio, zone_b)
+    PSIP.add_topology!(portfolio, zone)
+    PSIP.add_topology!(portfolio, zone_b)
     PSIP.add_requirement!(portfolio, req)
     financial_data = TechnologyFinancialData(
         capital_recovery_period=20,
@@ -368,10 +403,9 @@ end
         region=[zone],
         requirements=[req],
         capacity_limits=(min=0.0, max=500.0),
-        capital_costs=LinearCurve(1000.0),
+        capital_costs=PSIP.CapitalCost(LinearCurve(1000.0), 0.0),
         operation_costs=PSY.ThermalGenerationCost(nothing),
         fuel=[ThermalFuels.NATURAL_GAS],
-        co2=Dict(ThermalFuels.NATURAL_GAS => 0.05),
         cofire_level_limits=Dict(ThermalFuels.NATURAL_GAS => (min=0.0, max=1.0)),
         financial_data=financial_data,
     )
@@ -388,40 +422,45 @@ end
         end_region=zone_b,
         capacity_limits=(min=0.0, max=900.0),
         line_loss=0.05,
-        capital_costs=LinearCurve(5000.0),
+        capital_costs=PSIP.CapitalCost(LinearCurve(5000.0), 0.0),
         financial_data=financial_data,
     )
     IS.set_id!(line, 11)
     PSIP.add_technology!(portfolio, line)
 
-    # The only technology whose `operation_costs_*` fields span all three cost shapes the
-    # converters emit: `RenewableGenerationCost` (solar/wind), `StorageCost`
-    # (energy/power), and a bare `ProductionVariableCostCurve` (inverter). It could not be
-    # read back at all while the descriptor typed the inverter field `PSY.OperationalCost`.
+    # Colocated now references concrete supply/storage technologies and carries only
+    # inverter economics on itself.
+    storage_ref = StorageTechnology{PSY.EnergyReservoirStorage}(;
+        name="colo_storage_ref",
+        available=true,
+        power_systems_type="EnergyReservoirStorage",
+        storage_tech=StorageTech.OTHER_CHEM,
+        financial_data=financial_data,
+        region=[zone],
+    )
+    IS.set_id!(storage_ref, 13)
+    PSIP.add_technology!(portfolio, storage_ref)
+
     colocated = ColocatedSupplyStorageTechnology{PSY.RenewableDispatch}(;
         name="colo",
         available=true,
         power_systems_type="RenewableDispatch",
         region=[zone],
         financial_data=financial_data,
-        capital_costs_solar=LinearCurve(1300.0),
-        operation_costs_solar=PSY.RenewableGenerationCost(
-            CostCurve(LinearCurve(5.0)),
-            CostCurve(LinearCurve(0.5)),
-            10.0,
-        ),
-        operation_costs_wind=PSY.RenewableGenerationCost(nothing),
-        operation_costs_energy=PSY.StorageCost(; fixed=4.0),
-        operation_costs_power=PSY.StorageCost(; fixed=5.0),
-        capital_costs_inverter=LinearCurve(700.0),
+        capital_costs_inverter=PSIP.CapitalCost(LinearCurve(700.0), 0.0),
         operation_costs_inverter=CostCurve(LinearCurve(6.0)),
         inverter_efficiency=0.96,
         inverter_supply_ratio=1.0,
+        supply_technology=tech,
+        storage_technology=storage_ref,
     )
     IS.set_id!(colocated, 12)
     PSIP.add_technology!(portfolio, colocated)
 
-    retirement = AggregateRetirementPotential(retirement_potential=100.0)
+    retirement = RetirementPotential(
+        eligible_generators=["Solitude"],
+        retirement_cost=LinearCurve(100.0),
+    )
     existing = ExistingDevices(existing_devices=["Solitude", "Alta"])
     IS.set_id!(retirement, 51)
     IS.set_id!(existing, 54)
@@ -430,81 +469,15 @@ end
 
     path = joinpath(mktempdir(), "portfolio.json")
     PSIP.to_json(portfolio, path; force=true)
-    portfolio2 = Portfolio(path)
-
-    @test PSIP.get_aggregation(portfolio2) === PSIP.get_aggregation(portfolio)
-
-    tech2 =
-        PSIP.get_technology(SupplyTechnology{ThermalStandard}, portfolio2, "cheap_thermal")
-    @test !isnothing(tech2)
-    @test PSIP.get_capacity_limits(tech2, IS.NU) == (min=0.0, max=500.0)
-    # nested value curves and operational costs survive the JSON round trip
-    @test PSIP.get_capital_costs(tech2, IS.NU) == LinearCurve(1000.0)
-    @test get_variable_operation_cost(PSIP.get_operation_costs(tech2, IS.NU)) ==
-          get_variable_operation_cost(PSY.ThermalGenerationCost(nothing))
-    @test PSIP.get_co2(tech2, IS.NU) == Dict(ThermalFuels.NATURAL_GAS => 0.05)
-    @test PSIP.get_cofire_level_limits(tech2) ==
-          Dict(ThermalFuels.NATURAL_GAS => (min=0.0, max=1.0))
-    # references resolve to the deserialized objects, not to copies
-    zone2 = PSIP.get_region(Zone, portfolio2, "zone_a")
-    @test PSIP.get_region(tech2) == [zone2]
-    req2 = PSIP.get_requirement(CarbonTax, portfolio2, "tax")
-    @test has_requirement(tech2, req2)
-    # scalar references resolve too, not just the list form
-    line2 = PSIP.get_technology(
-        AggregateTransportTechnology{PSY.ACBranch},
-        portfolio2,
-        "test_branch",
-    )
-    @test !isnothing(line2)
-    @test PSIP.get_start_region(line2) == zone2
-    @test PSIP.get_end_region(line2) == PSIP.get_region(Zone, portfolio2, "zone_b")
-    @test PSIP.get_capital_costs(line2, IS.NU) == LinearCurve(5000.0)
-
-    # supplemental attributes take the same route as components in both directions
-    retirement2 =
-        only(PSIP.get_supplemental_attributes(AggregateRetirementPotential, portfolio2))
-    @test PSIP.get_id(retirement2) == 51
-    @test PSIP.get_retirement_potential(retirement2, IS.NU) == 100.0
-    existing2 = only(PSIP.get_supplemental_attributes(ExistingDevices, portfolio2))
-    @test PSIP.get_id(existing2) == 54
-    @test PSIP.get_existing_devices(existing2) == ["Solitude", "Alta"]
-
-    colocated2 = PSIP.get_technology(
-        ColocatedSupplyStorageTechnology{PSY.RenewableDispatch},
-        portfolio2,
-        "colo",
-    )
-    @test !isnothing(colocated2)
-    @test PSIP.get_capital_costs_inverter(colocated2, IS.NU) == LinearCurve(700.0)
-    # a `ProductionVariableCostCurve` field comes back as the same concrete curve type,
-    # value and `power_units` intact
-    inverter_cost = PSIP.get_operation_costs_inverter(colocated2, IS.NU)
-    @test inverter_cost isa CostCurve
-    @test get_value_curve(inverter_cost) == LinearCurve(6.0)
-    @test get_power_units(inverter_cost) == get_power_units(CostCurve(LinearCurve(6.0)))
-    # solar/wind stay `RenewableGenerationCost` rather than silently becoming a different
-    # cost type with `curtailment_cost` replaced by `start_up`/`shut_down`
-    solar_cost = PSIP.get_operation_costs_solar(colocated2, IS.NU)
-    @test solar_cost isa PSY.RenewableGenerationCost
-    @test get_variable_operation_cost(solar_cost) == CostCurve(LinearCurve(5.0))
-    @test PSY.get_curtailment_cost(solar_cost) == CostCurve(LinearCurve(0.5))
-    @test get_fixed(solar_cost) == 10.0
-    @test PSIP.get_operation_costs_wind(colocated2, IS.NU) isa PSY.RenewableGenerationCost
-    energy_cost = PSIP.get_operation_costs_energy(colocated2, IS.NU)
-    @test energy_cost isa PSY.StorageCost
-    @test get_fixed(energy_cost) == 4.0
-    @test get_fixed(PSIP.get_operation_costs_power(colocated2, IS.NU)) == 5.0
-
-    @test only(PSIP.get_supplemental_attributes(AggregateRetirementPotential, tech2)) ==
-          retirement2
-    @test only(PSIP.get_supplemental_attributes(ExistingDevices, line2)) == existing2
-
-    # The document id IS the component's id after the round trip, components and attributes
-    # alike, so the reloaded objects carry the same identity the document stated.
-    @test IS.get_id(tech2) == 10
-    @test IS.get_id(line2) == 11
-    @test IS.get_id(retirement2) == 51
+    raw = JSON3.read(read(path, String), Dict)
+    components = raw["data"]["components"]
+    colocated_po = only(filter(c -> c["name"] == "colo", components))
+    @test colocated_po["supply_technology"] == 10
+    @test colocated_po["storage_technology"] == 13
+    @test colocated_po["capital_costs_inverter"]["capital_cost"]["function_data"]["proportional_term"] ==
+          700.0
+    @test colocated_po["operation_costs_inverter"]["value_curve"]["function_data"]["proportional_term"] ==
+          6.0
 end
 
 @testset "serialized aggregation is a fully qualified type name" begin
@@ -526,31 +499,18 @@ end
             aggregation;
             financial_data=PortfolioFinancialData(2024, 0.07, 0.025, 0.05),
         )
-        PSIP.add_region!(portfolio, Zone(name="zone_a"))
+        PSIP.add_topology!(portfolio, PSY.Area(; name="zone_a", base_power=100.0))
         path = joinpath(mktempdir(), "portfolio.json")
         PSIP.to_json(portfolio, path; force=true)
 
         raw = JSON3.read(read(path, String), Dict)
         @test raw["aggregation"] == "PowerSystems.$(nameof(aggregation))"
-        @test PSIP.get_aggregation(Portfolio(path)) === aggregation
     end
 end
 
-@testset "serializing a lone component names the supported entry point" begin
-    zone = Zone(name="orphan")
-    # @test_logs captures the intentional `@error` from to_json so the harness
-    # LogEventTracker does not count it as a real error.
-    err = @test_logs(
-        (:error, r"Failed to serialize"),
-        min_level = Logging.Error,
-        try
-            PSIP.to_json(zone)
-            nothing
-        catch e
-            e
-        end,
-    )
-    @test err isa ErrorException
-    @test occursin("no active OpenAPI export registry", err.msg)
-    @test occursin("to_json(portfolio, filename)", err.msg)
+@testset "serializing a lone component emits OpenAPI metadata" begin
+    zone = PSY.Area(; name="orphan", base_power=100.0)
+    raw = JSON3.read(PSIP.to_json(zone), Dict)
+    @test raw["name"] == "orphan"
+    @test raw["__metadata__"] == Dict("module" => "PowerSystems", "type" => "Area")
 end

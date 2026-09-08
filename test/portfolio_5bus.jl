@@ -5,13 +5,49 @@ function build_portfolio()
     ###### Zones ######
     ###################
 
-    z1 = Zone(name="Zone_1")
+    z1 = PSY.Area(; name="Zone_1", base_power=100.0)
 
-    z2 = Zone(name="Zone_2")
+    z2 = PSY.Area(; name="Zone_2", base_power=100.0)
 
-    n1 = Node(name="node1")
+    lz1 = PSY.LoadZone(;
+        name="Zone_1_load_zone",
+        peak_active_power=0.0,
+        peak_reactive_power=0.0,
+        base_power=100.0,
+    )
 
-    n2 = Node(name="node2")
+    lz2 = PSY.LoadZone(;
+        name="Zone_2_load_zone",
+        peak_active_power=0.0,
+        peak_reactive_power=0.0,
+        base_power=100.0,
+    )
+
+    n1 = PSY.ACBus(;
+        number=101,
+        name="node101",
+        available=true,
+        bustype=PSY.ACBusTypes.PQ,
+        angle=0.0,
+        magnitude=1.0,
+        voltage_limits=(min=0.9, max=1.1),
+        base_voltage=138.0,
+        area=z1,
+        load_zone=lz1,
+    )
+
+    n2 = PSY.ACBus(;
+        number=102,
+        name="node102",
+        available=true,
+        bustype=PSY.ACBusTypes.PQ,
+        angle=0.0,
+        magnitude=1.0,
+        voltage_limits=(min=0.9, max=1.1),
+        base_voltage=138.0,
+        area=z2,
+        load_zone=lz2,
+    )
 
     ###################
     ### Time Series ###
@@ -50,7 +86,7 @@ function build_portfolio()
     )
 
     thermals = collect(get_components(ThermalStandard, sys))
-    var_cost = PSY.get_variable.((get_operation_cost.((thermals))))
+    var_cost = PSY.get_variable_operation_cost.((get_operation_cost.((thermals))))
     op_cost = get_proportional_term.(get_value_curve.(var_cost))
 
     cheap_th_ixs = 2:4
@@ -79,19 +115,19 @@ function build_portfolio()
     #, coal_new_capex / coal_new_capex_2028
     t_th = SupplyTechnology{PSY.ThermalStandard}(;
         prime_mover_type=PrimeMovers.ST,
-        capital_costs=LinearCurve(coal_igcc_capex * 1000.0),
+        capital_costs=PSIP.CapitalCost(LinearCurve(coal_igcc_capex * 1000.0), 0.0),
         available=true,
         name="cheap_thermal",
         fuel=[ThermalFuels.COAL],
         power_systems_type="ThermalStandard",
         operation_costs=ThermalGenerationCost(
-            variable=FuelCurve(LinearCurve(cheap_th_var_cost), 1.12),
+            variable_operation_cost=FuelCurve(LinearCurve(cheap_th_var_cost), 1.12),
             fixed=0.0,
             start_up=0.0,
             shut_down=0.0,
         ),#LinearCurve(0.0),
-        capacity_limits=(0.0, 3000.0),
-        outage_factor=0.92,
+        capacity_limits=(min=0.0, max=3000.0),
+        outage_factor=(planned=0.08, forced=0.0),
         region=[z1],
         unit_size=250.0,
         financial_data=tech_financials,
@@ -99,19 +135,19 @@ function build_portfolio()
 
     t_th_exp = SupplyTechnology{PSY.ThermalStandard}(;
         prime_mover_type=PrimeMovers.ST,
-        capital_costs=LinearCurve(coal_new_capex * 1000.0),
+        capital_costs=PSIP.CapitalCost(LinearCurve(coal_new_capex * 1000.0), 0.0),
         available=true,
         name="expensive_thermal",
         fuel=[ThermalFuels.COAL],
         power_systems_type="ThermalStandard",
         operation_costs=ThermalGenerationCost(
-            variable=CostCurve(LinearCurve(exp_th_var_cost)),
+            variable_operation_cost=CostCurve(LinearCurve(exp_th_var_cost)),
             fixed=0.0,
             start_up=0.0,
             shut_down=0.0,
         ),
-        capacity_limits=(0.0, 3000.0),
-        outage_factor=0.95,
+        capacity_limits=(min=0.0, max=3000.0),
+        outage_factor=(planned=0.05, forced=0.0),
         region=[z2],
         unit_size=75.0,
         financial_data=tech_financials,
@@ -136,7 +172,9 @@ function build_portfolio()
     renewables = collect(get_components(RenewableDispatch, sys))
     wind_op_costs =
         get_proportional_term.(
-            get_value_curve.(PSY.get_variable.((get_operation_cost.((renewables)))))
+            get_value_curve.(
+                PSY.get_variable_operation_cost.((get_operation_cost.((renewables))))
+            )
         )
     wind_op_cost = mean(wind_op_costs)
     # initial_cap_wind = sum(get_max_active_power.(renewables))
@@ -165,19 +203,19 @@ function build_portfolio()
 
     t_wind = SupplyTechnology{PSY.RenewableDispatch}(;
         prime_mover_type=PrimeMovers.WT,
-        capital_costs=LinearCurve(wind_capex * 1000.0), # to $/MW
+        capital_costs=PSIP.CapitalCost(LinearCurve(wind_capex * 1000.0), 0.0), # to $/MW
         available=true,
         name="wind",
         fuel=[ThermalFuels.OTHER],
         power_systems_type="RenewableDispatch",
         operation_costs=ThermalGenerationCost(
-            variable=CostCurve(LinearCurve(0.0)),
+            variable_operation_cost=CostCurve(LinearCurve(0.0)),
             fixed=wind_op_cost,
             start_up=0.0,
             shut_down=0.0,
         ),
-        capacity_limits=(0.0, 300.0),
-        outage_factor=0.92,
+        capacity_limits=(min=0.0, max=300.0),
+        outage_factor=(planned=0.08, forced=0.0),
         region=[z2],
         financial_data=tech_financials,
     )
@@ -225,38 +263,38 @@ function build_portfolio()
 
     t_pv1 = SupplyTechnology{PSY.RenewableDispatch}(;
         prime_mover_type=PrimeMovers.PVe,
-        capital_costs=LinearCurve(pv_capex * 1000.0), # to $/MW
+        capital_costs=PSIP.CapitalCost(LinearCurve(pv_capex * 1000.0), 0.0), # to $/MW
         available=true,
         name="PV1",
         fuel=[ThermalFuels.OTHER],
         power_systems_type="RenewableDispatch",
         operation_costs=ThermalGenerationCost(
-            variable=CostCurve(LinearCurve(0.0)),
+            variable_operation_cost=CostCurve(LinearCurve(0.0)),
             fixed=0.0,
             start_up=0.0,
             shut_down=0.0,
         ),
-        capacity_limits=(0.0, 1e8),
-        outage_factor=0.92,
+        capacity_limits=(min=0.0, max=1e8),
+        outage_factor=(planned=0.08, forced=0.0),
         region=[z1],
         financial_data=tech_financials,
     )
 
     t_pv2 = SupplyTechnology{PSY.RenewableDispatch}(;
         prime_mover_type=PrimeMovers.PVe,
-        capital_costs=LinearCurve(pv_capex * 1000.0), # to $/MW
+        capital_costs=PSIP.CapitalCost(LinearCurve(pv_capex * 1000.0), 0.0), # to $/MW
         available=true,
         name="PV2",
         fuel=[ThermalFuels.OTHER],
         power_systems_type="RenewableDispatch",
         operation_costs=ThermalGenerationCost(
-            variable=CostCurve(LinearCurve(0.0)),
+            variable_operation_cost=CostCurve(LinearCurve(0.0)),
             fixed=0.0,
             start_up=0.0,
             shut_down=0.0,
         ),
-        capacity_limits=(0.0, 1e8),
-        outage_factor=0.92,
+        capacity_limits=(min=0.0, max=1e8),
+        outage_factor=(planned=0.08, forced=0.0),
         region=[z2],
         financial_data=tech_financials,
     )
@@ -267,14 +305,26 @@ function build_portfolio()
 
     thermal = collect(get_components(ThermalStandard, sys))
 
-    retro1 = AggregateRetrofitPotential(retrofit_id=1, retrofit_fraction=0.5)
+    retro1 = RetrofitPotential(
+        eligible_generators=[PSY.get_name(t) for t in thermal[4:5]],
+        retrofit_fraction=0.5,
+        retrofit_cost=LinearCurve(0.0),
+    )
 
-    retire1 = AggregateRetirementPotential(retirement_potential=100.0)
+    retire1 = RetirementPotential(
+        eligible_generators=[PSY.get_name(t) for t in thermal[4:5]],
+        retirement_cost=LinearCurve(0.0),
+    )
 
-    retro2 = RetrofitPotential(eligible_generators=[PSY.get_name(t) for t in thermal[1:3]])
+    retro2 = RetrofitPotential(
+        eligible_generators=[PSY.get_name(t) for t in thermal[1:3]],
+        retrofit_cost=LinearCurve(0.0),
+    )
 
-    retire2 =
-        RetirementPotential(eligible_generators=[PSY.get_name(t) for t in thermal[4:5]])
+    retire2 = RetirementPotential(
+        eligible_generators=[PSY.get_name(t) for t in thermal[4:5]],
+        retirement_cost=LinearCurve(0.0),
+    )
 
     existing = ExistingDevices(existing_devices=[PSY.get_name(t) for t in thermal[1:3]])
     existing2 = ExistingDevices(existing_devices=["Solitude", "dummy name", "Alta"])
@@ -288,13 +338,17 @@ function build_portfolio()
         name="test_storage",
         region=[z1],
         storage_tech=StorageTech.LIB,
-        capacity_limits_discharge=(0.0, 300.0),
-        capacity_limits_energy=(0.0, 1000.0),
+        capacity_limits_discharge=(min=0.0, max=300.0),
+        capacity_limits_energy=(min=0.0, max=1000.0),
         power_systems_type="EnergyReservoirStorage",
         prime_mover_type=PrimeMovers.BT,
         available=true,
-        capital_costs_discharge=LinearCurve(stor_kw_capex * 1000),
-        capital_costs_energy=LinearCurve(stor_kwh_capex * 1000),
+        capital_costs=PSIP.StorageCapitalCost(
+            LinearCurve(0.0),
+            LinearCurve(stor_kw_capex * 1000),
+            LinearCurve(stor_kwh_capex * 1000),
+            0.0,
+        ),
         operation_costs=StorageCost(
             charge_variable_cost=CostCurve(LinearCurve(0.0)),
             discharge_variable_cost=CostCurve(LinearCurve(0.0)),
@@ -402,9 +456,9 @@ function build_portfolio()
         name="test_branch",
         start_region=z1,
         end_region=z2,
-        capacity_limits=(min=0, max=900),
+        capacity_limits=(min=0.0, max=900.0),
         line_loss=0.05,
-        capital_costs=LinearCurve(5000.0),
+        capital_costs=PSIP.CapitalCost(LinearCurve(5000.0), 0.0),
         available=true,
         power_systems_type=string(nameof(PSY.ACBranch)),
         financial_data=tech_financials,
@@ -414,9 +468,9 @@ function build_portfolio()
         name="test_branch2",
         start_region=z1,
         end_region=z2,
-        capacity_limits=(min=0, max=900),
+        capacity_limits=(min=0.0, max=900.0),
         line_loss=0.05,
-        capital_costs=LinearCurve(5000.0),
+        capital_costs=PSIP.CapitalCost(LinearCurve(5000.0), 0.0),
         available=true,
         power_systems_type=string(nameof(PSY.ACBranch)),
         financial_data=tech_financials,
@@ -426,12 +480,12 @@ function build_portfolio()
         name="test",
         available=true,
         power_systems_type=string(nameof(PSY.ACBranch)),
-        capacity_limits=(min=0, max=900),
-        capital_costs=LinearCurve(5000.0),
+        capacity_limits=(min=0.0, max=900.0),
+        capital_costs=PSIP.CapitalCost(LinearCurve(5000.0), 0.0),
         start_node=n1,
         end_node=n2,
         financial_data=tech_financials,
-        reactance=1,
+        reactance=1.0,
     )
 
     ts_line_2024 = SingleTimeSeries(;
@@ -472,10 +526,12 @@ function build_portfolio()
     p_5bus = Portfolio(sys; financial_data=PortfolioFinancialData(2025, 0.07, 0.05, 0.03))
 
     #Regions
-    PSIP.add_region!(p_5bus, z1)
-    PSIP.add_region!(p_5bus, z2)
-    PSIP.add_region!(p_5bus, n1)
-    PSIP.add_region!(p_5bus, n2)
+    PSIP.add_topology!(p_5bus, z1)
+    PSIP.add_topology!(p_5bus, z2)
+    PSIP.add_topology!(p_5bus, lz1)
+    PSIP.add_topology!(p_5bus, lz2)
+    PSIP.add_topology!(p_5bus, n1)
+    PSIP.add_topology!(p_5bus, n2)
 
     #Supply
     PSIP.add_technology!(p_5bus, t_th)

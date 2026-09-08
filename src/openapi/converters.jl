@@ -57,10 +57,10 @@ _inout_po(v) = PC.InOut(; in=v.in, out=v.out)
 _inout_po_optional(::Nothing) = nothing
 _inout_po_optional(v) = _inout_po(v)
 
-_outagefactors_from_po(x::PC.OutageFactors) = (max=x.max, min=x.min)
+_outagefactors_from_po(x::PC.OutageFactors) = (planned=x.planned, forced=x.forced)
 _outagefactors_from_po(::Nothing) = nothing
 
-_outagefactors_po(v) = PC.OutageFactors(; max=v.max, min=v.min)
+_outagefactors_po(v) = PC.OutageFactors(; planned=v.planned, forced=v.forced)
 _outagefactors_po_optional(::Nothing) = nothing
 _outagefactors_po_optional(v) = _outagefactors_po(v)
 

@@ -95,8 +95,8 @@
         {
           "name": "outage_factor",
           "type": "OutageFactors",
-          "description": "Planned (`max`) and forced (`min`) outage factors for a technology, each a fraction of total availability.",
-          "default": "(max = 0.0, min = 0.0)"
+          "description": "Planned and forced outage factors for a technology, each a fraction of total availability.",
+          "default": "(planned = 0.0, forced = 0.0)"
         },
         {
           "name": "min_generation_fraction",
@@ -1382,13 +1382,13 @@
         },
         {
           "name": "supply_technology",
-          "type": "Int64",
-          "description": "Id of the underlying supply technology (e.g. wind or solar) co-located with storage"
+          "type": "SupplyTechnology",
+          "description": "The underlying supply technology (e.g. wind or solar) co-located with storage"
         },
         {
           "name": "storage_technology",
-          "type": "Int64",
-          "description": "Id of the underlying storage technology co-located with the supply technology"
+          "type": "StorageTechnology",
+          "description": "The underlying storage technology co-located with the supply technology"
         },
         {
           "name": "inverter_capacity_limits",

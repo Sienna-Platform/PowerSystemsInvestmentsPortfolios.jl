@@ -171,7 +171,7 @@ const OPENAPI_COMPOUND_MEMBERS = Dict(
     "MinMax" => ("min", "max"),
     "UpDown" => ("up", "down"),
     "InOut" => ("in", "out"),
-    "OutageFactors" => ("max", "min"),
+    "OutageFactors" => ("planned", "forced"),
 )
 
 const OPENAPI_COMPOUND_CTORS = Dict(
@@ -202,8 +202,19 @@ const OPENAPI_COMPOUND_EXTRACTORS = Dict(
 # `PSY.AggregationTopology`) that live in the base system, so the set is declared instead.
 # Topology references resolve through the same `OpenAPIRefs` registry, which is seeded with
 # the base system's topology components alongside the portfolio's own (see document.jl).
-const OPENAPI_REFERENCE_TYPES =
-    Set(["Requirement", "PSY.Topology", "PSY.Bus", "PSY.AggregationTopology"])
+# `SupplyTechnology`/`StorageTechnology` are concrete portfolio components a
+# `ColocatedSupplyStorageTechnology` co-locates by reference: the struct holds the resolved
+# component in memory, but the wire model carries only its integer id (see
+# `model_ColocatedSupplyStorageTechnology`). `DOCUMENT_PLAN` registers both before the
+# colocated type, so the id resolves in dependency order in either direction.
+const OPENAPI_REFERENCE_TYPES = Set([
+    "Requirement",
+    "PSY.Topology",
+    "PSY.Bus",
+    "PSY.AggregationTopology",
+    "SupplyTechnology",
+    "StorageTechnology",
+])
 
 const OPENAPI_ENUM_TYPES =
     Set(["PrimeMovers", "ThermalFuels", "StorageTech", "ACBusTypes", "PSY.LoadConformity"])

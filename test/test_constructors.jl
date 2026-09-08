@@ -8,15 +8,49 @@
         tax_rate=0.21,
     )
 
-    zone_a = Zone(name="zone_a")
-    zone_b = Zone(name="zone_b")
-    node_a = Node(name="node_a")
-    node_b = Node(name="node_b")
+    zone_a = PSY.Area(; name="zone_a", base_power=100.0)
+    zone_b = PSY.Area(; name="zone_b", base_power=100.0)
+    load_zone_a = PSY.LoadZone(;
+        name="lz_a",
+        peak_active_power=0.0,
+        peak_reactive_power=0.0,
+        base_power=100.0,
+    )
+    load_zone_b = PSY.LoadZone(;
+        name="lz_b",
+        peak_active_power=0.0,
+        peak_reactive_power=0.0,
+        base_power=100.0,
+    )
+    node_a = PSY.ACBus(;
+        number=901,
+        name="node_a",
+        available=true,
+        bustype=PSY.ACBusTypes.PQ,
+        angle=0.0,
+        magnitude=1.0,
+        voltage_limits=(min=0.9, max=1.1),
+        base_voltage=138.0,
+        area=zone_a,
+        load_zone=load_zone_a,
+    )
+    node_b = PSY.ACBus(;
+        number=902,
+        name="node_b",
+        available=true,
+        bustype=PSY.ACBusTypes.PQ,
+        angle=0.0,
+        magnitude=1.0,
+        voltage_limits=(min=0.9, max=1.1),
+        base_voltage=138.0,
+        area=zone_b,
+        load_zone=load_zone_b,
+    )
 
-    @test zone_a isa Zone
-    @test zone_a isa RegionTopology
-    @test node_a isa Node
-    @test node_a isa RegionTopology
+    @test zone_a isa PSY.Area
+    @test zone_a isa PSY.Topology
+    @test node_a isa PSY.ACBus
+    @test node_a isa PSY.Topology
 
     carbon_caps = CarbonCaps(name="carbon_cap", available=true)
     capacity_reserve = CapacityReserveMargin(name="reserve_margin", available=true)
@@ -94,9 +128,11 @@
         inverter_efficiency=0.96,
         power_systems_type="RenewableDispatch",
         inverter_supply_ratio=1.0,
-        capital_costs_inverter=LinearCurve(0.0),
+        capital_costs_inverter=PSIP.CapitalCost(LinearCurve(0.0), 0.0),
         available=true,
         region=[zone_a],
+        supply_technology=supply,
+        storage_technology=storage,
     )
 
     @test supply isa SupplyTechnology{PSY.ThermalStandard}
@@ -117,21 +153,19 @@
           ColocatedSupplyStorageTechnology{PSY.RenewableDispatch}
     @test colocated_supply_storage isa ResourceTechnology
 
-    retirement_potential = RetirementPotential()
-    aggregate_retirement_potential = AggregateRetirementPotential()
-    retrofit_potential = RetrofitPotential()
-    aggregate_retrofit_potential = AggregateRetrofitPotential()
+    retirement_potential = RetirementPotential(
+        eligible_generators=String["g1"],
+        retirement_cost=LinearCurve(0.0),
+    )
+    retrofit_potential =
+        RetrofitPotential(eligible_generators=String["g1"], retrofit_cost=LinearCurve(0.0))
     existing_devices = ExistingDevices()
     topology_mapping = TopologyMapping()
 
     @test retirement_potential isa RetirementPotential
     @test retirement_potential isa IS.SupplementalAttribute
-    @test aggregate_retirement_potential isa AggregateRetirementPotential
-    @test aggregate_retirement_potential isa IS.SupplementalAttribute
     @test retrofit_potential isa RetrofitPotential
     @test retrofit_potential isa IS.SupplementalAttribute
-    @test aggregate_retrofit_potential isa AggregateRetrofitPotential
-    @test aggregate_retrofit_potential isa IS.SupplementalAttribute
     @test existing_devices isa ExistingDevices
     @test existing_devices isa IS.SupplementalAttribute
     @test topology_mapping isa TopologyMapping

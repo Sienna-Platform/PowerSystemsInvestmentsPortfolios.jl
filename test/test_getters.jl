@@ -211,30 +211,31 @@ end
         return_on_equity=0.1,
         tax_rate=0.257,
     )
-    sc = StorageCost(
-        charge_variable_cost=CostCurve(LinearCurve(0.0)),
-        discharge_variable_cost=CostCurve(LinearCurve(0.0)),
-        fixed=0.0,
+    supply_ref = SupplyTechnology{PSY.RenewableDispatch}(;
+        name="colo_edge_supply_ref",
+        available=true,
+        power_systems_type="RenewableDispatch",
+        financial_data=tech_fd,
     )
-    rc = RenewableGenerationCost(
-        variable=CostCurve(LinearCurve(0.0)),
-        curtailment_cost=CostCurve(LinearCurve(0.0)),
-        fixed=0.0,
+    storage_ref = StorageTechnology{PSY.EnergyReservoirStorage}(;
+        name="colo_edge_storage_ref",
+        available=true,
+        power_systems_type="EnergyReservoirStorage",
+        storage_tech=StorageTech.OTHER_CHEM,
+        financial_data=tech_fd,
     )
     colocated = ColocatedSupplyStorageTechnology{PSY.RenewableDispatch}(;
         name="colo_edge",
         financial_data=tech_fd,
         power_systems_type="RenewableDispatch",
-        operation_costs_power=sc,
-        operation_costs_energy=sc,
         operation_costs_inverter=CostCurve(LinearCurve(0.0)),
-        operation_costs_solar=rc,
-        operation_costs_wind=rc,
         inverter_efficiency=0.96,
         inverter_supply_ratio=1.0,
-        capital_costs_inverter=LinearCurve(0.0),
+        capital_costs_inverter=PSIP.CapitalCost(LinearCurve(0.0), 0.0),
         available=true,
-        region=[get_region(Zone, p_5bus, "Zone_1")],
+        region=[get_region(PSY.Area, p_5bus, "Zone_1")],
+        supply_technology=supply_ref,
+        storage_technology=storage_ref,
     )
     @test get_existing_capacity_mw(p_5bus, colocated) == 0.0
 

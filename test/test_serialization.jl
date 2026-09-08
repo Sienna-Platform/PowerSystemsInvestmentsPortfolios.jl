@@ -32,7 +32,7 @@ end
     portfolio = build_portfolio()
     portfolio2 = validate_serialization(portfolio; time_series_read_only=true)
 
-    regions = get_regions(RegionTopology, portfolio)
+    regions = get_regions(PSY.Topology, portfolio)
 
     for r in regions
         r2 = get_region(typeof(r), portfolio2, PSIP.get_name(r))
@@ -47,13 +47,13 @@ end
     name = "my_portfolio"
     description = "test"
     port = Portfolio(; financial_data=financial_data, name=name, description=description)
-    zone = Zone(; name="zone1")
+    zone = PSY.Area(; name="zone1", base_power=100.0)
     base_sys = get_base_system(port)
     test_bus = ACBus(nothing)
     set_bustype!(test_bus, ACBusTypes.REF)
     add_component!(base_sys, test_bus)
 
-    add_region!(port, zone)
+    add_topology!(port, zone)
     gen = SupplyTechnology{ThermalStandard}(;
         name="gen1",
         region=[zone],
@@ -68,7 +68,7 @@ end
         ),
         power_systems_type=string(nameof(ThermalStandard)),
         operation_costs=ThermalGenerationCost(;
-            variable=zero(CostCurve),
+            variable_operation_cost=zero(CostCurve),
             fixed=0.0,
             start_up=0.0,
             shut_down=0.0,
@@ -91,13 +91,8 @@ end
         (SupplyTechnology{ThermalStandard}, "expensive_thermal") => 0.0,
         (StorageTechnology{EnergyReservoirStorage}, "test_storage") =>
             (build_p=0.0, build_e=0.0),
-        (ColocatedSupplyStorageTechnology{RenewableDispatch}, "colocated_test") => (
-            build_p=1400.6,
-            build_solar=0.0,
-            build_e=10176.7,
-            build_inverter=1592.22,
-            build_wind=1722.66,
-        ),
+        (ColocatedSupplyStorageTechnology{RenewableDispatch}, "colocated_test") =>
+            (build_inverter=1592.22,),
         (SupplyTechnology{RenewableDispatch}, "wind") => 975.015,
         (AggregateTransportTechnology{ACBranch}, "test_branch") => 934.992,
         (SupplyTechnology{ThermalStandard}, "cheap_thermal") => 0.0,
@@ -106,13 +101,8 @@ end
         (SupplyTechnology{ThermalStandard}, "expensive_thermal") => 0.0,
         (StorageTechnology{EnergyReservoirStorage}, "test_storage") =>
             (build_p=0.0, build_e=0.0),
-        (ColocatedSupplyStorageTechnology{RenewableDispatch}, "colocated_test") => (
-            build_p=185.437,
-            build_solar=0.0,
-            build_e=1283.1,
-            build_inverter=313.05,
-            build_wind=0.0,
-        ),
+        (ColocatedSupplyStorageTechnology{RenewableDispatch}, "colocated_test") =>
+            (build_inverter=313.05,),
         (SupplyTechnology{RenewableDispatch}, "wind") => 135.609,
         (AggregateTransportTechnology{ACBranch}, "test_branch") => 508.671,
         (SupplyTechnology{ThermalStandard}, "cheap_thermal") => 0.0,
@@ -190,7 +180,7 @@ end
         data = open(path, "r") do io
             JSON3.read(io, Dict)
         end
-        component_type_order = ["StorageTechnology", "EnergyShareRequirements", "Zone"]
+        component_type_order = ["StorageTechnology", "EnergyShareRequirements", "Area"]
         type_rank = Dict(type => rank for (rank, type) in enumerate(component_type_order))
         components = data["data"]["components"]
         sort!(
