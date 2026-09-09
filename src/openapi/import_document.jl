@@ -12,7 +12,48 @@ const SYSTEM_KWARGS = Set((
     :name,
     :description,
 ))
+# The type ordering both conversion directions share. References resolve by id, and
+# `OpenAPIRefs` errors on an unregistered one, so a type must appear after everything it
+# points at: requirements have no references, technologies point at the base system's
+# topology (seeded into `refs` up front) and at requirements. Topology lives in the base
+# `PSY.System`, not the portfolio's own component store, so it is not in this plan.
+const DOCUMENT_PLAN = [
+    (CarbonCaps, "CarbonCaps"),
+    (CarbonTax, "CarbonTax"),
+    (CapacityReserveMargin, "CapacityReserveMargin"),
+    (EnergyShareRequirements, "EnergyShareRequirements"),
+    (HourlyMatching, "HourlyMatching"),
+    (MinimumCapacityRequirements, "MinimumCapacityRequirements"),
+    (MaximumCapacityRequirements, "MaximumCapacityRequirements"),
+    (SupplyTechnology, "SupplyTechnology"),
+    (StorageTechnology, "StorageTechnology"),
+    (ColocatedSupplyStorageTechnology, "ColocatedSupplyStorageTechnology"),
+    (DemandRequirement, "DemandRequirement"),
+    (DemandSideTechnology, "DemandSideTechnology"),
+    (AggregateTransportTechnology, "AggregateTransportTechnology"),
+    (NodalACTransportTechnology, "NodalACTransportTechnology"),
+    (NodalHVDCTransportTechnology, "NodalHVDCTransportTechnology"),
+]
 
+"""
+Seed an `OpenAPIRefs` with the base system's topology components (buses, areas, load zones,
+arcs), keyed by their integer id. Technology reference fields (`region`, `start_node`,
+`start_region`, ...) point at these `PSY` topology structs by id, so they must be resolvable
+before any technology is converted in either direction.
+"""
+function _register_base_system_topology!(refs::OpenAPIRefs, base_system::PSY.System)
+    for component in PSY.get_components(PSY.Topology, base_system)
+        refs[IS.get_id(component)] = component
+    end
+    return refs
+end
+
+const SUPPLEMENTAL_ATTRIBUTE_PLAN = [
+    (RetirementPotential, "RetirementPotential"),
+    (RetrofitPotential, "RetrofitPotential"),
+    (ExistingDevices, "ExistingDevices"),
+    (TopologyMapping, "TopologyMapping"),
+]
 # `PI.<Name>` transport struct for each type the document can carry, keyed by the PSIP type
 # that `__metadata__` resolves to. Parametric PSIP types key on their `UnionAll`, which is
 # what `IS.get_type_from_serialization_metadata` returns now that `__metadata__` no longer
@@ -32,162 +73,6 @@ function _openapi_wire_type(psip_type)
     end
     return _OPENAPI_WIRE_TYPES[psip_type]
 end
-
-# `IS.serialize` reaches each component through `IS.serialize(::IS.SystemData)`, which hands
-# it no portfolio, but `to_openapi` needs the document's id registry. The registry for one
-# `IS.serialize(::Portfolio)` call therefore lives in task-local storage for its duration:
-# task-scoped so two portfolios serialized on different threads cannot see each other's
-# registry, re-entrant, and unwound on throw without an explicit `finally`.
-const _EXPORT_REFS_KEY = :psip_openapi_export_refs
-
-function _active_export_refs()
-    storage = task_local_storage()
-    if !haskey(storage, _EXPORT_REFS_KEY)
-        error(
-            "no active OpenAPI export registry: a PSIP component resolves its references " *
-            "by document id, which only a Portfolio can supply, so a component cannot be " *
-            "serialized on its own. Serialize the owning portfolio instead — " *
-            "`to_json(portfolio, filename)` or `to_json(portfolio)`.",
-        )
-    end
-    return storage[_EXPORT_REFS_KEY]
-end
-
-"""
-Constructs a Portfolio from a file path ending with .json
-"""
-function Portfolio(file_path::AbstractString; try_reimport=true, kwargs...)
-    ext = lowercase(splitext(file_path)[2])
-    if ext == ".json"
-        unsupported = setdiff(keys(kwargs), SYSTEM_KWARGS)
-        !isempty(unsupported) && error("Unsupported kwargs = $unsupported")
-        time_series_read_only = get(kwargs, :time_series_read_only, false)
-        time_series_directory = get(kwargs, :time_series_directory, nothing)
-        # TODO: `runchecks` governs the base system read only; portfolio-level validation on
-        # load is not wired up yet.
-        return deserialize(
-            Portfolio,
-            file_path;
-            time_series_read_only=time_series_read_only,
-            time_series_directory=time_series_directory,
-            runchecks=get(kwargs, :runchecks, false),
-        )
-    else
-        throw(IS.DataFormatError("$file_path is not a supported file type"))
-    end
-end
-
-function IS.serialize(portfolio::T) where {T <: Portfolio}
-    refs = _build_export_refs(portfolio)
-    return task_local_storage(_EXPORT_REFS_KEY, refs) do
-        data = Dict{String, Any}()
-        data["data_format_version"] = DATA_FORMAT_VERSION
-        for field in fieldnames(T)
-            # Exclude time_series_directory because the portfolio may get deserialized on a
-            # different portfolio. `aggregation` is written below instead, in a form that
-            # does not depend on the writing session's module scope.
-            if !(field in [:time_series_directory, :base_system, :aggregation])
-                data[string(field)] = serialize(getfield(portfolio, field))
-            end
-        end
-        data["aggregation"] = _serialize_type_name(get_aggregation(portfolio))
-        return data
-    end
-end
-
-function deserialize(::Type{Portfolio}, filename::AbstractString; kwargs...)
-    raw = open(filename) do io
-        JSON3.read(io, Dict)
-    end
-
-    if raw["data_format_version"] != DATA_FORMAT_VERSION
-        pre_read_conversion!(raw)
-    end
-
-    # These file paths are relative to the portfolio file.
-    directory = dirname(filename)
-    for file_key in ("time_series_storage_file",)
-        if haskey(raw["data"], file_key) && !isabspath(raw["data"][file_key])
-            raw["data"][file_key] = joinpath(directory, raw["data"][file_key])
-        end
-    end
-
-    return from_dict(Portfolio, raw, filename; kwargs...)
-end
-
-function IS.serialize(schedule::InvestmentScheduleResults)
-    start_dates = Vector{String}()
-    end_dates = Vector{String}()
-    capacity_data = Vector{Vector{Dict{String, Any}}}()
-    for (period, investments) in schedule.results
-        push!(start_dates, string(period[1]))
-        push!(end_dates, string(period[2]))
-
-        installation_list = Vector{Dict{String, Any}}()
-        for (technology, capacity) in investments
-            installation = Dict{String, Any}(
-                "technology" => string(nameof(technology[1])),
-                "parameter" => string(nameof((only(technology[1].parameters)))),
-                "name" => technology[2],
-                "installations" => capacity,
-            )
-            push!(installation_list, installation)
-        end
-        push!(capacity_data, installation_list)
-    end
-    return Dict{String, Any}(
-        "start_dates" => start_dates,
-        "end_dates" => end_dates,
-        "results" => capacity_data,
-    )
-end
-
-"""
-Rendering goes through `OpenAPI.to_json` rather than `JSON3.write` because only the former
-unwraps the `oneOf` wrappers and stamps their discriminators.
-"""
-function _serialize_openapi(component)
-    # Rejected on write as well as on read: a type absent from the plans would otherwise
-    # be emitted happily and then refused by `deserialize_components!`, producing a
-    # document that cannot be read back. `Base.typename(...).wrapper` is the plan key for
-    # a parametric type, matching what `_group_by_serialized_type` resolves to.
-    _openapi_wire_type(Base.typename(typeof(component)).wrapper)
-    po = to_openapi(component, _active_export_refs())
-    data = JSON3.read(OpenAPI.to_json(po), Dict{String, Any})
-    add_serialization_metadata!(data, typeof(component))
-    return data
-end
-
-IS.serialize(value::Technology) = _serialize_openapi(value)
-IS.serialize(value::Requirement) = _serialize_openapi(value)
-
-# PSIP's supplemental attributes subtype `IS.SupplementalAttribute` directly, with no PSIP
-# supertype of their own, so dispatching on the abstract type would pirate every other
-# package's attributes. One method per declared type instead, driven by the same plan the
-# deserialize side reads.
-for (attribute_type, _key) in SUPPLEMENTAL_ATTRIBUTE_PLAN
-    @eval IS.serialize(value::$attribute_type) = _serialize_openapi(value)
-end
-
-"""
-Add type information to the dictionary that can be used to deserialize the value.
-
-A parametric component's type parameter is not recorded here: it travels in the payload's
-own `power_systems_type` field, which `from_openapi` reads.
-"""
-function add_serialization_metadata!(data::Dict, ::Type{T}) where {T}
-    data[METADATA_KEY] = Dict{String, Any}(
-        TYPE_KEY => string(nameof(T)),
-        MODULE_KEY => string(parentmodule(T)),
-    )
-    return
-end
-
-"""
-Clear any value stored in ext.
-"""
-clear_ext!(port::Portfolio) = IS.clear_ext!(port.internal)
-
 function from_dict(
     ::Type{Portfolio},
     raw::Dict{String, Any},
@@ -297,20 +182,6 @@ function from_dict(
 
     return portfolio
 end
-
-"""
-Write a `Type`-valued field, such as `Portfolio.aggregation`, in the `"Module.Type"` form
-[`_deserialize_type_name`](@ref) requires.
-
-Emitted explicitly rather than left to the generic `serialize` path: `IS` has no
-`serialize(::Type)` method, so the raw `DataType` would reach JSON3, which stringifies it
-through `show` — and `show` resolves a type name against `Base.active_module()`. A writer
-with `using PowerSystems` in scope would then emit the bare `"ACBus"` and a writer with
-`import PowerSystems as PSY` the qualified `"PowerSystems.ACBus"`, making the document
-depend on the writing session's scope and unreadable in the first case.
-"""
-_serialize_type_name(T::Type) = string(parentmodule(T), '.', nameof(T))
-
 """
 Resolve a `"Module.Type"` string — the form [`_serialize_type_name`](@ref) writes a
 `Type`-valued field in, such as `Portfolio.aggregation` — back to the type itself.
@@ -325,7 +196,6 @@ function _deserialize_type_name(name::AbstractString)
     end
     return getproperty(IS.get_module(String(parts[1])), Symbol(parts[2]))
 end
-
 # Mirrors `IS.deserialize(::Type{IS.SystemData}, ::Dict)`, with one deliberate difference:
 # the supplemental attribute manager is left empty here and filled by
 # [`deserialize_attributes!`](@ref) once the `Portfolio` exists, because PSIP attributes are
@@ -358,7 +228,6 @@ function deserialize(
         internal,
     )
 end
-
 """
 Open the time series store the document names, or create a fresh one when it named none.
 
@@ -399,7 +268,6 @@ function _deserialize_time_series_manager(
         read_only=time_series_read_only,
     )
 end
-
 function deserialize(::Type{InvestmentScheduleResults}, raw::Dict)
     schedule = Dict()
     for (i, start_date) in enumerate(raw["start_dates"])
@@ -428,7 +296,6 @@ function deserialize(::Type{InvestmentScheduleResults}, raw::Dict)
 
     return InvestmentScheduleResults(schedule)
 end
-
 # Mirrors `IS.deserialize(::Type{IS.SupplementalAttributeManager}, ...)` but builds each
 # attribute through the OpenAPI converters, so supplemental attributes take the same route as
 # components in both directions. Fills the manager the `IS.SystemData` was constructed with
@@ -474,7 +341,6 @@ function deserialize_attributes!(portfolio::Portfolio, data::Dict, refs::OpenAPI
     )
     return mgr
 end
-
 function deserialize_components!(portfolio::Portfolio, raw, refs::OpenAPIRefs)
     # DOCUMENT_PLAN order is dependency order: regions and requirements land in `refs`
     # before the technologies whose references resolve against them.
@@ -503,7 +369,6 @@ function deserialize_components!(portfolio::Portfolio, raw, refs::OpenAPIRefs)
     _reject_unplanned_types(by_type, "component", "DOCUMENT_PLAN")
     return
 end
-
 """
 Buckets by `__metadata__`'s type, which for a parametric component is its `UnionAll` —
 `__metadata__` no longer carries `parameters` — and that is the key both plans use.
@@ -519,7 +384,6 @@ function _group_by_serialized_type(raw_values)
     end
     return grouped
 end
-
 function _reject_unplanned_types(grouped, family::AbstractString, plan_name::AbstractString)
     if !isempty(grouped)
         names = join(sort!([string(type) for type in keys(grouped)]), ", ")
@@ -530,7 +394,6 @@ function _reject_unplanned_types(grouped, family::AbstractString, plan_name::Abs
     end
     return
 end
-
 """
 Allow types to implement handling of special cases during deserialization.
 
@@ -543,116 +406,11 @@ handle_deserialization_special_cases!(
     component::Dict,
     ::Type{<:InfrastructureSystemsComponent},
 ) = nothing
-
 function _is_deserialization_in_progress(portfolio::Portfolio)
     ext = get_ext(portfolio)
     return get(ext, "deserialization_in_progress", false)
 end
-
 """
-Serializes a portfolio to a JSON file and saves time series to an HDF5 file.
-
-# Arguments
-
-  - `portfolio::Portfolio`: portfolio
-  - `filename::AbstractString`: filename to write
-
-# Keyword arguments
-
-  - `user_data::Union{Nothing, Dict} = nothing`: optional metadata to record
-  - `pretty::Bool = false`: whether to pretty-print the JSON
-  - `force::Bool = false`: whether to overwrite existing files
-  - `runchecks::Bool = false`: whether to run portfolio validation checks
-
-Refer to [`check_component`](@ref) for exceptions thrown if `check = true`.
+Clear any value stored in ext.
 """
-function to_json(
-    portfolio::Portfolio,
-    filename::AbstractString;
-    user_data=nothing,
-    pretty=false,
-    force=false,
-    runchecks=false,
-)
-    IS.prepare_for_serialization_to_file!(portfolio.data, filename; force=force)
-    data = to_json(portfolio; pretty=pretty)
-
-    open(filename, "w") do io
-        write(io, data)
-    end
-
-    mfile = joinpath(dirname(filename), splitext(basename(filename))[1] * "_metadata.json")
-    _serialize_portfolio_metadata_to_file(portfolio, mfile, user_data)
-    @info "Serialized Portfolio to $filename"
-
-    # Serialize base system to a separate file
-    base_system_file =
-        joinpath(dirname(filename), splitext(basename(filename))[1] * "_base_system.json")
-    PSY.to_json(portfolio.base_system, base_system_file; pretty=pretty, force=force)
-
-    return
-end
-
-"""
-Serializes a InfrastructureSystemsType to a JSON string.
-
-Component-level serialization is portfolio-scoped: a technology, region, requirement or
-supplemental attribute records its references as document ids, which only the owning
-`Portfolio` can assign, so passing one here on its own raises. Pass the `Portfolio` — or
-use [`to_json(portfolio, filename)`](@ref) to write the whole document to disk.
-"""
-function to_json(obj::T; pretty=false, indent=2) where {T <: InfrastructureSystemsType}
-    try
-        if pretty
-            io = IOBuffer()
-            JSON3.pretty(io, serialize(obj), JSON3.AlignmentContext(; indent=indent))
-            return take!(io)
-        else
-            return JSON3.write(serialize(obj))
-        end
-    catch e
-        @error "Failed to serialize $(summary(obj))"
-        rethrow(e)
-    end
-end
-
-function _serialize_portfolio_metadata_to_file(portfolio::Portfolio, filename, user_data)
-    name = get_name(portfolio)
-    description = get_description(portfolio)
-    metadata = OrderedDict(
-        "name" => isnothing(name) ? "" : name,
-        "description" => isnothing(description) ? "" : description,
-        "component_counts" => IS.get_component_counts_by_type(portfolio.data),
-        "time_series_counts" => IS.get_time_series_counts_by_type(portfolio.data),
-    )
-    if !isnothing(user_data)
-        metadata["user_data"] = user_data
-    end
-
-    open(filename, "w") do io
-        JSON3.pretty(io, metadata)
-    end
-
-    @info "Serialized Portfolio metadata to $filename"
-end
-
-"""
-Construct a Portfolio from a serialized JSON string or stream.
-
-Warning: time series data is not restored by this method. If that is needed, use the normal
-process to construct the portfolio from a serialized JSON file instead, such as with
-`Portfolio("portfolio.json")`.
-"""
-function IS.from_json(io::Union{IO, String}, ::Type{Portfolio}; kwargs...)
-    data = JSON3.read(io, Dict)
-    # These objects could be removed in to_json(portfolio). Doing it here will allow us to
-    # keep that JSON string fully consistent with time series and potentially use it in the
-    # future.
-    for component in data["data"]["components"]
-        if haskey(component, "time_series_container")
-            empty!(component["time_series_container"])
-        end
-    end
-
-    return from_dict(Portfolio, data; kwargs...)
-end
+clear_ext!(port::Portfolio) = IS.clear_ext!(port.internal)

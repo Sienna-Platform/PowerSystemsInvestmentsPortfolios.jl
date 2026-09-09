@@ -21,7 +21,6 @@
 # code needs one converter entry point per category. `convert_cost` still delegates to
 # `convert_value_curve` for the `ValueCurve` fields nested inside a cost (`CostCurve.value_curve`,
 # `vom_cost`, ...), so there is exactly one implementation of the curve/function-data recursion.
-
 # ── compound extraction, called by generated from_openapi ────────────────────
 #
 # The generated OpenAPI models declare every `$ref`ed field as bare `Any`, so reading
@@ -43,27 +42,8 @@ _updown_from_po(::Nothing) = nothing
 _inout_from_po(x::PC.InOut) = (in=x.in, out=x.out)
 _inout_from_po(::Nothing) = nothing
 
-# ── compound PO constructors, called by generated to_openapi ──────────────────
-
-_minmax_po(v) = PC.MinMax(; min=v.min, max=v.max)
-_minmax_po_optional(::Nothing) = nothing
-_minmax_po_optional(v) = _minmax_po(v)
-
-_updown_po(v) = PC.UpDown(; up=v.up, down=v.down)
-_updown_po_optional(::Nothing) = nothing
-_updown_po_optional(v) = _updown_po(v)
-
-_inout_po(v) = PC.InOut(; in=v.in, out=v.out)
-_inout_po_optional(::Nothing) = nothing
-_inout_po_optional(v) = _inout_po(v)
-
 _outagefactors_from_po(x::PC.OutageFactors) = (planned=x.planned, forced=x.forced)
 _outagefactors_from_po(::Nothing) = nothing
-
-_outagefactors_po(v) = PC.OutageFactors(; planned=v.planned, forced=v.forced)
-_outagefactors_po_optional(::Nothing) = nothing
-_outagefactors_po_optional(v) = _outagefactors_po(v)
-
 # ── value curves: FunctionData leaves + InputOutputCurve/IncrementalCurve/AverageRateCurve ──
 #
 # `convert_value_curve` accepts either the wrapped `PC.ValueCurve`/`PC.*FunctionData` oneOf or
@@ -111,78 +91,8 @@ function convert_value_curve(x)
         "every value curve in the document must be converted, not skipped",
     )
 end
-
-function _value_curve_body_to_openapi(fd::LinearFunctionData)
-    return PC.LinearFunctionData(;
-        proportional_term=get_proportional_term(fd),
-        constant_term=get_constant_term(fd),
-    )
-end
-
-function _value_curve_body_to_openapi(fd::QuadraticFunctionData)
-    return PC.QuadraticFunctionData(;
-        quadratic_term=get_quadratic_term(fd),
-        proportional_term=get_proportional_term(fd),
-        constant_term=get_constant_term(fd),
-    )
-end
-
-function _value_curve_body_to_openapi(fd::PiecewiseLinearData)
-    return PC.PiecewiseLinearData(;
-        points=[PC.XYCoords(; x=p.x, y=p.y) for p in get_points(fd)],
-    )
-end
-
-function _value_curve_body_to_openapi(fd::PiecewiseStepData)
-    return PC.PiecewiseStepData(; x_coords=get_x_coords(fd), y_coords=get_y_coords(fd))
-end
-
-function _value_curve_body_to_openapi(curve::InputOutputCurve)
-    return PC.InputOutputCurve(;
-        function_data=PC.InputOutputCurveFunctionData(
-            _value_curve_body_to_openapi(get_function_data(curve)),
-        ),
-        input_at_zero=get_input_at_zero(curve),
-    )
-end
-
-function _value_curve_body_to_openapi(curve::IncrementalCurve)
-    return PC.IncrementalCurve(;
-        function_data=PC.IncrementalCurveFunctionData(
-            _value_curve_body_to_openapi(get_function_data(curve)),
-        ),
-        initial_input=get_initial_input(curve),
-        input_at_zero=get_input_at_zero(curve),
-    )
-end
-
-function _value_curve_body_to_openapi(curve::AverageRateCurve)
-    return PC.AverageRateCurve(;
-        function_data=PC.IncrementalCurveFunctionData(
-            _value_curve_body_to_openapi(get_function_data(curve)),
-        ),
-        initial_input=get_initial_input(curve),
-        input_at_zero=get_input_at_zero(curve),
-    )
-end
-
-function _value_curve_body_to_openapi(x)
-    return error(
-        "convert_value_curve_to_openapi: no OpenAPI value-curve converter for " *
-        "$(nameof(typeof(x))) — every value curve in the document must be converted, " *
-        "not skipped",
-    )
-end
-
-convert_value_curve_to_openapi(curve::ValueCurve) =
-    PC.ValueCurve(_value_curve_body_to_openapi(curve))
-
 _value_curve_optional(::Nothing) = nothing
 _value_curve_optional(po) = convert_value_curve(po)
-
-_value_curve_po_optional(::Nothing) = nothing
-_value_curve_po_optional(curve) = convert_value_curve_to_openapi(curve)
-
 # ── operational costs ────────────────────────────────────────────────────────
 #
 # `ThermalGenerationCost`, `StorageCost`, `RenewableGenerationCost`, `HydroGenerationCost`,
@@ -242,29 +152,12 @@ function _linear_curve_no_input_at_zero(io::PC.InputOutputCurve, context::Abstra
     curve = _as_linear_curve(convert_value_curve(io), context)
     return InputOutputCurve(get_function_data(curve))
 end
-
-"""
-`LinearCurve(0.0)` is the sentinel `_vom_cost`/`_startup_fuel_offtake` map `nothing` to on
-import; reverse it back to `nothing` rather than emitting a spurious zero-cost curve.
-"""
-function _linear_curve_or_nothing(curve::InputOutputCurve)
-    if curve == LinearCurve(0.0)
-        return nothing
-    end
-    return _value_curve_body_to_openapi(curve)
-end
-_vom_cost_to_openapi(curve) = _linear_curve_or_nothing(curve)
-_startup_fuel_offtake_to_openapi(curve) = _linear_curve_or_nothing(curve)
-
 # ── fuel_cost: a bare number, or (unimplemented) a time-series reference ──────
 
 convert_cost(v::Real) = Float64(v)
 convert_cost(v::AbstractString) = error(
     "convert_cost: a String variant (\"$v\") — a time-series reference — is not implemented",
 )
-
-_fuel_cost_to_openapi(v::Real) = Float64(v)
-
 # ── ProductionVariableCostCurve: CostCurve / FuelCurve ─────────────────────────
 
 function convert_cost(c::PC.CostCurve)
@@ -290,58 +183,6 @@ convert_cost(w::PC.ProductionVariableCostCurve) = convert_cost(w.value)
 
 _optional_cost_curve(::Nothing) = zero(CostCurve)
 _optional_cost_curve(c::PC.CostCurve) = convert_cost(c)
-
-_power_units_to_string(::NaturalUnit, ::ProductionVariableCostCurve) = "NATURAL_UNITS"
-_power_units_to_string(::DeviceBaseUnit, ::ProductionVariableCostCurve) = "DEVICE_BASE"
-
-"""
-`CostCurve.power_units`/`FuelCurve.power_units` carry no system-base member — a curve whose
-per-unit data is on the system base is expected to record that base in the owning component's
-`base_power` and ride as `DEVICE_BASE`. This converter is handed the curve alone, so it can
-neither check that the component's `base_power` really is the system base nor rescale the
-curve's x-coordinates by `system_base / device_base` if it is not. Relabelling would silently
-corrupt magnitudes, so fail loudly instead (psy6 rule).
-"""
-function _power_units_to_string(::SystemBaseUnit, cost::ProductionVariableCostCurve)
-    error(
-        "cannot export $(typeof(cost)) with power_units = SystemBaseUnit(): the OpenAPI " *
-        "power_units enum accepts only DEVICE_BASE and NATURAL_UNITS, and this converter " *
-        "has no access to the owning component's base_power to rescale the curve. Rebuild " *
-        "the curve on the component's own base (DeviceBaseUnit) or in natural units first.",
-    )
-end
-
-function convert_cost_to_openapi(cost::CostCurve)
-    return PC.CostCurve(;
-        power_units=_power_units_to_string(get_power_units(cost), cost),
-        value_curve=convert_value_curve_to_openapi(get_value_curve(cost)),
-        vom_cost=_vom_cost_to_openapi(get_vom_cost(cost)),
-    )
-end
-
-function convert_cost_to_openapi(cost::FuelCurve)
-    return PC.FuelCurve(;
-        power_units=_power_units_to_string(get_power_units(cost), cost),
-        value_curve=convert_value_curve_to_openapi(get_value_curve(cost)),
-        fuel_cost=_fuel_cost_to_openapi(IS.get_fuel_cost(cost)),
-        startup_fuel_offtake=_startup_fuel_offtake_to_openapi(
-            PSY.get_startup_fuel_offtake(cost),
-        ),
-        vom_cost=_vom_cost_to_openapi(get_vom_cost(cost)),
-    )
-end
-
-"""
-`zero(CostCurve)` is the sentinel `_optional_cost_curve` maps `nothing` to on import;
-reverse it back to `nothing` (curtailment_cost, storage charge/discharge_variable_cost).
-"""
-function _optional_cost_curve_to_openapi(cost::CostCurve)
-    if cost == zero(CostCurve)
-        return nothing
-    end
-    return convert_cost_to_openapi(cost)
-end
-
 # ── start_up: a bare number, or a multi-stage / charge-discharge breakdown ────
 
 convert_cost(s::PC.StartUpStages) = (hot=s.hot, warm=s.warm, cold=s.cold)
@@ -349,21 +190,6 @@ convert_cost(w::PC.ThermalGenerationCostStartUp) = convert_cost(w.value)
 
 convert_cost(s::PC.StorageCostStartUpOneOf) = (charge=s.charge, discharge=s.discharge)
 convert_cost(w::PC.StorageCostStartUp) = convert_cost(w.value)
-
-_thermal_start_up_to_openapi(x::Real) = PC.ThermalGenerationCostStartUp(Float64(x))
-function _thermal_start_up_to_openapi(x::NamedTuple)
-    return PC.ThermalGenerationCostStartUp(
-        PC.StartUpStages(; hot=x.hot, warm=x.warm, cold=x.cold),
-    )
-end
-
-_storage_start_up_to_openapi(x::Real) = PC.StorageCostStartUp(Float64(x))
-function _storage_start_up_to_openapi(x::NamedTuple)
-    return PC.StorageCostStartUp(
-        PC.StorageCostStartUpOneOf(; charge=x.charge, discharge=x.discharge),
-    )
-end
-
 # ── Operation-cost containers ──────────────────────────────────────────────
 
 function convert_cost(po::PC.ThermalGenerationCost)
@@ -427,60 +253,6 @@ function convert_cost(po)
         "every cost in the document must be converted, not skipped",
     )
 end
-
-function convert_cost_to_openapi(cost::ThermalGenerationCost)
-    return PC.ThermalGenerationCost(;
-        fixed=get_fixed(cost),
-        shut_down=get_shut_down(cost),
-        start_up=_thermal_start_up_to_openapi(get_start_up(cost)),
-        variable_operation_cost=PC.ProductionVariableCostCurve(
-            convert_cost_to_openapi(get_variable_operation_cost(cost)),
-        ),
-    )
-end
-
-function convert_cost_to_openapi(cost::RenewableGenerationCost)
-    return PC.RenewableGenerationCost(;
-        variable_operation_cost=convert_cost_to_openapi(get_variable_operation_cost(cost)),
-        # `get_curtailment_cost` is shadowed in this module by `DemandSideTechnology`'s
-        # generated 2-arg getter of the same name, so PSY's 1-arg getter must be qualified.
-        curtailment_cost=_optional_cost_curve_to_openapi(PSY.get_curtailment_cost(cost)),
-        fixed=get_fixed(cost),
-    )
-end
-
-function convert_cost_to_openapi(cost::HydroGenerationCost)
-    return PC.HydroGenerationCost(;
-        fixed=get_fixed(cost),
-        variable_operation_cost=PC.ProductionVariableCostCurve(
-            convert_cost_to_openapi(get_variable_operation_cost(cost)),
-        ),
-    )
-end
-
-function convert_cost_to_openapi(cost::StorageCost)
-    return PC.StorageCost(;
-        charge_variable_cost=_optional_cost_curve_to_openapi(
-            get_charge_variable_cost(cost),
-        ),
-        discharge_variable_cost=_optional_cost_curve_to_openapi(
-            get_discharge_variable_cost(cost),
-        ),
-        fixed=get_fixed(cost),
-        shut_down=get_shut_down(cost),
-        start_up=_storage_start_up_to_openapi(get_start_up(cost)),
-        energy_shortage_cost=get_energy_shortage_cost(cost),
-        energy_surplus_cost=get_energy_surplus_cost(cost),
-    )
-end
-
-function convert_cost_to_openapi(cost)
-    return error(
-        "convert_cost_to_openapi: no OpenAPI operational-cost converter for " *
-        "$(nameof(typeof(cost))) — every cost in the document must be converted, not skipped",
-    )
-end
-
 # ── financial data ───────────────────────────────────────────────────────────
 
 function convert_nested_data(po::PI.TechnologyFinancialData)
@@ -500,25 +272,6 @@ function convert_nested_data(po)
         "$(nameof(typeof(po))) — every financial data record must be converted, not skipped",
     )
 end
-
-function convert_nested_data_to_openapi(fd::TechnologyFinancialData)
-    return PI.TechnologyFinancialData(;
-        capital_recovery_period=get_capital_recovery_period(fd),
-        technology_base_year=get_technology_base_year(fd),
-        debt_fraction=get_debt_fraction(fd),
-        debt_rate=get_debt_rate(fd),
-        return_on_equity=get_return_on_equity(fd),
-        tax_rate=get_tax_rate(fd),
-    )
-end
-
-function convert_nested_data_to_openapi(fd)
-    return error(
-        "convert_nested_data_to_openapi: no OpenAPI financial-data converter for " *
-        "$(nameof(typeof(fd))) — every financial data record must be converted, not skipped",
-    )
-end
-
 # ── investment costs: CapitalCost / StorageCapitalCost ────────────────────────
 #
 # Nested cost structs that embed `ValueCurve`s, so unlike `TechnologyFinancialData`
@@ -533,14 +286,6 @@ function convert_nested_data(po::PC.CapitalCost)
         interconnection_cost=something(po.interconnection_cost, 0.0),
     )
 end
-
-function convert_nested_data_to_openapi(cc::CapitalCost)
-    return PC.CapitalCost(;
-        capital_cost=convert_value_curve_to_openapi(get_capital_cost(cc)),
-        interconnection_cost=get_interconnection_cost(cc),
-    )
-end
-
 function convert_nested_data(po::PC.StorageCapitalCost)
     return StorageCapitalCost(;
         charge_capital_cost=convert_value_curve(
@@ -558,18 +303,6 @@ function convert_nested_data(po::PC.StorageCapitalCost)
         interconnection_cost=something(po.interconnection_cost, 0.0),
     )
 end
-
-function convert_nested_data_to_openapi(sc::StorageCapitalCost)
-    return PC.StorageCapitalCost(;
-        charge_capital_cost=convert_value_curve_to_openapi(get_charge_capital_cost(sc)),
-        discharge_capital_cost=convert_value_curve_to_openapi(
-            get_discharge_capital_cost(sc),
-        ),
-        energy_capital_cost=convert_value_curve_to_openapi(get_energy_capital_cost(sc)),
-        interconnection_cost=get_interconnection_cost(sc),
-    )
-end
-
 # ── capacity bounds: a MinMax, or a per-topology map of MinMax ────────────────
 #
 # The platform model wraps the value in a field-specific AnyOf struct whose `.value` is
@@ -584,7 +317,3 @@ _capacity_bound_value(d::AbstractDict, refs::OpenAPIRefs) = Dict{PSY.Topology, M
     resolve_ref(refs, parse(Int, string(k)), PSY.Topology) => (min=v.min, max=v.max) for
     (k, v) in d
 )
-
-_capacity_bound_po_value(v::NamedTuple, ::OpenAPIRefs) = PC.MinMax(; min=v.min, max=v.max)
-_capacity_bound_po_value(d::AbstractDict, refs::OpenAPIRefs) =
-    Dict(string(component_id(refs, k)) => PC.MinMax(; min=v.min, max=v.max) for (k, v) in d)
