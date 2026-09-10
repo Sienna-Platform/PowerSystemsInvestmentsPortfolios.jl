@@ -210,11 +210,7 @@ end
 """
 Construct an empty `Portfolio` specifying aggregation and data. Useful for building a Portfolio from scratch and used in the database parser.
 """
-function Portfolio(
-    data, 
-    aggregation;
-    kwargs...,
-)
+function Portfolio(data, aggregation; kwargs...)
     return Portfolio(
         aggregation,
         data,
@@ -304,7 +300,8 @@ set_description!(val::Portfolio, description::AbstractString) =
 """
 Set the financial data of the portfolio.
 """
-set_financial_data!(val::Portfolio, financial_data::PortfolioFinancialData) = val.financial_data = financial_data
+set_financial_data!(val::Portfolio, financial_data::PortfolioFinancialData) =
+    val.financial_data = financial_data
 
 """
 Set the base year of the portfolio.

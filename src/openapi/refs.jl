@@ -113,7 +113,6 @@ resolve_ref(::OpenAPIRefs, ::Nothing, ::Type) = nothing
 resolve_ref(refs::OpenAPIRefs, id::Integer, ::Type{T}) where {T} =
     _resolve(refs, id, T <: PSY.Topology)::T
 
-
 """
 Resolve a list of references whose element type the descriptor states.
 

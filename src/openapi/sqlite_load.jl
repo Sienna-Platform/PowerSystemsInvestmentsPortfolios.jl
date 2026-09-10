@@ -16,8 +16,10 @@ seam so `_attach_attribute!` can stay group-index-aware if a plant-family type i
 """
 _group_index_by_pair(::PD.PortfolioDocument) = Dict{Tuple{Int, Int}, Vector{Int}}()
 
-"""Loud error naming `id` when the document's declared `attribute_type` is absent or does
-not match `nameof(typeof(resolved))`."""
+"""
+Loud error naming `id` when the document's declared `attribute_type` is absent or does
+not match `nameof(typeof(resolved))`.
+"""
 function _check_resolved_type_matches(resolved, declared_type, id)
     isnothing(declared_type) && error(
         "load_supplemental_attribute_associations!: association referencing id=$id has " *
@@ -92,7 +94,11 @@ function load_supplemental_attribute_associations!(
             end
             group_indices = get(group_index_by_pair, (attribute_id, component_id), nothing)
             _attach_attribute!(
-                portfolio, stored_pairs, _resolve(refs, component_id, false), attribute, group_indices,
+                portfolio,
+                stored_pairs,
+                _resolve(refs, component_id, false),
+                attribute,
+                group_indices,
             )
         end
     end

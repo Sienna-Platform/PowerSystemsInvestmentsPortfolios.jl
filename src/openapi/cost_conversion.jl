@@ -47,14 +47,17 @@ _outagefactors_from_po(::Nothing) = nothing
 
 const _IMPORT_STORE = Base.ScopedValues.ScopedValue{IS.Store}()
 
-"""No sidecar was adopted, so there is nothing to bind; a document that then names a
-time-series-backed cost fails in `_current_import_store`."""
+"""
+No sidecar was adopted, so there is nothing to bind; a document that then names a
+time-series-backed cost fails in `_current_import_store`.
+"""
 _with_import_store(f, ::Nothing) = f()
 
-"""Bind `store` for the duration of `f()`. `ScopedValue`-based, so a nested import and a
-task spawned inside one both see the innermost binding."""
-_with_import_store(f, store::IS.Store) =
-    Base.ScopedValues.with(f, _IMPORT_STORE => store)
+"""
+Bind `store` for the duration of `f()`. `ScopedValue`-based, so a nested import and a
+task spawned inside one both see the innermost binding.
+"""
+_with_import_store(f, store::IS.Store) = Base.ScopedValues.with(f, _IMPORT_STORE => store)
 
 function _current_import_store()
     store = Base.ScopedValues.get(_IMPORT_STORE)
@@ -355,6 +358,7 @@ _capacity_bound_value(x::PC.MinMax, ::OpenAPIRefs) = _minmax_nt(x)
 function _capacity_bound_value(d::AbstractDict, refs::OpenAPIRefs)
     (haskey(d, "min") && haskey(d, "max")) && return _minmax_nt(d)
     return Dict{PSY.Topology, MinMax}(
-        resolve_ref(refs, parse(Int, string(k)), PSY.Topology) => _minmax_nt(v) for (k, v) in d
+        resolve_ref(refs, parse(Int, string(k)), PSY.Topology) => _minmax_nt(v) for
+        (k, v) in d
     )
 end

@@ -261,10 +261,10 @@ end
 
 function convert_nested_data_to_openapi(fd::PortfolioFinancialData)
     return PI.PortfolioFinancialData(;
-        base_year = fd.base_year,
-        discount_rate = fd.discount_rate,
-        inflation_rate = fd.inflation_rate,
-        interest_rate = fd.interest_rate,
+        base_year=fd.base_year,
+        discount_rate=fd.discount_rate,
+        inflation_rate=fd.inflation_rate,
+        interest_rate=fd.interest_rate,
     )
 end
 

@@ -90,9 +90,11 @@ for (psip_type, _key) in DOCUMENT_PLAN
     @eval is_document_exportable(::$psip_type) = true
 end
 
-"""Error, naming every offending type, when the document declares a component type with
+"""
+Error, naming every offending type, when the document declares a component type with
 no registered `from_openapi` converter — psy6 forbids silently skipping unconverted
-types."""
+types.
+"""
 function _check_no_unconverted_component_types(components::AbstractDict)
     unconverted = sort([k for k in keys(components) if !(k in DOCUMENT_PLAN_KEYS)])
     isempty(unconverted) || error(
@@ -162,7 +164,10 @@ function _attach_attribute!(
     pair = (IS.get_id(component), IS.get_id(attribute))
     if pair in stored_pairs
         IS.attach_supplemental_attribute!(
-            portfolio.data, component, attribute; allow_existing_time_series = true,
+            portfolio.data,
+            component,
+            attribute;
+            allow_existing_time_series=true,
         )
     else
         IS.add_supplemental_attribute!(portfolio.data, component, attribute)
@@ -217,8 +222,10 @@ end
 
 # ── Document-level entry point ──────────────────────────────────────────────────
 
-"""Apply one optional document metadata field, dispatching on presence rather than
-branching: a field the document omits leaves `System`'s own value untouched."""
+"""
+Apply one optional document metadata field, dispatching on presence rather than
+branching: a field the document omits leaves `System`'s own value untouched.
+"""
 _apply_metadata_field!(::Any, ::Portfolio, ::Nothing) = nothing
 _apply_metadata_field!(setter, portfolio::Portfolio, value) = setter(portfolio, value)
 
@@ -235,7 +242,11 @@ discard it silently. This is the same precedence `frequency` already has, where 
 keyword is merged after the document's — the three document-owned keywords now agree instead
 of splitting on which one happens to be applied after construction.
 """
-function _apply_document_metadata!(portfolio::Portfolio, doc::PD.PortfolioDocument, supplied)
+function _apply_document_metadata!(
+    portfolio::Portfolio,
+    doc::PD.PortfolioDocument,
+    supplied,
+)
     :name in supplied || _apply_metadata_field!(set_name!, portfolio, PD.get_name(doc))
     :description in supplied ||
         _apply_metadata_field!(set_description!, portfolio, PD.get_description(doc))
@@ -253,7 +264,7 @@ silently reset a 50 Hz system to the 60 Hz default. A caller's own `frequency` i
 `portfolio_kwargs` wins, since it is merged after this one.
 """
 _frequency_kwarg(::Nothing) = (;)
-_frequency_kwarg(value) = (; frequency = Float64(value))
+_frequency_kwarg(value) = (; frequency=Float64(value))
 
 """
 $(TYPEDSIGNATURES)
@@ -302,8 +313,8 @@ function from_openapi(
     ::Type{Portfolio},
     doc::PD.PortfolioDocument,
     document_path::AbstractString;
-    base_power::Float64 = 100.0,
-    time_series_storage_path = nothing,
+    base_power::Float64=100.0,
+    time_series_storage_path=nothing,
     portfolio_kwargs...,
 )
     _check_no_unconverted_component_types(doc.components)
@@ -312,13 +323,15 @@ function from_openapi(
     _apply_document_metadata!(portfolio, doc, keys(portfolio_kwargs))
 
     system_path = _resolve_base_system(doc, dirname(document_path))
-    system = isnothing(system_path) ? DEFAULT_SYSTEM() : PSY.from_file(PSY.System, system_path)
+    system =
+        isnothing(system_path) ? DEFAULT_SYSTEM() : PSY.from_file(PSY.System, system_path)
     set_base_system!(portfolio, system)
 
     schedule = _resolve_investment_schedule(doc)
     isnothing(schedule) || set_investment_schedule!(portfolio, schedule)
 
-    isnothing(doc.financial_data) || set_financial_data!(portfolio, convert_nested_data(doc.financial_data))
+    isnothing(doc.financial_data) ||
+        set_financial_data!(portfolio, convert_nested_data(doc.financial_data))
 
     store = if isnothing(time_series_storage_path)
         nothing
@@ -349,8 +362,10 @@ function from_openapi(
     return portfolio
 end
 
-add_component!(portfolio::Portfolio, component::Technology) = add_technology!(portfolio, component)
-add_component!(portfolio::Portfolio, component::Requirement) = add_requirement!(portfolio, component)
+add_component!(portfolio::Portfolio, component::Technology) =
+    add_technology!(portfolio, component)
+add_component!(portfolio::Portfolio, component::Requirement) =
+    add_requirement!(portfolio, component)
 
 function _resolve_investment_schedule(doc::PD.PortfolioDocument)
     results = PD.get_investment_schedule(doc)
@@ -361,8 +376,11 @@ function _resolve_base_system(doc::PD.PortfolioDocument, dir::AbstractString)
     named = PD.get_base_system_file(doc)          # accessor confirmed
     named === nothing && return nothing
     path = joinpath(dir, named)
-    ispath(path) || throw(IS.DataFormatError(
-        "the document names base_system_file=\"$named\" but $path does not exist"))
+    ispath(path) || throw(
+        IS.DataFormatError(
+            "the document names base_system_file=\"$named\" but $path does not exist",
+        ),
+    )
     return path
 end
 
@@ -383,19 +401,23 @@ so the rows have to be there first.
 """
 _load_time_series_associations!(::Portfolio, ::PD.PortfolioDocument, ::Nothing) = nothing
 
-function _load_time_series_associations!(portfolio::Portfolio, doc::PD.PortfolioDocument, store)
+function _load_time_series_associations!(
+    portfolio::Portfolio,
+    doc::PD.PortfolioDocument,
+    store,
+)
     isempty(doc.time_series_associations) && return nothing
     if _catalog_is_authoritative(store)
         return _validate_time_series_associations!(portfolio, doc)
     end
-    IS.import_time_series_association_rows!(
-        store, JSON.json(doc.time_series_associations),
-    )
+    IS.import_time_series_association_rows!(store, JSON.json(doc.time_series_associations))
     return nothing
 end
 
-"""Whether the adopted store brought its own association rows, in which case they outrank the
-document's. A count, not a listing: the answer is a yes/no and the catalog can be large."""
+"""
+Whether the adopted store brought its own association rows, in which case they outrank the
+document's. A count, not a listing: the answer is a yes/no and the catalog can be large.
+"""
 _catalog_is_authoritative(store) = !iszero(IS.get_num_time_series(store))
 
 """
@@ -415,7 +437,8 @@ function _portfolio_with_sidecar(
     time_series_storage_path;
     portfolio_kwargs...,
 )
-    isnothing(time_series_storage_path) && return Portfolio(_deserialize_type_name(doc.aggregation); portfolio_kwargs...)
+    isnothing(time_series_storage_path) &&
+        return Portfolio(_deserialize_type_name(doc.aggregation); portfolio_kwargs...)
     isfile(time_series_storage_path) || error(
         "from_openapi(System, doc): time_series_storage_path " *
         "\"$time_series_storage_path\" does not exist",
@@ -423,7 +446,9 @@ function _portfolio_with_sidecar(
     read_only = get(portfolio_kwargs, :time_series_read_only, false)
     directory = get(portfolio_kwargs, :time_series_directory, nothing)
     store = IS.open_deserialized_infrastore_store(
-        String(time_series_storage_path), directory, read_only,
+        String(time_series_storage_path),
+        directory,
+        read_only,
     )
     attribute_manager = IS.SupplementalAttributeManager(store)
     # Positional: IS's keyword `SystemData` constructor opens its own store and cannot adopt
@@ -431,14 +456,13 @@ function _portfolio_with_sidecar(
     # advances the counter past each one as components and attributes are adopted.
     data = IS.SystemData(
         IS.read_validation_descriptor(PORTFOLIO_STRUCT_DESCRIPTOR_FILE),
-        IS.TimeSeriesManager(; data_store = store, read_only = read_only),
+        IS.TimeSeriesManager(; data_store=store, read_only=read_only),
         1,
         Dict{String, Set{Int}}(),
         attribute_manager,
         IS.InfrastructureSystemsInternal(),
     )
     return Portfolio(data, _deserialize_type_name(doc.aggregation); portfolio_kwargs...)
-
 end
 
 """
@@ -446,8 +470,7 @@ Cross-check the document's own `time_series_associations` rows against the adopt
 catalog. A no-op when there is no sidecar or the document names no rows.
 
 The sidecar is authoritative, so this never writes: every document row must match a sidecar
-row, identified by `(owner_id, owner_category, time_series_type, name, resolution, interval,
-features)` — the same identity tuple the store's own uniqueness index keys on (`owner_type`
+row, identified by `(owner_id, owner_category, time_series_type, name, resolution, interval, features)` — the same identity tuple the store's own uniqueness index keys on (`owner_type`
 is a denormalized label excluded from identity); a type that carries no `resolution`/
 `interval` field at all (e.g. `NonSequentialTimeSeries`) treats it as `nothing`. A matched row
 must then agree with its counterpart field-for-field — compared as canonical OpenAPI JSON,
@@ -458,9 +481,13 @@ the bundle is corrupt and throws `IS.DataFormatError` naming the row and, for dr
 differing fields. Sidecar rows the document does not mention are tolerated (`@debug`-logged)
 — a document only ever names the owners it carries.
 """
-function _validate_time_series_associations!(portfolio::Portfolio, doc::PD.PortfolioDocument)
+function _validate_time_series_associations!(
+    portfolio::Portfolio,
+    doc::PD.PortfolioDocument,
+)
     store_rows = [
-        _unwrap_oneof(row) for row in IS.openapi_time_series_association_rows(portfolio.data)
+        _unwrap_oneof(row) for
+        row in IS.openapi_time_series_association_rows(portfolio.data)
     ]
     store_by_identity = Dict(_ts_row_identity(row) => row for row in store_rows)
     referenced = Set{keytype(store_by_identity)}()
@@ -519,27 +546,34 @@ function _validate_time_series_associations!(portfolio::Portfolio, doc::PD.Portf
     return nothing
 end
 
-"""The wire field value of `field` on `row`, or `nothing` when `row`'s type does not carry
+"""
+The wire field value of `field` on `row`, or `nothing` when `row`'s type does not carry
 that field at all (e.g. `NonSequentialTimeSeries` has no `resolution`/`interval`) — as
 opposed to carrying it unset, which is also `nothing`. Either way, absent and unset compare
-equal for identity purposes."""
+equal for identity purposes.
+"""
 function _ts_field(row, field::Symbol)
     hasproperty(row, field) && return getproperty(row, field)
     return nothing
 end
 
-"""The `(owner_id, owner_category, time_series_type, name, resolution, interval, features)`
+"""
+The `(owner_id, owner_category, time_series_type, name, resolution, interval, features)`
 named tuple a time series association row is matched by — the same identity the store's own
 uniqueness index keys on. See [`_validate_time_series_associations!`](@ref).
 
 Features are compared by value: the wire type wraps each value in a mutable
 `TimeSeriesFeatureValue`, which compares by object identity, so a document row and its store
-counterpart would never match on the wrappers themselves."""
+counterpart would never match on the wrappers themselves.
+"""
 _ts_row_identity(row) = (
-    owner_id = row.owner_id, owner_category = row.owner_category,
-    time_series_type = row.time_series_type, name = row.name,
-    resolution = _ts_field(row, :resolution), interval = _ts_field(row, :interval),
-    features = _ts_feature_values(row.features),
+    owner_id=row.owner_id,
+    owner_category=row.owner_category,
+    time_series_type=row.time_series_type,
+    name=row.name,
+    resolution=_ts_field(row, :resolution),
+    interval=_ts_field(row, :interval),
+    features=_ts_feature_values(row.features),
 )
 
 _ts_feature_values(::Nothing) = nothing
@@ -548,20 +582,24 @@ _ts_feature_values(features::AbstractDict) =
 _ts_feature_value(v::InfrastructureTimeSeriesOpenAPIModels.TimeSeriesFeatureValue) = v.value
 _ts_feature_value(v) = v
 
-"""Human-readable label for a time series association identity, for error messages."""
+"""
+Human-readable label for a time series association identity, for error messages.
+"""
 function _ts_row_label(identity)
     return "$(identity.time_series_type) owner $(identity.owner_id) \"$(identity.name)\""
 end
 
-"""Wire field names on which `doc_row` and `store_row` differ, comparing canonical OpenAPI
-JSON and excluding `uri`/`data_hash`."""
+"""
+Wire field names on which `doc_row` and `store_row` differ, comparing canonical OpenAPI
+JSON and excluding `uri`/`data_hash`.
+"""
 function _ts_row_drift(doc_row, store_row)
     doc_json = _ts_row_wire_dict(doc_row)
     store_json = _ts_row_wire_dict(store_row)
     fields = union(keys(doc_json), keys(store_json))
-    return sort!(
-        [f for f in fields if get(doc_json, f, nothing) != get(store_json, f, nothing)],
-    )
+    return sort!([
+        f for f in fields if get(doc_json, f, nothing) != get(store_json, f, nothing)
+    ],)
 end
 
 function _ts_row_wire_dict(row)
@@ -607,9 +645,8 @@ Resolve a `"Module.Type"` string (as written by [`_serialize_type_name`](@ref)) 
 """
 function _deserialize_type_name(qualified::AbstractString)
     parts = split(qualified, '.')
-    length(parts) >= 2 || error(
-        "_deserialize_type_name: expected a \"Module.Type\" name, got \"$qualified\"",
-    )
+    length(parts) >= 2 ||
+        error("_deserialize_type_name: expected a \"Module.Type\" name, got \"$qualified\"")
     obj = getfield(@__MODULE__, Symbol(parts[1]))
     for p in parts[2:end]
         obj = getfield(obj, Symbol(p))

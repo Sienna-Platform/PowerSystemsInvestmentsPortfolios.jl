@@ -156,7 +156,8 @@ function _export_supplemental_attributes(refs::OpenAPIRefs, portfolio::Portfolio
     attribute_rows = OpenAPI.APIModel[]
     association_rows = IC.SupplementalAttributeAssociation[]
     attributes_by_id = Dict{Int, SupplementalAttribute}(
-        IS.get_id(attr) => attr for attr in IS.iterate_supplemental_attributes(portfolio.data)
+        IS.get_id(attr) => attr for
+        attr in IS.iterate_supplemental_attributes(portfolio.data)
     )
     for row in IS.openapi_supplemental_attribute_association_rows(portfolio.data)
         entity_id = Int(row.component_id)
@@ -185,13 +186,15 @@ end
 # metadata row by hand. The catalog's owner ids are already document ids for both owner
 # kinds, so a row's `owner_category` is read only to pick the right failure mode.
 
-"""Whether a time series owner absent from the document is a tolerated loss or a hard error.
+"""
+Whether a time series owner absent from the document is a tolerated loss or a hard error.
 
 A component owner may be absent because it has no converter — the same reported loss
 [`warn_unexportable_components`](@ref) already flags. An absent supplemental-attribute owner
 means the sidecar and the attribute manager disagree about what exists: every attribute the
 document can describe was registered into `refs` by `_export_supplemental_attributes` before
-this runs."""
+this runs.
+"""
 function _absent_owner_is_tolerated(row)
     row.owner_category == "Component" && return true
     row.owner_category == "SupplementalAttribute" && return false
@@ -215,11 +218,13 @@ A dataset in that state has a broken relationship -- a cost pointing at somethin
 document does not contain -- so this errors rather than dropping the reference. Dropping it
 would change the model on the way out, and quietly.
 """
-function _check_costs_reference_declared_series!(doc::PD.PortfolioDocument, emitted::Set{Int})
+function _check_costs_reference_declared_series!(
+    doc::PD.PortfolioDocument,
+    emitted::Set{Int},
+)
     isempty(emitted) && return nothing
-    declared = Set{Int}(
-        _unwrap_oneof(row).association_id for row in doc.time_series_associations
-    )
+    declared =
+        Set{Int}(_unwrap_oneof(row).association_id for row in doc.time_series_associations)
     dangling = sort!(collect(setdiff(emitted, declared)))
     isempty(dangling) && return nothing
     throw(
@@ -286,13 +291,16 @@ function _export_all_time_series(
     return rows
 end
 
-"""Enumerate the live instances of a `DOCUMENT_PLAN` type. Technology types walk the masked
+"""
+Enumerate the live instances of a `DOCUMENT_PLAN` type. Technology types walk the masked
 container alongside the live one so components masked out of the portfolio's own enumeration are
-still exported by id; requirement types (which have no masked container) enumerate directly."""
-_plan_components(portfolio::Portfolio, ::Type{T}) where {T <: Technology} = Iterators.flatten((
-    get_technologies(T, portfolio),
-    IS.get_masked_components(T, portfolio.data),
-))
+still exported by id; requirement types (which have no masked container) enumerate directly.
+"""
+_plan_components(portfolio::Portfolio, ::Type{T}) where {T <: Technology} =
+    Iterators.flatten((
+        get_technologies(T, portfolio),
+        IS.get_masked_components(T, portfolio.data),
+    ))
 _plan_components(portfolio::Portfolio, ::Type{T}) where {T <: Requirement} =
     get_requirements(T, portfolio)
 
@@ -344,8 +352,8 @@ function _export_requirements_associations!(
             PD.add_requirement_association!(
                 doc,
                 PO.RequirementAssociation(;
-                    requirement_id = component_id(refs, requirement),
-                    entity_id = component_id(refs, technology),
+                    requirement_id=component_id(refs, requirement),
+                    entity_id=component_id(refs, technology),
                 ),
             )
         end
@@ -376,26 +384,26 @@ Errors rather than silently dropping data when time series are attached but no
 function to_openapi(
     portfolio::Portfolio;
     base_system_path::AbstractString,
-    time_series_storage_path = nothing,
-    write_catalog::Bool = false,
+    time_series_storage_path=nothing,
+    write_catalog::Bool=false,
 )
     warn_unexportable_components(portfolio)
     refs = _build_export_refs(portfolio)
 
     doc = PD.PortfolioDocument(
         _serialize_type_name(get_aggregation(portfolio));
-        name = get_name(portfolio),
-        description = get_description(portfolio),
-        base_system_file = _base_system_relpath(base_system_path),
-        time_series_storage_file = _sidecar_basename(time_series_storage_path),
-        financial_data = convert_nested_data_to_openapi(get_financial_data(portfolio)),
-        investment_schedule = isnothing(get_investment_schedule(portfolio)) ? nothing : _serialize_schedule(get_investment_schedule(portfolio)),
+        name=get_name(portfolio),
+        description=get_description(portfolio),
+        base_system_file=_base_system_relpath(base_system_path),
+        time_series_storage_file=_sidecar_basename(time_series_storage_path),
+        financial_data=convert_nested_data_to_openapi(get_financial_data(portfolio)),
+        investment_schedule=isnothing(get_investment_schedule(portfolio)) ? nothing :
+                            _serialize_schedule(get_investment_schedule(portfolio)),
     )
     emitted = Set{Int}()
     task_local_storage(_EMITTED_ASSOCIATION_IDS_KEY, emitted) do
         _export_components!(doc, refs, portfolio)
-        supplemental_attributes,
-        supplemental_attribute_associations =
+        supplemental_attributes, supplemental_attribute_associations =
             _export_supplemental_attributes(refs, portfolio)
         append!(doc.supplemental_attributes, supplemental_attributes)
         append!(
@@ -405,7 +413,12 @@ function to_openapi(
         _export_requirements_associations!(doc, refs, portfolio)
         append!(
             doc.time_series_associations,
-            _export_all_time_series(portfolio, refs, time_series_storage_path, write_catalog),
+            _export_all_time_series(
+                portfolio,
+                refs,
+                time_series_storage_path,
+                write_catalog,
+            ),
         )
         _reserve_ids!(doc, refs)
     end
@@ -423,9 +436,11 @@ _sidecar_basename(path) = basename(String(path))
 _base_system_relpath(::Nothing) = nothing
 _base_system_relpath(path) = basename(String(path))
 
-"""Reserve `doc`'s own id counter above every id already assigned, so it cannot reissue one
+"""
+Reserve `doc`'s own id counter above every id already assigned, so it cannot reissue one
 that collides. Components and supplemental attributes share one id stream, and `refs`
-registers both kinds by the time this runs."""
+registers both kinds by the time this runs.
+"""
 function _reserve_ids!(doc::PD.PortfolioDocument, refs::OpenAPIRefs)
     if isempty(refs.by_component_id)
         return nothing

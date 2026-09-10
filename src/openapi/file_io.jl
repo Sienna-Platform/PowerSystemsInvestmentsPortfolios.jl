@@ -53,23 +53,34 @@
 #
 # `to_openapi(portfolio; write_catalog)` is the knob.
 
-"""Document member of a serialized Portfolio directory."""
+"""
+Document member of a serialized Portfolio directory.
+"""
 const PORTFOLIO_DOCUMENT_FILE = "portfolio.json"
 
-"""Base System document member of a serialized Portfolio directory."""
+"""
+Base System document member of a serialized Portfolio directory.
+"""
 const BASE_SYSTEM_DOCUMENT_FILE = "base_system.json"
 
-"""Base System subdirectory for a serialized Portfolio directory."""
+"""
+Base System subdirectory for a serialized Portfolio directory.
+"""
 const BASE_SYSTEM_DIRECTORY = "base_system"
 
-"""HDF5 sidecar member of a serialized Portfolio directory."""
+"""
+HDF5 sidecar member of a serialized Portfolio directory.
+"""
 const TIME_SERIES_FILE = "time_series.h5"
 
-"""Suffix InfraStore gives its catalog: the sidecar's own name plus this. Named once so the
-document forms, which name their sidecar after the document, derive the same path."""
+"""
+Suffix InfraStore gives its catalog: the sidecar's own name plus this. Named once so the
+document forms, which name their sidecar after the document, derive the same path.
+"""
 const TIME_SERIES_CATALOG_SUFFIX = ".sqlite"
 
-"""InfraStore's SQLite catalog, beside the HDF5 sidecar.
+"""
+InfraStore's SQLite catalog, beside the HDF5 sidecar.
 
 A member of a `:sienna` bundle and not of a `:json` one — that is the difference between the
 formats. Named here either way, because a directory being overwritten is cleared of it: the
@@ -114,20 +125,21 @@ function _prepare_write_targets(paths, force::Bool)
         # Removed rather than truncated: Hdf5TimeSeriesStorage appends to an existing file,
         # so a stale sidecar would leave orphaned series behind in the new bundle.
         if force
-            rm(path; force = true)
+            rm(path; force=true)
         end
     end
     return nothing
 end
 
-"""Create `dir` when it names one; a bare filename has no parent to create."""
+"""
+Create `dir` when it names one; a bare filename has no parent to create.
+"""
 function _ensure_parent_dir(dir::AbstractString)
     if !isempty(dir)
         mkpath(dir)
     end
     return nothing
 end
-
 
 """
 $(TYPEDSIGNATURES)
@@ -150,20 +162,32 @@ and selects the basis its values are written on; it does not affect the portfoli
 function to_file(
     portfolio::Portfolio,
     path::AbstractString;
-    base_system_units::IS.AbstractUnitSystem = DU,
-    force::Bool = false,
-    pretty::Bool = false,
+    base_system_units::IS.AbstractUnitSystem=DU,
+    force::Bool=false,
+    pretty::Bool=false,
 )
     # The unknown-extension case is refused here, before anything dispatches on the form: a
     # `Val`-style dispatch reached first would turn a typo'd extension into a `MethodError` on
     # an internal helper instead of this message.
     ext = lowercase(splitext(path)[2])
     if ext == IS.SIENNA_ARCHIVE_EXTENSION
-        _to_file_sienna(portfolio, path; force = force, pretty = pretty)
+        _to_file_sienna(portfolio, path; force=force, pretty=pretty)
     elseif ext == ".json"
-        _to_file_document(portfolio, path; base_system_units = base_system_units, force = force, pretty = pretty)
+        _to_file_document(
+            portfolio,
+            path;
+            base_system_units=base_system_units,
+            force=force,
+            pretty=pretty,
+        )
     elseif isempty(ext)
-        _to_file_directory(portfolio, path; base_system_units = base_system_units, force = force, pretty = pretty)
+        _to_file_directory(
+            portfolio,
+            path;
+            base_system_units=base_system_units,
+            force=force,
+            pretty=pretty,
+        )
     else
         error(
             "to_file: cannot tell from \"$path\" which form to write. Give a directory " *
@@ -174,15 +198,16 @@ function to_file(
     return nothing
 end
 
-
-"""Write the directory form: both members named by convention inside `dir`."""
+"""
+Write the directory form: both members named by convention inside `dir`.
+"""
 function _to_file_directory(
     portfolio::Portfolio,
     dir::AbstractString;
     base_system_units::IS.AbstractUnitSystem,
     force::Bool,
     pretty::Bool,
-    write_catalog::Bool = false,
+    write_catalog::Bool=false,
 )
     mkpath(dir)
     _prepare_write_targets(
@@ -197,17 +222,17 @@ function _to_file_directory(
         portfolio,
         joinpath(dir, PORTFOLIO_DOCUMENT_FILE),
         _sidecar_path_for_write(portfolio, joinpath(dir, TIME_SERIES_FILE));
-        force = force,
-        pretty = pretty,
-        write_catalog = write_catalog,
+        force=force,
+        pretty=pretty,
+        write_catalog=write_catalog,
     )
     @info "Serialized Portfolio to $dir"
 
     base_system = get_base_system(portfolio)
     PSY.to_file(
-        base_system, 
-        joinpath(dir, BASE_SYSTEM_DIRECTORY); 
-        power_units = _base_system_power_units(base_system_units), 
+        base_system,
+        joinpath(dir, BASE_SYSTEM_DIRECTORY);
+        power_units=_base_system_power_units(base_system_units),
         force=force,
         pretty=pretty,
     )
@@ -215,7 +240,9 @@ function _to_file_directory(
     return nothing
 end
 
-"""Write the document form: the document at `path`, its sidecar beside it on the same stem."""
+"""
+Write the document form: the document at `path`, its sidecar beside it on the same stem.
+"""
 function _to_file_document(
     portfolio::Portfolio,
     path::AbstractString;
@@ -225,25 +252,22 @@ function _to_file_document(
 )
     _ensure_parent_dir(dirname(path))
     sidecar = _document_sidecar_path(path)
-    _prepare_write_targets(
-        (path, sidecar, sidecar * TIME_SERIES_CATALOG_SUFFIX),
-        force,
-    )
+    _prepare_write_targets((path, sidecar, sidecar * TIME_SERIES_CATALOG_SUFFIX), force)
     _write_bundle(
         portfolio,
         path,
         _sidecar_path_for_write(portfolio, sidecar);
-        force = force,
-        pretty = pretty,
-        write_catalog = false,
+        force=force,
+        pretty=pretty,
+        write_catalog=false,
     )
     @info "Serialized Portfolio to $path"
 
     base_system = get_base_system(portfolio)
     PSY.to_file(
-        base_system, 
-        joinpath(dirname(path), BASE_SYSTEM_DIRECTORY); 
-        power_units = _base_system_power_units(base_system_units), 
+        base_system,
+        joinpath(dirname(path), BASE_SYSTEM_DIRECTORY);
+        power_units=_base_system_power_units(base_system_units),
         force=force,
         pretty=pretty,
     )
@@ -268,15 +292,17 @@ function _write_bundle(
     base_system_path = joinpath(dirname(document_path), BASE_SYSTEM_DIRECTORY)
     doc = to_openapi(
         portfolio;
-        base_system_path = base_system_path,
-        time_series_storage_path = storage_path,
-        write_catalog = write_catalog,
+        base_system_path=base_system_path,
+        time_series_storage_path=storage_path,
+        write_catalog=write_catalog,
     )
-    PD.write_document(doc, document_path; pretty = pretty, force = force)
+    PD.write_document(doc, document_path; pretty=pretty, force=force)
     return nothing
 end
 
-"""The sidecar beside a `.json` document: its stem, with the HDF5 extension."""
+"""
+The sidecar beside a `.json` document: its stem, with the HDF5 extension.
+"""
 _document_sidecar_path(path::AbstractString) = string(splitext(path)[1], ".h5")
 
 function _to_file_sienna(
@@ -287,24 +313,26 @@ function _to_file_sienna(
 )
     # `IS.create_sienna_archive` owns the container — the extension rule, the guards, and the
     # compression. What is PSIP's is only what goes inside it.
-    IS.create_sienna_archive(path; force = force) do bundle
+    IS.create_sienna_archive(path; force=force) do bundle
         # The archive keeps InfraStore's own `.sqlite` — see the format notes at the top of
         # this file for why that is what makes `:sienna` the lossless one.
         _to_file_directory(
             portfolio,
             bundle;
-            base_system_units = DU,
-            force = true,
-            pretty = pretty,
-            write_catalog = true,
+            base_system_units=DU,
+            force=true,
+            pretty=pretty,
+            write_catalog=true,
         )
     end
     @info "Serialized Portfolio to $path"
     return nothing
 end
 
-"""The sidecar path a write should use, or `nothing` when `sys` has no time series to put in
-one. The caller resolves *where* the sidecar goes; this decides only whether there is one."""
+"""
+The sidecar path a write should use, or `nothing` when `sys` has no time series to put in
+one. The caller resolves *where* the sidecar goes; this decides only whether there is one.
+"""
 function _sidecar_path_for_write(portfolio::Portfolio, candidate::AbstractString)
     return _sidecar_path_for_write(Val(has_time_series_data(portfolio)), candidate)
 end
@@ -350,8 +378,9 @@ function from_file(path::AbstractString; system_kwargs...)
     end
 end
 
-
-"""Read the directory form, whose document member is named by convention."""
+"""
+Read the directory form, whose document member is named by convention.
+"""
 function _from_file_directory(dir::AbstractString; system_kwargs...)
     document_path = joinpath(dir, PORTFOLIO_DOCUMENT_FILE)
     if !isfile(document_path)
@@ -380,7 +409,7 @@ function _from_file_document(document_path::AbstractString; system_kwargs...)
         Portfolio,
         doc,
         document_path;
-        time_series_storage_path = _resolve_sidecar(doc, isempty(dir) ? "." : dir),
+        time_series_storage_path=_resolve_sidecar(doc, isempty(dir) ? "." : dir),
         system_kwargs...,
     )
 end
