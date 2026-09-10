@@ -52,12 +52,12 @@ import PowerSystems:
     get_time_series_values,
     get_to,
     get_value_curve,
-    get_variable,
+    get_variable_operation_cost,
     has_supplemental_attributes,
     set_downstream_turbines!,
     set_fixed!,
     set_upstream_turbines!,
-    set_variable!
+    set_variable_operation_cost!
 
 import InfrastructureSystems
 const IS = InfrastructureSystems
@@ -388,7 +388,7 @@ function parse_thermal_cost(ops_cost::Dict{String, Any})
         ),
         shut_down=ops_cost["shut_down"],
         fixed=ops_cost["fixed"],
-        variable=FuelCurve(;
+        variable_operation_cost=FuelCurve(;
             fuel_cost=variable_dict["fuel_cost"],
             value_curve=IncrementalCurve(
                 PiecewiseStepData(
@@ -426,7 +426,7 @@ function parse_renewable_cost(ops_cost::Dict{String, Any})
                 ),
             ),
         ),
-        variable=CostCurve(;
+        variable_operation_cost=CostCurve(;
             value_curve=InputOutputCurve(
                 LinearFunctionData(
                     constant_term=variable_dict["value_curve"]["function_data"]["constant_term"],
@@ -488,7 +488,7 @@ end
 function parse_hydro_cost(ops_cost::Dict{String, Any})
     variable_dict = ops_cost["variable"]
     operational_cost = HydroGenerationCost(;
-        variable=CostCurve(;
+        variable_operation_cost=CostCurve(;
             value_curve=InputOutputCurve(
                 LinearFunctionData(
                     constant_term=variable_dict["value_curve"]["function_data"]["constant_term"],
@@ -732,7 +732,7 @@ function add_technologies!(
                 available=true,
                 power_systems_type=string(nameof(parametric)),
                 operation_costs=ThermalGenerationCost(
-                    variable=CostCurve(LinearCurve(0.0)),
+                    variable_operation_cost=CostCurve(LinearCurve(0.0)),
                     fixed=0.0,
                     start_up=0.0,
                     shut_down=0.0,
@@ -788,7 +788,8 @@ function add_generation_units!(
                 rating=rec.rating / rec.base_power,
                 base_power=rec.base_power,
                 available=component_attr["available"],
-                status=component_attr["status"],
+                status=component_attr["status"] ? PSY.OperationalStates.ONLINE :
+                       PSY.OperationalStates.OFFLINE,
                 bus=PSY.get_component(PSY.ACBus, portfolio.base_system, bus_name),
                 prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers, rec.prime_mover),
                 active_power_limits=active_limits,
@@ -1476,7 +1477,7 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
                     heat_rate = LinearCurve(0.0)
                 end
                 opex = ThermalGenerationCost(
-                    variable=FuelCurve(
+                    variable_operation_cost=FuelCurve(
                         heat_rate,
                         cost_data["fuel_price"],
                         LinearCurve(0.0),
@@ -1495,7 +1496,10 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
             else
                 capex = LinearCurve(cost_data["capcost"] * 1000.0)
                 opex = RenewableGenerationCost(
-                    variable=CostCurve(LinearCurve(0.0), LinearCurve(cost_data["vom"])),
+                    variable_operation_cost=CostCurve(
+                        LinearCurve(0.0),
+                        LinearCurve(cost_data["vom"]),
+                    ),
                 )
                 set_operation_costs!(tech, opex, (x_unit=u"MW" * u"hr", y_unit=USD))
                 set_capital_costs!(tech, capex, (x_unit=u"MW", y_unit=USD))
@@ -1512,12 +1516,12 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
                 if get_fixed(ops) == 0.0
                     fixed = cost_data["fom"] * 1000.0
                 end
-                set_variable!(
+                set_variable_operation_cost!(
                     ops,
                     FuelCurve(
-                        get_value_curve(get_variable(ops)),
+                        get_value_curve(get_variable_operation_cost(ops)),
                         get_fuel_cost(tech, units),
-                        IS.get_startup_fuel_offtake(get_variable(ops)),
+                        IS.get_startup_fuel_offtake(get_variable_operation_cost(ops)),
                         vom,
                     ),
                 )
@@ -1564,7 +1568,7 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
             ts = SingleTimeSeries(
                 "capacity_factor",
                 ts_array;
-                unit_system=IS.DU,
+                unit_system=IS.CU,
                 quantity_kind="active_power",
             )
             add_time_series!(portfolio, tech, ts)
@@ -1585,7 +1589,7 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
         ts = SingleTimeSeries(
             "demand",
             ts_array;
-            unit_system=IS.DU,
+            unit_system=IS.CU,
             quantity_kind="active_power",
         )
         add_time_series!(portfolio, demand, ts)
@@ -1603,7 +1607,7 @@ accessor on its owner.
 
 The `scaling_factor_multiplier` column holds a serialized function reference; every read used
 to multiply the stored values by it. Nothing rescales on retrieval now, so the declaration
-carries that meaning instead: `IS.DU` says the values are per unit on the owner's own base,
+carries that meaning instead: `IS.CU` says the values are per unit on the owner's own base,
 and `quantity_kind` names the quantity they scale to. A per-unit basis is not a units label,
 so `units` stays `nothing`.
 
@@ -1622,7 +1626,7 @@ function normalized_series_declaration(raw_multiplier)
         )
     end
     return (
-        unit_system=IS.DU,
+        unit_system=IS.CU,
         quantity_kind=MULTIPLIER_QUANTITY_KINDS[accessor],
         units=nothing,
     )

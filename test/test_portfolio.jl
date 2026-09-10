@@ -35,8 +35,7 @@
         SingleTimeSeries,
         renewable,
         "ops_variable_cap_factor";
-        year="2024",
-        rep_day=1,
+        features=Dict("year" => "2024", "rep_day" => 1),
     )
     @test ts isa SingleTimeSeries
 
@@ -46,16 +45,14 @@
         SingleTimeSeries,
         renewable,
         "ops_variable_cap_factor";
-        year="2024",
-        rep_day=1,
+        features=Dict("year" => "2024", "rep_day" => 1),
     )
     @test values1 == values2
     values3 = get_time_series_array(
         SingleTimeSeries,
         renewable,
         "ops_variable_cap_factor";
-        year="2024",
-        rep_day=1,
+        features=Dict("year" => "2024", "rep_day" => 1),
     )
     @test values1 == values3
 
@@ -63,16 +60,14 @@
         SingleTimeSeries,
         renewable,
         "ops_variable_cap_factor";
-        year="2024",
-        rep_day=1,
+        features=Dict("year" => "2024", "rep_day" => 1),
     )
     @test val isa TimeSeries.TimeArray
     val = get_time_series_timestamps(
         SingleTimeSeries,
         renewable,
         "ops_variable_cap_factor";
-        year="2024",
-        rep_day=1,
+        features=Dict("year" => "2024", "rep_day" => 1),
     )
     @test val isa Array
     @test val[1] isa Dates.DateTime
@@ -80,8 +75,7 @@
         SingleTimeSeries,
         renewable,
         "ops_variable_cap_factor";
-        year="2024",
-        rep_day=1,
+        features=Dict("year" => "2024", "rep_day" => 1),
     )
     @test val isa Array
     @test val[1] isa AbstractFloat
@@ -257,8 +251,7 @@ end
         SingleTimeSeries,
         renewable,
         "ops_variable_cap_factor";
-        year="2024",
-        rep_day=1,
+        features=Dict("year" => "2024", "rep_day" => 1),
     )
 end
 

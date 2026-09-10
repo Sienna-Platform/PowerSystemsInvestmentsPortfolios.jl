@@ -32,7 +32,8 @@
           "description": "(**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference"
         }
       ],
-      "supertype": "RegionTopology"
+      "supertype": "RegionTopology",
+      "openapi": false
     },
     {
       "name": "Node",
@@ -66,7 +67,8 @@
           "description": "(**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference"
         }
       ],
-      "supertype": "RegionTopology"
+      "supertype": "RegionTopology",
+      "openapi": false
     },
     {
       "name": "SupplyTechnology",
@@ -238,8 +240,7 @@
     {
       "name": "RetirementPotential",
       "type": "object",
-      "required": [
-      ],
+      "required": [],
       "docstring": "Supplemental attribute used to define what existing generators are eligible for retirement for a SupplyTechnology",
       "properties": [
         {
@@ -261,34 +262,10 @@
           "default": "Dict{String, Int64}()"
         },
         {
-          "name": "ext",
-          "type": "Dict",
-          "default": "Dict()",
-          "description": "Optional dictionary to provide additional data"
-        },
-        {
-          "name": "internal",
-          "type": "InfrastructureSystemsInternal",
-          "default": "InfrastructureSystemsInternal()",
-          "description": "(**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference"
-        }
-      ],
-      "supertype": "IS.SupplementalAttribute"
-    },
-    {
-      "name": "AggregateRetirementPotential",
-      "type": "object",
-      "required": [
-      ],
-      "docstring": "Supplemental attribute used to define a total amount of existing capacity that can be retired for a technology",
-      "properties": [
-        {
-          "name": "retirement_potential",
-          "type": "Float64",
-          "description": "Amount of pre-existing capacity for a technology that is eligible for retirement (MW). Units: MW.",
-          "default": "0.0",
-          "needs_conversion": true,
-          "conversion_unit": ":mw"
+          "name": "retirement_cost",
+          "type": "PSY.ValueCurve",
+          "description": "Cost associated with retiring the eligible generators, in USD/MW",
+          "default": "LinearCurve(0.0)"
         },
         {
           "name": "ext",
@@ -308,8 +285,7 @@
     {
       "name": "RetrofitPotential",
       "type": "object",
-      "required": [
-      ],
+      "required": [],
       "docstring": "Supplemental attribute used to define what existing generators are eligible for retrofit for a SupplyTechnology",
       "properties": [
         {
@@ -319,46 +295,16 @@
           "default": "Vector()"
         },
         {
-          "name": "ext",
-          "type": "Dict",
-          "default": "Dict()",
-          "description": "Optional dictionary to provide additional data"
-        },
-        {
-          "name": "internal",
-          "type": "InfrastructureSystemsInternal",
-          "default": "InfrastructureSystemsInternal()",
-          "description": "(**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference"
-        }
-      ],
-      "supertype": "IS.SupplementalAttribute"
-    },
-    {
-      "name": "AggregateRetrofitPotential",
-      "type": "object",
-      "required": [
-      ],
-      "docstring": "Supplemental attribute used to define a total amount of capacity that can be retrofit for a SupplyTechnology",
-      "properties": [
-        {
-          "name": "retrofit_id",
-          "type": "Int64",
-          "description": "Unique identifier to group retrofittable source technologies with retrofit options inside the same zone.",
-          "default": "0"
-        },
-        {
-          "name": "retrofit_potential",
-          "type": "Float64",
-          "description": "Amount of existing capacity for technology that can be retrofitted",
-          "default": "0.0",
-          "needs_conversion": true,
-          "conversion_unit": ":mw"
-        },
-        {
           "name": "retrofit_fraction",
           "type": "Float64",
-          "description": "Fraction of existing capacity that is eligible for retrofits. Alternative to retrofit_potential",
-          "default": "0.0"
+          "description": "Fraction of existing capacity that is eligible for retrofits",
+          "default": "1.0"
+        },
+        {
+          "name": "retrofit_cost",
+          "type": "PSY.ValueCurve",
+          "description": "Cost associated with retrofitting the eligible generators, in USD/MW",
+          "default": "LinearCurve(0.0)"
         },
         {
           "name": "ext",
@@ -378,8 +324,7 @@
     {
       "name": "ExistingDevices",
       "type": "object",
-      "required": [
-      ],
+      "required": [],
       "docstring": "Supplemental attributed used to map technologies in a portfolio to the existing system. For example, contains a list of existing generators that correspond to a SupplyTechnology.",
       "properties": [
         {
@@ -406,8 +351,7 @@
     {
       "name": "TopologyMapping",
       "type": "object",
-      "required": [
-      ],
+      "required": [],
       "docstring": "Supplemental attributed used to store mapping between the PSIP Zone and the associated buses in the base system.",
       "properties": [
         {

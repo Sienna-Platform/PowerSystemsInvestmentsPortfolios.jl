@@ -45,7 +45,12 @@ end
     ts = SingleTimeSeries(; data=TimeArray(timestamps, data), name=name)
 
     technology = get_technology(SupplyTechnology{RenewableDispatch}, port, technology_name)
-    PSIP.add_time_series!(port, technology, ts; year="2024", rep_day=1)
+    PSIP.add_time_series!(
+        port,
+        technology,
+        ts;
+        features=Dict("year" => "2024", "rep_day" => 1),
+    )
 
     ta = get_data(ts)
     @test verify_time_series(port, 1, 1, 24)

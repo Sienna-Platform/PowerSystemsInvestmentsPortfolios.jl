@@ -45,18 +45,3 @@ set_name!(value::Zone, val) = value.name = val
 set_ext!(value::Zone, val) = value.ext = val
 """Set [`Zone`](@ref) `internal`."""
 set_internal!(value::Zone, val) = value.internal = val
-
-
-
-function from_openapi(po::PI.Zone, refs::OpenAPIRefs)
-    return Zone(;
-        name = po.name,
-    )
-end
-
-function to_openapi(value::Zone, refs::OpenAPIRefs)
-    return PI.Zone(;
-        id = get_id(value),
-        name = get_name(value),
-    )
-end

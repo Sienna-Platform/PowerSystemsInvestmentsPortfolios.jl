@@ -103,12 +103,6 @@ demand_side() = DemandSideTechnology{PSY.PowerLoad}(;
     max_demand_delay=360.0,
 )
 
-retro() = AggregateRetrofitPotential(;
-    retrofit_id=1,
-    retrofit_potential=150.0,
-    retrofit_fraction=0.5,
-)
-
 carbon_caps() =
     CarbonCaps(; name="carbon_caps", available=true, max_tons_mwh=2.0e-6, max_mtons=50.0)
 
@@ -202,14 +196,15 @@ end
 # `fixed`, and both scale by `ratio`.
 function check_variable_fixed_cost(get, set, nat, alt; var_prop, fixed, ratio)
     o = get(nat)
-    @test o.variable.value_curve.function_data.proportional_term ≈ var_prop
+    @test o.variable_operation_cost.value_curve.function_data.proportional_term ≈ var_prop
     @test o.fixed ≈ fixed
     o2 = get(alt)
-    @test o2.variable.value_curve.function_data.proportional_term ≈ var_prop * ratio
+    @test o2.variable_operation_cost.value_curve.function_data.proportional_term ≈
+          var_prop * ratio
     @test o2.fixed ≈ fixed * ratio
     set(get(alt), alt)              # round trip: feed the alt-unit cost back
     o3 = get(nat)
-    @test o3.variable.value_curve.function_data.proportional_term ≈ var_prop
+    @test o3.variable_operation_cost.value_curve.function_data.proportional_term ≈ var_prop
     @test o3.fixed ≈ fixed
 end
 
@@ -387,7 +382,7 @@ end
     )
     ngc = PSIP._natural_unit_conversions(t, gc, cu_kw, cu_mw)
     @test ngc isa ThermalGenerationCost
-    @test ngc.variable.value_curve.function_data.proportional_term ≈ 500.0
+    @test ngc.variable_operation_cost.value_curve.function_data.proportional_term ≈ 500.0
     @test ngc.fixed ≈ 1.0e5
 
     io = InputOutputCurve(LinearFunctionData(0.5, 10.0), 1.0)
@@ -400,7 +395,7 @@ end
         (energy_unit=u"MW" * u"hr", fuel_unit=u"btu", currency_unit=USD),
     )
     @test ngfc isa ThermalGenerationCost
-    @test ngfc.variable.fuel_cost ≈ 1.0e-4
+    @test ngfc.variable_operation_cost.fuel_cost ≈ 1.0e-4
     @test ngfc.start_up == (hot=100.0, warm=50.0, cold=10.0)
 
     sc = StorageCost(;
@@ -421,7 +416,7 @@ end
     nrc = PSIP._natural_unit_conversions(t, rc, cu_kw, cu_mw)
     @test nrc isa RenewableGenerationCost
     @test nrc.fixed ≈ 1000.0
-    @test nrc.variable.value_curve.function_data.proportional_term ≈ 1000.0
+    @test nrc.variable_operation_cost.value_curve.function_data.proportional_term ≈ 1000.0
 end
 
 @testset "SupplyTechnology getters/setters" begin
@@ -491,10 +486,10 @@ end
     )
     # operation_costs (usd_per_mwh, OperationalCost)
     oc = PSIP.get_operation_costs(t, conversion_unit(u"MW" * u"hr", USD))
-    @test oc.variable.value_curve.function_data.proportional_term ≈ 10.0
+    @test oc.variable_operation_cost.value_curve.function_data.proportional_term ≈ 10.0
     @test oc.fixed ≈ 100.0
     oc2 = PSIP.get_operation_costs(t, conversion_unit(u"kW" * u"hr", USD))
-    @test oc2.variable.value_curve.function_data.proportional_term ≈ 0.01
+    @test oc2.variable_operation_cost.value_curve.function_data.proportional_term ≈ 0.01
     # lifetime (yr, Int)
     @test PSIP.get_lifetime(t, u"yr") == 30
     PSIP.set_lifetime!(t, 20, u"yr")
@@ -792,34 +787,6 @@ end
     )
 end
 
-@testset "AggregateRetrofitPotential getters/setters" begin
-    t = retro()
-    # AggregateRetrofitPotential <: SupplementalAttribute; unit-aware dispatch now
-    # covers it via the `_UNIT_AWARE` union (bug fixed on this branch).
-    check_scalar(
-        u -> PSIP.get_retrofit_potential(t, u),
-        (v, u) -> PSIP.set_retrofit_potential!(t, v, u),
-        u"MW",
-        u"kW";
-        base=150.0,
-        ratio=1000.0,
-    )
-end
-
-@testset "AggregateRetirementPotential getters/setters" begin
-    # newly wired conversion; SiennaSchemas declares x-unit MW, but PSIP never
-    # marked this field `needs_conversion` before this branch.
-    t = AggregateRetirementPotential(retirement_potential=100.0)
-    check_scalar(
-        u -> PSIP.get_retirement_potential(t, u),
-        (v, u) -> PSIP.set_retirement_potential!(t, v, u),
-        u"MW",
-        u"kW";
-        base=100.0,
-        ratio=1000.0,
-    )
-end
-
 @testset "CarbonCaps getters/setters" begin
     t = carbon_caps()
     # max_mtons (mt) — emissions mass, natural unit follows SiennaSchemas (Mt)
@@ -1103,18 +1070,21 @@ end
         # (Sienna component type, field name) for every field corrected on this
         # branch — the 9 scale/basis mismatches plus the 2 fields SiennaSchemas
         # annotated but PSIP never converted at all.
+        #
+        # Three entries are skipped: the schemas no longer carry these fields at all
+        # (ColocatedSupplyStorageTechnology.duration_limits and .operation_costs_power
+        # per the f95da63 restructure; SupplyTechnology.co2 per 7c4ad0c's "move
+        # EmissionsData to Core"), so there is nothing on the schema side left to
+        # compare a unit against. These are parity drifts, not fixed here — see the
+        # parity-drift table in the PR body.
         checked_fields = [
             ("SupplyTechnology", "time_limits"),
             ("StorageTechnology", "duration_limits"),
-            ("ColocatedSupplyStorageTechnology", "duration_limits"),
             ("DemandSideTechnology", "max_demand_delay"),
             ("DemandSideTechnology", "max_demand_advance"),
             ("CarbonCaps", "max_mtons"),
             ("CarbonCaps", "max_tons_mwh"),
             ("DemandSideTechnology", "price_per_unit"),
-            ("ColocatedSupplyStorageTechnology", "operation_costs_power"),
-            ("AggregateRetirementPotential", "retirement_potential"),
-            ("SupplyTechnology", "co2"),
         ]
 
         for (type_name, field_name) in checked_fields

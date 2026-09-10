@@ -187,20 +187,20 @@ is_new(t::Technology) = !(IS.has_supplemental_attributes(ExistingDevices, t))
 Get constant heat rate value from FuelCurve stored in a SupplyTechnology
 """
 get_heat_rate(t::SupplyTechnology, units::_UNIT_OPTIONS) = IS.get_proportional_term(
-    IS.get_value_curve(PSY.get_variable(get_operation_costs(t, units))),
+    IS.get_value_curve(PSY.get_variable_operation_cost(get_operation_costs(t, units))),
 )
 
 """
 Get constant fuel cost from FuelCurve stored in a SupplyTechnology
 """
 get_fuel_cost(t::SupplyTechnology, units::_UNIT_OPTIONS) =
-    IS.get_fuel_cost(PSY.get_variable(get_operation_costs(t, units)))
+    IS.get_fuel_cost(PSY.get_variable_operation_cost(get_operation_costs(t, units)))
 
 """
 Get constant variable OM costs from OperationalCost in a SupplyTechnology
 """
 get_variable_cost(t::SupplyTechnology, units::_UNIT_OPTIONS) = IS.get_proportional_term(
-    IS.get_vom_cost(PSY.get_variable(get_operation_costs(t, units))),
+    IS.get_vom_cost(PSY.get_variable_operation_cost(get_operation_costs(t, units))),
 )
 
 """

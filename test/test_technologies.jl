@@ -1,6 +1,6 @@
 @testset "Technology and region getters/setters" begin
     thermal_cost = ThermalGenerationCost(
-        variable=CostCurve(LinearCurve(0.0)),
+        variable_operation_cost=CostCurve(LinearCurve(0.0)),
         fixed=0.0,
         start_up=0.0,
         shut_down=0.0,
@@ -11,7 +11,7 @@
         fixed=0.0,
     )
     renewable_cost = RenewableGenerationCost(
-        variable=CostCurve(LinearCurve(0.0)),
+        variable_operation_cost=CostCurve(LinearCurve(0.0)),
         curtailment_cost=CostCurve(LinearCurve(0.0)),
         fixed=0.0,
     )
@@ -474,12 +474,12 @@
     )
     colocated_inverter_cost = CostCurve(LinearCurve(0.8))
     colocated_solar_cost = RenewableGenerationCost(
-        variable=CostCurve(LinearCurve(4.0)),
+        variable_operation_cost=CostCurve(LinearCurve(4.0)),
         curtailment_cost=CostCurve(LinearCurve(0.1)),
         fixed=1.0,
     )
     colocated_wind_cost = RenewableGenerationCost(
-        variable=CostCurve(LinearCurve(3.0)),
+        variable_operation_cost=CostCurve(LinearCurve(3.0)),
         curtailment_cost=CostCurve(LinearCurve(0.2)),
         fixed=1.2,
     )

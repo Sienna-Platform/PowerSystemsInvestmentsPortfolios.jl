@@ -118,20 +118,14 @@
     @test colocated_supply_storage isa ResourceTechnology
 
     retirement_potential = RetirementPotential()
-    aggregate_retirement_potential = AggregateRetirementPotential()
     retrofit_potential = RetrofitPotential()
-    aggregate_retrofit_potential = AggregateRetrofitPotential()
     existing_devices = ExistingDevices()
     topology_mapping = TopologyMapping()
 
     @test retirement_potential isa RetirementPotential
     @test retirement_potential isa IS.SupplementalAttribute
-    @test aggregate_retirement_potential isa AggregateRetirementPotential
-    @test aggregate_retirement_potential isa IS.SupplementalAttribute
     @test retrofit_potential isa RetrofitPotential
     @test retrofit_potential isa IS.SupplementalAttribute
-    @test aggregate_retrofit_potential isa AggregateRetrofitPotential
-    @test aggregate_retrofit_potential isa IS.SupplementalAttribute
     @test existing_devices isa ExistingDevices
     @test existing_devices isa IS.SupplementalAttribute
     @test topology_mapping isa TopologyMapping

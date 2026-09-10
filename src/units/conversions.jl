@@ -183,7 +183,7 @@ function get_value(
     to::_UNIT_OPTIONS,
 )
     value = Base.getproperty(t, val_to_symbol(field))
-    variable = get_variable(value)
+    variable = get_variable_operation_cost(value)
     if isa(variable, FuelCurve)
         from = Val(:fuel_curve)
     end
@@ -221,7 +221,7 @@ function set_value(
     from::_UNIT_OPTIONS,
     to::Val,
 ) where {T <: SupplyTechnology}
-    if isa(get_variable(value), FuelCurve)
+    if isa(get_variable_operation_cost(value), FuelCurve)
         to = Val(:fuel_curve)
     end
     base_unit = natural_unit(_unit_category(to))

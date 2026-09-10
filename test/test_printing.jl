@@ -43,7 +43,10 @@
 
     @testset "show_region_topology_table empty portfolio" begin
         # Build an empty portfolio (no regions added) and verify no output is produced.
-        sys = build_system(PSITestSystems, "c_sys5_re")
+        # skip_serialization=true: PowerSystems.jl's OpenAPI export path
+        # (export_cost_conversion.jl) still fails to serialize a CostCurve with no
+        # vom_cost; that is a PowerSystems.jl bug, out of scope here.
+        sys = build_system(PSITestSystems, "c_sys5_re"; skip_serialization=true)
         empty_port = Portfolio(sys)
 
         buf = IOBuffer()
