@@ -200,7 +200,6 @@ function from_openapi(po::PI.DemandSideTechnology, refs::OpenAPIRefs)
         max_demand_advance = po.max_demand_advance,
         demand_energy_efficiency = po.demand_energy_efficiency,
         shift_variable_cost = convert_value_curve(po.shift_variable_cost),
-        requirements = resolve_refs(refs, po.requirements, Requirement),
     )
 end
 
@@ -221,6 +220,5 @@ function to_openapi(value::DemandSideTechnology{T}, refs::OpenAPIRefs) where {T 
         max_demand_advance = get_max_demand_advance(value, IS.NU),
         demand_energy_efficiency = get_demand_energy_efficiency(value),
         shift_variable_cost = convert_value_curve_to_openapi(get_shift_variable_cost(value, IS.NU)),
-        requirements = component_ids(refs, get_requirements(value)),
     )
 end

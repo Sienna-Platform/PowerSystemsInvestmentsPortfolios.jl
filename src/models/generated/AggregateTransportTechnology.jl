@@ -147,7 +147,6 @@ function from_openapi(po::PI.AggregateTransportTechnology, refs::OpenAPIRefs)
         unit_size = po.unit_size,
         capital_costs = convert_nested_data(po.capital_costs),
         line_loss = po.line_loss,
-        requirements = resolve_refs(refs, po.requirements, Requirement),
         financial_data = convert_nested_data(po.financial_data),
     )
 end
@@ -164,7 +163,6 @@ function to_openapi(value::AggregateTransportTechnology{T}, refs::OpenAPIRefs) w
         unit_size = get_unit_size(value, IS.NU),
         capital_costs = convert_nested_data_to_openapi(get_capital_costs(value)),
         line_loss = get_line_loss(value),
-        requirements = component_ids(refs, get_requirements(value)),
         financial_data = convert_nested_data_to_openapi(get_financial_data(value)),
     )
 end

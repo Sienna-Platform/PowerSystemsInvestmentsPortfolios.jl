@@ -177,7 +177,6 @@ function from_openapi(po::PI.NodalACTransportTechnology, refs::OpenAPIRefs)
         resistance = po.resistance,
         voltage = po.voltage,
         reactance = po.reactance,
-        requirements = resolve_refs(refs, po.requirements, Requirement),
         financial_data = convert_nested_data(po.financial_data),
     )
 end
@@ -196,7 +195,6 @@ function to_openapi(value::NodalACTransportTechnology{T}, refs::OpenAPIRefs) whe
         resistance = get_resistance(value, IS.NU),
         voltage = get_voltage(value, IS.NU),
         reactance = get_reactance(value, IS.NU),
-        requirements = component_ids(refs, get_requirements(value)),
         financial_data = convert_nested_data_to_openapi(get_financial_data(value)),
     )
 end

@@ -265,7 +265,6 @@ function from_openapi(po::PI.StorageTechnology, refs::OpenAPIRefs)
         efficiency = _inout_from_po(po.efficiency),
         losses = po.losses,
         lifetime = po.lifetime,
-        requirements = resolve_refs(refs, po.requirements, Requirement),
         financial_data = convert_nested_data(po.financial_data),
     )
 end
@@ -292,7 +291,6 @@ function to_openapi(value::StorageTechnology{T}, refs::OpenAPIRefs) where {T <: 
         efficiency = _inout_po(get_efficiency(value)),
         losses = get_losses(value),
         lifetime = get_lifetime(value, IS.NU),
-        requirements = component_ids(refs, get_requirements(value)),
         financial_data = convert_nested_data_to_openapi(get_financial_data(value)),
     )
 end

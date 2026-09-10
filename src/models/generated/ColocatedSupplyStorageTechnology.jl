@@ -166,7 +166,6 @@ function from_openapi(po::PI.ColocatedSupplyStorageTechnology, refs::OpenAPIRefs
         operation_costs_inverter = convert_cost(po.operation_costs_inverter)::IS.ProductionVariableCostCurve,
         inverter_efficiency = po.inverter_efficiency,
         inverter_supply_ratio = po.inverter_supply_ratio,
-        requirements = resolve_refs(refs, po.requirements, Requirement),
     )
 end
 
@@ -185,6 +184,5 @@ function to_openapi(value::ColocatedSupplyStorageTechnology{T}, refs::OpenAPIRef
         operation_costs_inverter = convert_cost_to_openapi(get_operation_costs_inverter(value, IS.NU)),
         inverter_efficiency = get_inverter_efficiency(value),
         inverter_supply_ratio = get_inverter_supply_ratio(value),
-        requirements = component_ids(refs, get_requirements(value)),
     )
 end

@@ -152,7 +152,6 @@ function from_openapi(po::PI.DemandRequirement, refs::OpenAPIRefs)
         value_of_lost_load = po.value_of_lost_load,
         unserved_demand_curve = convert_value_curve(po.unserved_demand_curve),
         region = resolve_refs(refs, po.region, PSY.Topology),
-        requirements = resolve_refs(refs, po.requirements, Requirement),
     )
 end
 
@@ -169,6 +168,5 @@ function to_openapi(value::DemandRequirement{T}, refs::OpenAPIRefs) where {T <: 
         value_of_lost_load = get_value_of_lost_load(value, IS.NU),
         unserved_demand_curve = convert_value_curve_to_openapi(get_unserved_demand_curve(value, IS.NU)),
         region = component_ids(refs, get_region(value)),
-        requirements = component_ids(refs, get_requirements(value)),
     )
 end
