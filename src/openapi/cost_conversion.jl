@@ -44,6 +44,28 @@ _inout_from_po(::Nothing) = nothing
 
 _outagefactors_from_po(x::PC.OutageFactors) = (planned=x.planned, forced=x.forced)
 _outagefactors_from_po(::Nothing) = nothing
+
+const _IMPORT_STORE = Base.ScopedValues.ScopedValue{IS.Store}()
+
+"""No sidecar was adopted, so there is nothing to bind; a document that then names a
+time-series-backed cost fails in `_current_import_store`."""
+_with_import_store(f, ::Nothing) = f()
+
+"""Bind `store` for the duration of `f()`. `ScopedValue`-based, so a nested import and a
+task spawned inside one both see the innermost binding."""
+_with_import_store(f, store::IS.Store) =
+    Base.ScopedValues.with(f, _IMPORT_STORE => store)
+
+function _current_import_store()
+    store = Base.ScopedValues.get(_IMPORT_STORE)
+    isnothing(store) && error(
+        "convert_cost: the document names a time-series-backed cost, but no time series " *
+        "store is bound — either this ran outside an active from_openapi(System, doc) " *
+        "import, or no time_series_storage_path sidecar was adopted for it",
+    )
+    return something(store)
+end
+
 # ── value curves: FunctionData leaves + InputOutputCurve/IncrementalCurve/AverageRateCurve ──
 #
 # `convert_value_curve` accepts either the wrapped `PC.ValueCurve`/`PC.*FunctionData` oneOf or
@@ -266,6 +288,15 @@ function convert_nested_data(po::PI.TechnologyFinancialData)
     )
 end
 
+function convert_nested_data(po::PI.PortfolioFinancialData)
+    return PortfolioFinancialData(
+        po.base_year,
+        po.discount_rate,
+        po.inflation_rate,
+        po.interest_rate,
+    )
+end
+
 function convert_nested_data(po)
     return error(
         "convert_nested_data: no OpenAPI financial-data converter for " *
@@ -312,8 +343,18 @@ end
 
 _capacity_bound_from_po(::Nothing, ::OpenAPIRefs) = (min=0.0, max=1e8)
 _capacity_bound_from_po(po, refs::OpenAPIRefs) = _capacity_bound_value(po.value, refs)
-_capacity_bound_value(x::PC.MinMax, ::OpenAPIRefs) = (min=x.min, max=x.max)
-_capacity_bound_value(d::AbstractDict, refs::OpenAPIRefs) = Dict{PSY.Topology, MinMax}(
-    resolve_ref(refs, parse(Int, string(k)), PSY.Topology) => (min=v.min, max=v.max) for
-    (k, v) in d
-)
+
+# One `(min, max)` pair, from either the typed wire struct or the `Dict{String,Any}` that
+# `OpenAPI.from_json` leaves an AnyOf value as.
+_minmax_nt(v::PC.MinMax) = (min=Float64(v.min), max=Float64(v.max))
+_minmax_nt(v::AbstractDict) = (min=Float64(v["min"]), max=Float64(v["max"]))
+
+_capacity_bound_value(x::PC.MinMax, ::OpenAPIRefs) = _minmax_nt(x)
+# A plain MinMax deserializes to a dict keyed `"min"`/`"max"`; a per-topology map is keyed by
+# base-system topology ids (integer strings). Distinguish the two by their keys.
+function _capacity_bound_value(d::AbstractDict, refs::OpenAPIRefs)
+    (haskey(d, "min") && haskey(d, "max")) && return _minmax_nt(d)
+    return Dict{PSY.Topology, MinMax}(
+        resolve_ref(refs, parse(Int, string(k)), PSY.Topology) => _minmax_nt(v) for (k, v) in d
+    )
+end

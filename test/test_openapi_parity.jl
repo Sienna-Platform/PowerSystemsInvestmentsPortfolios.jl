@@ -4,7 +4,7 @@
 @testset "descriptor and PowerInvestmentsOpenAPIModels agree on fields" begin
     descriptor =
         JSON3.read(joinpath(BASE_DIR, "src", "descriptors", "SiennaInvestSchema.json"))
-    skipped = Set(["ext", "internal"])
+    skipped = Set(["ext", "internal", "requirements"])
     for component in descriptor["components"]
         name = String(component["name"])
         po_type = getproperty(PSIP.PI, Symbol(name))

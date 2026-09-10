@@ -16,6 +16,13 @@ Fields:
     technologies), populated by `setindex!` as each is converted.
   - `id_by_component::IdDict{Any, Int}`: Component → id, the reverse of both forward maps,
     keyed by object identity (globally unique, so a single map suffices).
+  - `deferred_refs::Vector{Function}`: import-only queue of component→component reference
+    resolutions a converter could not complete on its first pass (forward or same-type refs),
+    drained by [`resolve_deferred_refs!`](@ref). Empty on export.
+
+PSY's `OpenAPIRefs` carries `base_power` and a time-series `store` besides these; PSIP needs
+neither — it has one unit representation and no system base, and threads the import store through
+a `_with_import_store` scoped value rather than the refs object.
 
 Topology lives in the base `PSY.System` and portfolio components in `portfolio.data`; those
 are two independent `InfrastructureSystems` id counters, so their integer ids overlap (both
@@ -34,9 +41,11 @@ struct OpenAPIRefs
     by_topology_id::Dict{Int, Any}
     by_component_id::Dict{Int, Any}
     id_by_component::IdDict{Any, Int}
+    deferred_refs::Vector{Function}
 end
 
-OpenAPIRefs() = OpenAPIRefs(Dict{Int, Any}(), Dict{Int, Any}(), IdDict{Any, Int}())
+OpenAPIRefs() =
+    OpenAPIRefs(Dict{Int, Any}(), Dict{Int, Any}(), IdDict{Any, Int}(), Function[])
 
 # The forward map for a family. Topology (from the base `PSY.System`) and portfolio
 # components (from `portfolio.data`) share an integer id space, so which map applies is
@@ -90,6 +99,7 @@ absent relationship, not a malformed one. A reference that *is* stated still goe
 through the typed lookup and so still errors when it names an unregistered id.
 """
 resolve_ref(::OpenAPIRefs, ::Nothing) = nothing
+resolve_ref(refs::OpenAPIRefs, id::Integer) = refs[id]
 
 """
 Resolve a reference whose type the descriptor already states, asserting it on the way out.
@@ -102,6 +112,7 @@ family map (topology vs portfolio component) the id is resolved against.
 resolve_ref(::OpenAPIRefs, ::Nothing, ::Type) = nothing
 resolve_ref(refs::OpenAPIRefs, id::Integer, ::Type{T}) where {T} =
     _resolve(refs, id, T <: PSY.Topology)::T
+
 
 """
 Resolve a list of references whose element type the descriptor states.
@@ -127,3 +138,33 @@ component_ids(refs::OpenAPIRefs, components) =
     Int[component_id(refs, c) for c in components]
 
 has_component_id(refs::OpenAPIRefs, component) = haskey(refs.id_by_component, component)
+
+"""
+Defer a component→component reference a `from_openapi` converter cannot resolve on its own
+first pass: either a genuine forward reference (the referenced type converts later in
+`DOCUMENT_PLAN`) or a same-type reference (the referenced component is of the SAME type,
+converted earlier or later within that type's own document-key pass, so no `DOCUMENT_PLAN`
+reordering could express it — a cascading `HydroReservoir` chain is the motivating case).
+
+A converter facing either one constructs its component with that field left at its own
+empty/`nothing` default, then calls `defer_ref!(refs, f)` with a zero-argument `f` that
+performs the resolution (typically closing over the constructed component, `refs`, and the
+raw ids still to resolve) via a mutating setter. `f` runs later, from
+[`resolve_deferred_refs!`](@ref), once every component in the document is registered — a raw
+id still unresolvable then is genuinely absent from the document and errors from `refs`'s own
+`getindex`, not from here.
+"""
+defer_ref!(refs::OpenAPIRefs, f) = push!(refs.deferred_refs, f)
+
+"""
+Run every reference resolution queued by [`defer_ref!`](@ref), in the order queued, then clear
+the queue. Called once, after every component in the document has converted and registered —
+see `from_openapi(::Type{System}, doc)` in `import_document.jl`.
+"""
+function resolve_deferred_refs!(refs::OpenAPIRefs)
+    for f in refs.deferred_refs
+        f()
+    end
+    empty!(refs.deferred_refs)
+    return nothing
+end

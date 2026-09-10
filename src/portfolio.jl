@@ -208,6 +208,24 @@ function Portfolio(
 end
 
 """
+Construct an empty `Portfolio` specifying aggregation and data. Useful for building a Portfolio from scratch and used in the database parser.
+"""
+function Portfolio(
+    data, 
+    aggregation;
+    kwargs...,
+)
+    return Portfolio(
+        aggregation,
+        data,
+        DEFAULT_SYSTEM(),
+        nothing,
+        InfrastructureSystemsInternal();
+        kwargs...,
+    )
+end
+
+"""
 Return the internal of the portfolio
 """
 IS.get_internal(val::Portfolio) = val.internal
@@ -284,6 +302,11 @@ set_description!(val::Portfolio, description::AbstractString) =
     val.metadata.description = description
 
 """
+Set the financial data of the portfolio.
+"""
+set_financial_data!(val::Portfolio, financial_data::PortfolioFinancialData) = val.financial_data = financial_data
+
+"""
 Set the base year of the portfolio.
 """
 set_base_year!(val::Portfolio, base_year::Int64) = val.financial_data.base_year = base_year
@@ -337,6 +360,12 @@ add_technology!(portfolio, bus)
 foreach(x -> add_technology!(portfolio, x), Iterators.flatten((buses, generators)))
 ```
 """
+# Holdover from the pre-document serialization path (mirrors PowerSystems' own definition in
+# base.jl). The document-based import never sets this flag, so it defaults to `false`; it stays
+# as the defensive default `add_technology!` reads for `allow_existing_time_series`.
+_is_deserialization_in_progress(portfolio::Portfolio) =
+    get(get_ext(portfolio), "deserialization_in_progress", false)
+
 function add_technology!(
     portfolio::Portfolio,
     technology::T;

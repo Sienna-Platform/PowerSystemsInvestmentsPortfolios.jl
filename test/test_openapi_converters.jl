@@ -190,7 +190,11 @@ end
     po = PSIP.to_openapi(tech, refs)
     # references leave as ids, not objects
     @test po.region == [1]
-    @test po.requirements == [3]
+    # Requirement↔member membership is NOT inline on the wire technology (Option B): it lives in
+    # the document-level `requirements_associations` table, so `po` carries no `requirements`
+    # field and the per-component converter does not round-trip it. The membership round trip is
+    # covered end-to-end in `test_serialization.jl`.
+    @test !hasproperty(po, :requirements)
     # the type parameter is carried by power_systems_type, and by nothing else
     @test po.power_systems_type == "ThermalStandard"
     # enums, enum vectors and enum-keyed dicts all cross as strings
@@ -206,7 +210,9 @@ end
     @test PSIP.get_parameter_type(back) === ThermalStandard
     @test PSIP.get_name(back) == "cheap_thermal"
     @test PSIP.get_region(back) == [zone]
-    @test PSIP.get_requirements(back) == [req]
+    # Membership is not reconstructed by the per-component converter (Option B — see above);
+    # `back` comes back with no requirements. Document-level reconstruction is tested elsewhere.
+    @test isempty(PSIP.get_requirements(back))
     @test PSIP.get_prime_mover_type(back) == PrimeMovers.CT
     @test PSIP.get_fuel(back) == [ThermalFuels.NATURAL_GAS]
     @test PSIP.get_capacity_limits(back, NU) == (min=0.0, max=500.0)
@@ -373,111 +379,6 @@ end
         storage_technology=storage,
     )
     @test PSIP.get_available(colocated) === true
-end
-
-@testset "portfolio serializes through the OpenAPI path" begin
-    # Financial data is not optional on the read-back path: `from_dict` indexes into the
-    # serialized `financial_data` object, so an empty `Portfolio()` cannot round trip.
-    portfolio = Portfolio(2024, 0.07, 0.025, 0.05)
-    zone = PSY.Area(; name="zone_a", base_power=100.0)
-    zone_b = PSY.Area(; name="zone_b", base_power=100.0)
-    req = CarbonTax(name="tax", available=true)
-    IS.set_id!(zone, 1)
-    IS.set_id!(zone_b, 2)
-    IS.set_id!(req, 3)
-    PSIP.add_topology!(portfolio, zone)
-    PSIP.add_topology!(portfolio, zone_b)
-    PSIP.add_requirement!(portfolio, req)
-    financial_data = TechnologyFinancialData(
-        capital_recovery_period=20,
-        technology_base_year=2024,
-        debt_fraction=0.6,
-        debt_rate=0.05,
-        return_on_equity=0.1,
-        tax_rate=0.21,
-    )
-    tech = SupplyTechnology{ThermalStandard}(;
-        name="cheap_thermal",
-        available=true,
-        power_systems_type="ThermalStandard",
-        region=[zone],
-        requirements=[req],
-        capacity_limits=(min=0.0, max=500.0),
-        capital_costs=PSIP.CapitalCost(LinearCurve(1000.0), 0.0),
-        operation_costs=PSY.ThermalGenerationCost(nothing),
-        fuel=[ThermalFuels.NATURAL_GAS],
-        cofire_level_limits=Dict(ThermalFuels.NATURAL_GAS => (min=0.0, max=1.0)),
-        financial_data=financial_data,
-    )
-    IS.set_id!(tech, 10)
-    PSIP.add_technology!(portfolio, tech)
-
-    # A transmission technology exercises the scalar `component_id`/`resolve_ref` path;
-    # `SupplyTechnology` above only covers the `component_ids`/`resolve_refs` list form.
-    line = AggregateTransportTechnology{PSY.ACBranch}(;
-        name="test_branch",
-        available=true,
-        power_systems_type="ACBranch",
-        start_region=zone,
-        end_region=zone_b,
-        capacity_limits=(min=0.0, max=900.0),
-        line_loss=0.05,
-        capital_costs=PSIP.CapitalCost(LinearCurve(5000.0), 0.0),
-        financial_data=financial_data,
-    )
-    IS.set_id!(line, 11)
-    PSIP.add_technology!(portfolio, line)
-
-    # Colocated now references concrete supply/storage technologies and carries only
-    # inverter economics on itself.
-    storage_ref = StorageTechnology{PSY.EnergyReservoirStorage}(;
-        name="colo_storage_ref",
-        available=true,
-        power_systems_type="EnergyReservoirStorage",
-        storage_tech=StorageTech.OTHER_CHEM,
-        financial_data=financial_data,
-        region=[zone],
-    )
-    IS.set_id!(storage_ref, 13)
-    PSIP.add_technology!(portfolio, storage_ref)
-
-    colocated = ColocatedSupplyStorageTechnology{PSY.RenewableDispatch}(;
-        name="colo",
-        available=true,
-        power_systems_type="RenewableDispatch",
-        region=[zone],
-        financial_data=financial_data,
-        capital_costs_inverter=PSIP.CapitalCost(LinearCurve(700.0), 0.0),
-        operation_costs_inverter=CostCurve(LinearCurve(6.0)),
-        inverter_efficiency=0.96,
-        inverter_supply_ratio=1.0,
-        supply_technology=tech,
-        storage_technology=storage_ref,
-    )
-    IS.set_id!(colocated, 12)
-    PSIP.add_technology!(portfolio, colocated)
-
-    retirement = RetirementPotential(
-        eligible_generators=["Solitude"],
-        retirement_cost=LinearCurve(100.0),
-    )
-    existing = ExistingDevices(existing_devices=["Solitude", "Alta"])
-    IS.set_id!(retirement, 51)
-    IS.set_id!(existing, 54)
-    PSIP.add_supplemental_attribute!(portfolio, tech, retirement)
-    PSIP.add_supplemental_attribute!(portfolio, line, existing)
-
-    path = joinpath(mktempdir(), "portfolio.json")
-    PSIP.to_json(portfolio, path; force=true)
-    raw = JSON3.read(read(path, String), Dict)
-    components = raw["data"]["components"]
-    colocated_po = only(filter(c -> c["name"] == "colo", components))
-    @test colocated_po["supply_technology"] == 10
-    @test colocated_po["storage_technology"] == 13
-    @test colocated_po["capital_costs_inverter"]["capital_cost"]["function_data"]["proportional_term"] ==
-          700.0
-    @test colocated_po["operation_costs_inverter"]["value_curve"]["function_data"]["proportional_term"] ==
-          6.0
 end
 
 @testset "serialized aggregation is a fully qualified type name" begin

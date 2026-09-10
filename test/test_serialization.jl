@@ -1,63 +1,36 @@
-@testset "Test serialization of technologies" begin
-    portfolio = build_portfolio()
-    portfolio2 = validate_serialization(portfolio; time_series_read_only=true)
+# Round-trip tests for the OpenAPI document serialization (`to_file`/`from_file`).
+#
+# Builds a small-but-complete portfolio exercising every serialized facet — base system,
+# technology + financial_data, policy requirement + membership, supplemental attribute, time
+# series, portfolio financial_data, and investment schedule — writes it to the on-disk bundle
+# form, reads it back, and asserts each facet survives. Replaces the previous `to_json`-based
+# serialization tests.
 
-    technologies = get_technologies(Technology, portfolio)
-
-    for t in technologies
-        t2 = get_technology(typeof(t), portfolio2, PSIP.get_name(t))
-        @test t2 !== nothing
-        result = IS.compare_values(t, t2; compare_uuids=false)
-        @test result
-    end
-end
-
-@testset "Test serialization of technology requirement references" begin
-    portfolio = build_portfolio()
-    requirement = PSIP.get_requirement(EnergyShareRequirements, portfolio, "test_esr")
-    storage = first(get_technologies(StorageTechnology, portfolio))
-    set_requirements!(storage, [requirement])
-
-    portfolio2 = validate_serialization(portfolio; time_series_read_only=true)
-    storage2 = get_technology(typeof(storage), portfolio2, PSIP.get_name(storage))
-    @test storage2 !== nothing
-    result = IS.compare_values(storage, storage2; compare_uuids=false)
-    @test result
-
-    requirement2 = PSIP.get_requirement(EnergyShareRequirements, portfolio2, "test_esr")
-    @test has_requirement(storage2, requirement2)
-end
-
-@testset "Test serialization of regions" begin
-    portfolio = build_portfolio()
-    portfolio2 = validate_serialization(portfolio; time_series_read_only=true)
-
-    regions = get_regions(PSY.Topology, portfolio)
-
-    for r in regions
-        r2 = get_region(typeof(r), portfolio2, PSIP.get_name(r))
-        @test r2 !== nothing
-        result = IS.compare_values(r, r2; compare_uuids=false)
-        @test result
-    end
-end
-
-@testset "Test serialization of Portfolio fields" begin
+function _build_roundtrip_portfolio()
     financial_data = PortfolioFinancialData(2020, 0.07, 0.03, 0.05)
-    name = "my_portfolio"
-    description = "test"
-    port = Portfolio(; financial_data=financial_data, name=name, description=description)
-    zone = PSY.Area(; name="zone1", base_power=100.0)
-    base_sys = get_base_system(port)
-    test_bus = ACBus(nothing)
-    set_bustype!(test_bus, ACBusTypes.REF)
-    add_component!(base_sys, test_bus)
+    port = Portfolio(;
+        financial_data=financial_data,
+        name="roundtrip_portfolio",
+        description="round-trip case",
+    )
 
-    add_topology!(port, zone)
+    # Base system with a bus, so the base_system/ sidecar round-trips.
+    base_sys = PSIP.get_base_system(port)
+    ref_bus = ACBus(nothing)
+    PSY.set_name!(ref_bus, "ref_bus")
+    PSY.set_bustype!(ref_bus, ACBusTypes.REF)
+    PSY.add_component!(base_sys, ref_bus)
+
+    # Topology region referenced by the technology.
+    zone = PSY.Area(; name="zone1", base_power=100.0)
+    PSIP.add_topology!(port, zone)
+
+    # One technology, with its own financial data + operation costs.
     gen = SupplyTechnology{ThermalStandard}(;
         name="gen1",
         region=[zone],
         available=true,
+        power_systems_type=string(nameof(ThermalStandard)),
         financial_data=TechnologyFinancialData(;
             capital_recovery_period=30,
             technology_base_year=2025,
@@ -66,7 +39,6 @@ end
             return_on_equity=0.1,
             tax_rate=0.257,
         ),
-        power_systems_type=string(nameof(ThermalStandard)),
         operation_costs=ThermalGenerationCost(;
             variable_operation_cost=zero(CostCurve),
             fixed=0.0,
@@ -74,131 +46,82 @@ end
             shut_down=0.0,
         ),
     )
-    add_technology!(port, gen)
+    PSIP.add_technology!(port, gen)
 
-    port2 = validate_serialization(port)
-    @test port2.financial_data.discount_rate == financial_data.discount_rate
-    @test port2.financial_data.inflation_rate == financial_data.inflation_rate
-    @test port2.financial_data.interest_rate == financial_data.interest_rate
-    @test port2.metadata.name == name
-    @test port2.metadata.description == description
+    # A policy requirement, with membership on the technology (requirements_associations table).
+    req = MaximumCapacityRequirements(; name="max_cap", available=true, target_year=2030)
+    PSIP.add_requirement!(port, req)
+    PSIP.set_requirements!(gen, [req])
+
+    # A supplemental attribute on the technology.
+    PSIP.add_supplemental_attribute!(port, gen, ExistingDevices(; existing_devices=["gen1"]))
+
+    # A time series on the technology.
+    timestamps = collect(
+        DateTime("2024-01-01T00:00:00"):Hour(1):DateTime("2024-01-01T23:00:00"),
+    )
+    ts = SingleTimeSeries(; data=TimeArray(timestamps, collect(1.0:24.0)), name="cap_factor")
+    PSIP.add_time_series!(port, gen, ts; year="2024", rep_day=1)
+
+    # An investment schedule (model output).
+    schedule = InvestmentScheduleResults(
+        Dict((Date("2030-01-01"), Date("2034-12-01")) =>
+            Dict((SupplyTechnology{ThermalStandard}, "gen1") => 123.45)),
+    )
+    PSIP.set_investment_schedule!(port, schedule)
+
+    return port
 end
 
-@testset "Test serialization/deserialization of investment schedule" begin
-    portfolio = build_portfolio()
+@testset "OpenAPI document round-trip (to_file/from_file)" begin
+    port = _build_roundtrip_portfolio()
 
-    dict_2030 = Dict(
-        (SupplyTechnology{ThermalStandard}, "expensive_thermal") => 0.0,
-        (StorageTechnology{EnergyReservoirStorage}, "test_storage") =>
-            (build_p=0.0, build_e=0.0),
-        (ColocatedSupplyStorageTechnology{RenewableDispatch}, "colocated_test") =>
-            (build_inverter=1592.22,),
-        (SupplyTechnology{RenewableDispatch}, "wind") => 975.015,
-        (AggregateTransportTechnology{ACBranch}, "test_branch") => 934.992,
-        (SupplyTechnology{ThermalStandard}, "cheap_thermal") => 0.0,
-    )
-    dict_2035 = Dict(
-        (SupplyTechnology{ThermalStandard}, "expensive_thermal") => 0.0,
-        (StorageTechnology{EnergyReservoirStorage}, "test_storage") =>
-            (build_p=0.0, build_e=0.0),
-        (ColocatedSupplyStorageTechnology{RenewableDispatch}, "colocated_test") =>
-            (build_inverter=313.05,),
-        (SupplyTechnology{RenewableDispatch}, "wind") => 135.609,
-        (AggregateTransportTechnology{ACBranch}, "test_branch") => 508.671,
-        (SupplyTechnology{ThermalStandard}, "cheap_thermal") => 0.0,
-    )
-    manual_schedule = Dict(
-        (Date("2030-01-01"), Date("2034-12-01")) => dict_2030,
-        (Date("2035-01-01"), Date("2039-12-01")) => dict_2035,
-    )
-    schedule = InvestmentScheduleResults(manual_schedule)
+    mktempdir() do dir
+        bundle = joinpath(dir, "case")
+        PSIP.to_file(port, bundle; force=true)
+        port2 = PSIP.from_file(bundle)
 
-    set_investment_schedule!(portfolio, schedule)
+        # Portfolio-level financial_data
+        fd2 = PSIP.get_financial_data(port2)
+        @test fd2 !== nothing
+        @test fd2.base_year == 2020
+        @test fd2.discount_rate == 0.07
+        @test fd2.inflation_rate == 0.03
+        @test fd2.interest_rate == 0.05
 
-    @test schedule == get_investment_schedule(portfolio)
+        # Metadata
+        @test PSIP.get_name(port2) == "roundtrip_portfolio"
+        @test PSIP.get_description(port2) == "round-trip case"
 
-    portfolio2 = validate_serialization(portfolio)
-    schedule2 = get_investment_schedule(portfolio2)
-    for key in keys(schedule.results)
-        @test haskey(schedule2.results, key)
-        for key2 in keys(schedule.results[key])
-            @test haskey(schedule2.results[key], key2)
-            if schedule.results[key][key2] isa NamedTuple
-                caps = schedule.results[key][key2]
-                caps2 = schedule2.results[key][key2]
-                for key3 in keys(caps)
-                    @test caps[key3] == caps2[key3]
-                end
-            else
-                @test schedule.results[key][key2] == schedule2.results[key][key2]
-            end
-        end
-    end
-end
+        # Technology
+        gen2 = PSIP.get_technology(SupplyTechnology{ThermalStandard}, port2, "gen1")
+        @test gen2 !== nothing
 
-@testset "serialization edge cases" begin
-    # --- unsupported file extension throws DataFormatError ---
-    @test_throws IS.DataFormatError Portfolio("not_a_portfolio.txt")
+        # Requirement + membership (association-table round trip)
+        req2 = PSIP.get_requirement(MaximumCapacityRequirements, port2, "max_cap")
+        @test req2 !== nothing
+        @test PSIP.has_requirement(gen2, req2)
 
-    portfolio = build_portfolio()
+        # Supplemental attribute
+        attrs = collect(IS.get_supplemental_attributes(ExistingDevices, gen2))
+        @test length(attrs) == 1
+        @test attrs[1].existing_devices == ["gen1"]
 
-    # --- to_json of a lone technology raises: references need the portfolio's id registry ---
-    tech = first(get_technologies(SupplyTechnology, portfolio))
-    @test_logs(
-        (:error, r"Failed to serialize"),
-        min_level = Logging.Error,
-        @test_throws(ErrorException, PSIP.to_json(tech; pretty=true)),
-    )
+        # Time series
+        ts_list = collect(IS.get_time_series_multiple(port2))
+        @test length(ts_list) == 1
+        @test TimeSeries.values(IS.get_data(ts_list[1])) == collect(1.0:24.0)
 
-    # --- pretty-printed to_json of the portfolio returns non-empty output ---
-    pretty_bytes = PSIP.to_json(portfolio; pretty=true)
-    @test !isempty(pretty_bytes)
-    plain_bytes = PSIP.to_json(portfolio; pretty=false)
-    @test !isempty(plain_bytes)
+        # Investment schedule
+        sched2 = PSIP.get_investment_schedule(port2)
+        @test sched2 !== nothing
+        key = (Date("2030-01-01"), Date("2034-12-01"))
+        @test haskey(sched2.results, key)
+        @test sched2.results[key][(SupplyTechnology{ThermalStandard}, "gen1")] == 123.45
 
-    test_dir = mktempdir()
-    path = joinpath(test_dir, "edge_portfolio.json")
-
-    # --- to_json with user_data writes metadata (covers user_data branch) ---
-    PSIP.to_json(portfolio, path; user_data=Dict("scenario" => "edge"), force=true)
-    @test isfile(path)
-    mfile = joinpath(test_dir, "edge_portfolio_metadata.json")
-    @test isfile(mfile)
-    meta = JSON3.read(read(mfile, String))
-    @test meta["user_data"]["scenario"] == "edge"
-end
-
-@testset "Test deserialization of component dependency order" begin
-    portfolio = build_portfolio()
-    requirement = PSIP.get_requirement(EnergyShareRequirements, portfolio, "test_esr")
-    storage = first(get_technologies(StorageTechnology, portfolio))
-    set_requirements!(storage, [requirement])
-
-    mktempdir() do test_dir
-        path = joinpath(test_dir, "test_requirement_serialization.json")
-        PSIP.to_json(portfolio, path; force=true)
-        data = open(path, "r") do io
-            JSON3.read(io, Dict)
-        end
-        component_type_order = ["StorageTechnology", "EnergyShareRequirements", "Area"]
-        type_rank = Dict(type => rank for (rank, type) in enumerate(component_type_order))
-        components = data["data"]["components"]
-        sort!(
-            components;
-            by=x ->
-                get(type_rank, x["__metadata__"]["type"], length(component_type_order) + 1),
-        )
-        open(path, "w") do io
-            JSON3.pretty(io, data)
-        end
-
-        portfolio2 = Portfolio(path)
-        storage2 = get_technology(typeof(storage), portfolio2, PSIP.get_name(storage))
-        @test storage2 !== nothing
-        result = IS.compare_values(storage, storage2; compare_uuids=false)
-        @test result
-
-        requirement2 = PSIP.get_requirement(EnergyShareRequirements, portfolio2, "test_esr")
-        @test has_requirement(storage2, requirement2)
+        # Base system
+        bsys2 = PSIP.get_base_system(port2)
+        @test bsys2 isa PSY.System
+        @test any(b -> PSY.get_name(b) == "ref_bus", PSY.get_components(ACBus, bsys2))
     end
 end

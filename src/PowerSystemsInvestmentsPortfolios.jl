@@ -30,6 +30,7 @@ using PowerSystems
 import PowerSystems: ThermalFuels, PrimeMovers, StorageTech, ACBusTypes
 
 import JSONSchema
+import JSON
 import JSON3
 import PrettyTables
 import SQLite
@@ -43,10 +44,18 @@ import PowerCoreOpenAPIModels
 import PowerInvestmentsOpenAPIModels
 const PC = PowerCoreOpenAPIModels
 const PI = PowerInvestmentsOpenAPIModels
+import PowerOpenAPIModels
+import InfrastructureCoreOpenAPIModels
+import InfrastructureTimeSeriesOpenAPIModels
+const PD = PowerOpenAPIModels
+const PO = PowerOpenAPIModels
+const IC = InfrastructureCoreOpenAPIModels
+const PTS = InfrastructureTimeSeriesOpenAPIModels
 import StringEncodings
 import Tables
 import Unitful
 using Unitful: @dimension, @u_str, @refunit, @unit, Quantity, Units, uconvert, ustrip, unit
+using DocStringExtensions
 
 export Portfolio
 export Requirement
@@ -176,8 +185,6 @@ include("models/cost_functions/investment_cost.jl")
 include("models/cost_functions/CapitalCost.jl")
 include("models/cost_functions/StorageCapitalCost.jl")
 include("openapi/refs.jl")
-include("openapi/cost_conversion.jl")
-include("openapi/export_cost_conversion.jl")
 include("models/generated/includes.jl")
 include("investment_schedule.jl")
 
@@ -186,6 +193,9 @@ include("units/conversions.jl")
 include("units/function_conversions.jl")
 
 include("portfolio.jl")
+include("openapi/cost_conversion.jl")
+include("openapi/export_cost_conversion.jl")
+include("openapi/sqlite_load.jl")
 include("openapi/import_document.jl")
 include("validation.jl")
 include("time_mapping.jl")
@@ -201,8 +211,6 @@ else
     include("utils/print_pt_v3.jl")
 end
 include("update_system.jl")
-
-using DocStringExtensions
 
 const localunits = Unitful.basefactors
 const localpromotion = copy(Unitful.promotion)

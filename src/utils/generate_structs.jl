@@ -154,7 +154,7 @@ end
 #  * Parametric types are generated, not rejected. PSY hand-writes those; PSIP cannot,
 #    since 8 of its 23 types are parametric. `power_systems_type` carries the parameter.
 
-const OPENAPI_SKIP_FIELDS = Set(["ext", "internal"])
+const OPENAPI_SKIP_FIELDS = Set(["ext", "internal", "requirements"])
 
 const OPENAPI_SCALAR_TYPES = Set([
     "Float64",

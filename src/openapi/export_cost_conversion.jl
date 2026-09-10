@@ -1,6 +1,26 @@
 # OpenAPI export (`*_to_openapi`) converters: reverse direction of
 # `src/openapi/cost_conversion.jl`, mirroring PowerSystems.jl structure.
 
+# Every association id the document emits passes through here.
+#
+# A cost may reference a series owned by a different component, and that owner may
+# be one the document cannot describe -- a dynamic component today, since none has
+# a converter yet. `_export_all_time_series` then skips the series' association row
+# and the document ships a cost pointing at a series it never declares. Importing
+# that against another sidecar resolves the bare id against whatever holds it
+# there, silently binding the cost to the wrong series.
+#
+# Recording each id as it is emitted lets `_check_costs_reference_declared_series!`
+# catch that before the document exists, and it stays correct for cost shapes added
+# later: a new emit point routes through here or it does not emit an id at all.
+const _EMITTED_ASSOCIATION_IDS_KEY = :psip_openapi_export_emitted_association_ids
+
+function _record_emitted_association_id(id::Int)
+    ids = get(task_local_storage(), _EMITTED_ASSOCIATION_IDS_KEY, nothing)
+    isnothing(ids) || push!(ids, id)
+    return id
+end
+
 # ── compound PO constructors, called by generated to_openapi ──────────────────
 
 _minmax_po(v) = PC.MinMax(; min=v.min, max=v.max)
@@ -238,6 +258,17 @@ function convert_nested_data_to_openapi(fd::TechnologyFinancialData)
         tax_rate=get_tax_rate(fd),
     )
 end
+
+function convert_nested_data_to_openapi(fd::PortfolioFinancialData)
+    return PI.PortfolioFinancialData(;
+        base_year = fd.base_year,
+        discount_rate = fd.discount_rate,
+        inflation_rate = fd.inflation_rate,
+        interest_rate = fd.interest_rate,
+    )
+end
+
+convert_nested_data_to_openapi(::Nothing) = nothing
 
 function convert_nested_data_to_openapi(fd)
     return error(
