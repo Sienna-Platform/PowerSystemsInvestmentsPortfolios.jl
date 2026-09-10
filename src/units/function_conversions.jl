@@ -234,7 +234,7 @@ function _natural_unit_conversions(
     from::FuelCurveUnits,
     to::FuelCurveUnits,
 )
-    if isa(get_variable(v), CostCurve)
+    if isa(get_variable_operation_cost(v), CostCurve)
         @error "Variable Cost is a CostCurve. Use ConversionUnits for conversion."
     end
     start_up = _natural_unit_conversions(
@@ -244,7 +244,7 @@ function _natural_unit_conversions(
         to.currency_unit / to.energy_unit,
     )
     return ThermalGenerationCost(
-        _natural_unit_conversions(base, v.variable, from, to),
+        _natural_unit_conversions(base, v.variable_operation_cost, from, to),
         IS._strip_units(
             _natural_unit_conversions(
                 base,
@@ -271,7 +271,7 @@ function _natural_unit_conversions(
     from::ConversionUnits,
     to::ConversionUnits,
 )
-    if isa(get_variable(v), FuelCurve)
+    if isa(get_variable_operation_cost(v), FuelCurve)
         @error "Variable Cost is a FuelCurve. Use FuelCurveUnits for conversion."
     end
 
@@ -282,7 +282,7 @@ function _natural_unit_conversions(
         to.y_unit / to.x_unit,
     )
     return ThermalGenerationCost(
-        _natural_unit_conversions(base, v.variable, from, to),
+        _natural_unit_conversions(base, v.variable_operation_cost, from, to),
         IS._strip_units(
             _natural_unit_conversions(
                 base,
@@ -310,7 +310,7 @@ function _natural_unit_conversions(
     to::ConversionUnits,
 )
     return HydroGenerationCost(
-        _natural_unit_conversions(base, v.variable, from, to),
+        _natural_unit_conversions(base, v.variable_operation_cost, from, to),
         IS._strip_units(
             _natural_unit_conversions(
                 base,
@@ -382,7 +382,7 @@ function _natural_unit_conversions(
     to::ConversionUnits,
 )
     return RenewableGenerationCost(
-        _natural_unit_conversions(base, v.variable, from, to),
+        _natural_unit_conversions(base, v.variable_operation_cost, from, to),
         _natural_unit_conversions(base, v.curtailment_cost, from, to),
         IS._strip_units(
             _natural_unit_conversions(

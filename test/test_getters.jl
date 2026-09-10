@@ -217,7 +217,7 @@ end
         fixed=0.0,
     )
     rc = RenewableGenerationCost(
-        variable=CostCurve(LinearCurve(0.0)),
+        variable_operation_cost=CostCurve(LinearCurve(0.0)),
         curtailment_cost=CostCurve(LinearCurve(0.0)),
         fixed=0.0,
     )

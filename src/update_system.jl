@@ -131,7 +131,7 @@ function update_or_create_new_generator!(
         new_gen = T(
             name=unit_name,
             available=true,                           # Generator is available for dispatch
-            status=true,                            # Generator is on by default
+            status=PSY.OperationalStates.ONLINE,      # Generator is on by default
             bus=bus_sys,                              # Connected bus
             active_power=0.0,                         # Initial active power output
             reactive_power=0.0,                       # Initial reactive power output
@@ -254,7 +254,7 @@ capacity, accounting for resource availability (e.g., solar irradiance, wind spe
 
   - The time series is named "max_active_power" to comply with PowerSystems conventions
   - The values are stored as capacity factors, declared as per unit on the generator's own
-    base (`IS.DU`) scaling to active power. Nothing rescales them on read; a consumer that
+    base (`IS.CU`) scaling to active power. Nothing rescales them on read; a consumer that
     wants MW multiplies by the generator's max active power itself
   - A deep copy of the time series array is made to avoid unintended data sharing
 """
@@ -272,7 +272,7 @@ function add_renewable_timeseries!(
     renewable_ts = PSY.SingleTimeSeries(;
         name="max_active_power",                      # Standard PowerSystems time series name
         data=ts_array,                                 # Capacity factor time series data
-        unit_system=IS.DU,                             # Values are per unit on the generator's base
+        unit_system=IS.CU,                             # Values are per unit on the generator's base
         quantity_kind="active_power",                  # ...of active power
     )
 

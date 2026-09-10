@@ -65,9 +65,7 @@ export StorageTechnology
 export DemandRequirement
 export DemandSideTechnology
 export RetirementPotential
-export AggregateRetirementPotential
 export RetrofitPotential
-export AggregateRetrofitPotential
 export ExistingDevices
 export TopologyMapping
 export CarbonCaps

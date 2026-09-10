@@ -53,20 +53,3 @@ set_bus_type!(value::Node, val) = value.bus_type = val
 set_ext!(value::Node, val) = value.ext = val
 """Set [`Node`](@ref) `internal`."""
 set_internal!(value::Node, val) = value.internal = val
-
-
-
-function from_openapi(po::PI.Node, refs::OpenAPIRefs)
-    return Node(;
-        name = po.name,
-        bus_type = ACBusTypes(po.bus_type),
-    )
-end
-
-function to_openapi(value::Node, refs::OpenAPIRefs)
-    return PI.Node(;
-        id = get_id(value),
-        name = get_name(value),
-        bus_type = string(get_bus_type(value)),
-    )
-end

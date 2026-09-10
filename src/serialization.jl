@@ -143,8 +143,9 @@ function IS.serialize(schedule::InvestmentScheduleResults)
 end
 
 """
-Rendering goes through `OpenAPI.to_json` rather than `JSON3.write` because only the former
-unwraps the `oneOf` wrappers and stamps their discriminators.
+Rendering goes through the generated packages' `encode` rather than `JSON3.write` because
+only the former unwraps the `oneOf` wrappers and stamps their discriminators. `encode` is the
+public entry point that replaced OpenAPI.jl 0.2's `OpenAPI.to_json`, which 1.x deleted.
 """
 function _serialize_openapi(component)
     # Rejected on write as well as on read: a type absent from the plans would otherwise
@@ -153,14 +154,18 @@ function _serialize_openapi(component)
     # a parametric type, matching what `_group_by_serialized_type` resolves to.
     _openapi_wire_type(Base.typename(typeof(component)).wrapper)
     po = to_openapi(component, _active_export_refs())
-    data = JSON3.read(OpenAPI.to_json(po), Dict{String, Any})
+    data = Dict{String, Any}(PC.encode(po))
     add_serialization_metadata!(data, typeof(component))
     return data
 end
 
 IS.serialize(value::Technology) = _serialize_openapi(value)
-IS.serialize(value::RegionTopology) = _serialize_openapi(value)
 IS.serialize(value::Requirement) = _serialize_openapi(value)
+
+# `Zone`/`Node` (the only `RegionTopology`s) carry `openapi: false` (SiennaSchemas
+# 51f872e dropped the Regions folder): neither has a `PI.` counterpart, so they fall
+# through to `IS.serialize`'s generic `InfrastructureSystemsType` default rather than
+# the OpenAPI path the other component families use.
 
 # PSIP's supplemental attributes subtype `IS.SupplementalAttribute` directly, with no PSIP
 # supertype of their own, so dispatching on the abstract type would pirate every other
@@ -346,12 +351,18 @@ function deserialize(
     else
         IS.read_validation_descriptor(validation_descriptor_file)
     end
+    if !haskey(raw, "next_id")
+        error(
+            "The serialized system predates the single id stream (it carries " *
+            "next_component_id/next_supplemental_attribute_id); regenerate it with " *
+            "this version of InfrastructureSystems.",
+        )
+    end
 
     return IS.SystemData(
         validation_descriptors,
         time_series_manager,
-        Int(get(raw, "next_component_id", 1)),
-        Int(get(raw, "next_supplemental_attribute_id", 1)),
+        Int(raw["next_id"]),
         subsystems,
         IS.SupplementalAttributeManager(time_series_manager.data_store),
         internal,
@@ -443,7 +454,7 @@ function deserialize_attributes!(portfolio::Portfolio, data::Dict, refs::OpenAPI
     for (attribute_type, _key) in SUPPLEMENTAL_ATTRIBUTE_PLAN
         haskey(by_type, attribute_type) || continue
         for raw_attribute in pop!(by_type, attribute_type)
-            po = OpenAPI.from_json(_openapi_wire_type(attribute_type), raw_attribute)
+            po = PC.decode(_openapi_wire_type(attribute_type), raw_attribute)
             attribute = from_openapi(po, refs)
             # The wire carries the document id in `po.id`. Stamp it onto the attribute's
             # internal identity so it becomes the stored id the store's association rows
@@ -478,6 +489,17 @@ function deserialize_components!(portfolio::Portfolio, raw, refs::OpenAPIRefs)
     # DOCUMENT_PLAN order is dependency order: regions and requirements land in `refs`
     # before the technologies whose references resolve against them.
     by_type = _group_by_serialized_type(raw["components"])
+    # Zone/Node (`openapi: false`) were written through `IS.serialize`'s generic
+    # `InfrastructureSystemsType` path (`serialization.jl`'s `RegionTopology` note),
+    # not `PC.decode`/`from_openapi`, so they need the matching generic `IS.deserialize`
+    # here, ahead of DOCUMENT_PLAN, and are never in that plan themselves.
+    for psip_type in filter(t -> t <: RegionTopology, collect(keys(by_type)))
+        for raw_component in pop!(by_type, psip_type)
+            component = IS.deserialize(psip_type, raw_component)
+            IS.add_component!(portfolio.data, component; skip_validation=true)
+            refs[get_id(component)] = component
+        end
+    end
     for (psip_type, _key) in DOCUMENT_PLAN
         haskey(by_type, psip_type) || continue
         for raw_component in pop!(by_type, psip_type)
@@ -485,7 +507,7 @@ function deserialize_components!(portfolio::Portfolio, raw, refs::OpenAPIRefs)
             # special-case method written for a concrete `Name{Param}` would never
             # dispatch here; declare it on the `UnionAll`.
             handle_deserialization_special_cases!(raw_component, psip_type)
-            po = OpenAPI.from_json(_openapi_wire_type(psip_type), raw_component)
+            po = PC.decode(_openapi_wire_type(psip_type), raw_component)
             component = from_openapi(po, refs)
             # The wire carries the document id in `po.id`; `from_openapi` does not read it
             # because id is no longer a struct field. Stamp it onto the component's internal

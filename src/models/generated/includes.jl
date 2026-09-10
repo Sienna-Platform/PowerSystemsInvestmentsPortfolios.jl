@@ -2,9 +2,7 @@ include("Zone.jl")
 include("Node.jl")
 include("SupplyTechnology.jl")
 include("RetirementPotential.jl")
-include("AggregateRetirementPotential.jl")
 include("RetrofitPotential.jl")
-include("AggregateRetrofitPotential.jl")
 include("ExistingDevices.jl")
 include("TopologyMapping.jl")
 include("StorageTechnology.jl")
@@ -102,10 +100,9 @@ export get_reactance
 export get_region
 export get_requirements
 export get_resistance
-export get_retirement_potential
+export get_retirement_cost
+export get_retrofit_cost
 export get_retrofit_fraction
-export get_retrofit_id
-export get_retrofit_potential
 export get_shift_variable_cost
 export get_start_fuel_mmbtu_per_mw
 export get_start_node
@@ -202,10 +199,9 @@ export set_reactance!
 export set_region!
 export set_requirements!
 export set_resistance!
-export set_retirement_potential!
+export set_retirement_cost!
+export set_retrofit_cost!
 export set_retrofit_fraction!
-export set_retrofit_id!
-export set_retrofit_potential!
 export set_shift_variable_cost!
 export set_start_fuel_mmbtu_per_mw!
 export set_start_node!
