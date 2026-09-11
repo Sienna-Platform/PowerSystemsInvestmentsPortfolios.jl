@@ -28,15 +28,14 @@ URIs = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [sources]
-InfrastructureSystems = {path = "../InfrastructureSystems.jl"}
-PowerSystems = {path = "../PowerSystems.jl"}
-# Pinned by rev, not by sibling path: the sibling checkout carries in-progress schema
-# renames ahead of the PowerSystems rev above, and the two must agree.
+# Branch pins until the OpenAPI packages are registered and the psy6-line branches merge.
+InfrastructureSystems = {url = "https://github.com/Sienna-Platform/InfrastructureSystems.jl.git", rev = "jd/openapi-1x-suite"}
+PowerSystems = {url = "https://github.com/Sienna-Platform/PowerSystems.jl.git", rev = "jd/openapi-1x"}
 # PowerOperationsOpenAPIModels is unused here — PSY's own [sources] are ignored once PSY
 # is a dependency rather than the root project, so PSIP pins it for Pkg to resolve.
-PowerCoreOpenAPIModels = {path = "../PowerOpenAPIModels/PowerCoreOpenAPIModels.jl"}
-PowerOperationsOpenAPIModels = {path = "../PowerOpenAPIModels/PowerOperationsOpenAPIModels.jl"}
-PowerInvestmentsOpenAPIModels = {path = "../PowerOpenAPIModels/PowerInvestmentsOpenAPIModels.jl"}
+PowerCoreOpenAPIModels = {url = "https://github.com/Sienna-Platform/PowerOpenAPIModels.git", rev = "jd/openapi_deps_update", subdir = "PowerCoreOpenAPIModels.jl"}
+PowerOperationsOpenAPIModels = {url = "https://github.com/Sienna-Platform/PowerOpenAPIModels.git", rev = "jd/openapi_deps_update", subdir = "PowerOperationsOpenAPIModels.jl"}
+PowerInvestmentsOpenAPIModels = {url = "https://github.com/Sienna-Platform/PowerOpenAPIModels.git", rev = "jd/openapi_deps_update", subdir = "PowerInvestmentsOpenAPIModels.jl"}
 
 [compat]
 DBInterface = "2.6"
