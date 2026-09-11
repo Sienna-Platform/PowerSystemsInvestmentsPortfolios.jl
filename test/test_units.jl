@@ -242,14 +242,15 @@ end
 # `fixed`, and both scale by `ratio`.
 function check_variable_fixed_cost(get, set, nat, alt; var_prop, fixed, ratio)
     o = get(nat)
-    @test o.variable.value_curve.function_data.proportional_term ≈ var_prop
+    @test o.variable_operation_cost.value_curve.function_data.proportional_term ≈ var_prop
     @test o.fixed ≈ fixed
     o2 = get(alt)
-    @test o2.variable.value_curve.function_data.proportional_term ≈ var_prop * ratio
+    @test o2.variable_operation_cost.value_curve.function_data.proportional_term ≈
+          var_prop * ratio
     @test o2.fixed ≈ fixed * ratio
     set(get(alt), alt)              # round trip: feed the alt-unit cost back
     o3 = get(nat)
-    @test o3.variable.value_curve.function_data.proportional_term ≈ var_prop
+    @test o3.variable_operation_cost.value_curve.function_data.proportional_term ≈ var_prop
     @test o3.fixed ≈ fixed
 end
 
@@ -427,7 +428,7 @@ end
     )
     ngc = PSIP._natural_unit_conversions(t, gc, cu_kw, cu_mw)
     @test ngc isa ThermalGenerationCost
-    @test ngc.variable.value_curve.function_data.proportional_term ≈ 500.0
+    @test ngc.variable_operation_cost.value_curve.function_data.proportional_term ≈ 500.0
     @test ngc.fixed ≈ 1.0e5
 
     io = InputOutputCurve(LinearFunctionData(0.5, 10.0), 1.0)
@@ -440,7 +441,7 @@ end
         (energy_unit=u"MW" * u"hr", fuel_unit=u"btu", currency_unit=USD),
     )
     @test ngfc isa ThermalGenerationCost
-    @test ngfc.variable.fuel_cost ≈ 1.0e-4
+    @test ngfc.variable_operation_cost.fuel_cost ≈ 1.0e-4
     @test ngfc.start_up == (hot=100.0, warm=50.0, cold=10.0)
 
     sc = StorageCost(;
@@ -461,7 +462,7 @@ end
     nrc = PSIP._natural_unit_conversions(t, rc, cu_kw, cu_mw)
     @test nrc isa RenewableGenerationCost
     @test nrc.fixed ≈ 1000.0
-    @test nrc.variable.value_curve.function_data.proportional_term ≈ 1000.0
+    @test nrc.variable_operation_cost.value_curve.function_data.proportional_term ≈ 1000.0
 end
 
 @testset "SupplyTechnology getters/setters" begin
@@ -509,13 +510,31 @@ end
         down=1200.0,
         ratio=1 / 60,
     )
+    # capital_costs (usd_per_mw, ValueCurve)
+    check_valuecurve(
+        u -> PSIP.get_capital_costs(t, u),
+        (v, u) -> PSIP.set_capital_costs!(t, v, u),
+        conversion_unit(u"MW", USD),
+        conversion_unit(u"kW", USD);
+        prop=10000.0,
+        ratio=1e-3,
+    )
+
     PSIP.set_outage_factor!(t, (planned=0.08, forced=0.0))
     @test PSIP.get_outage_factor(t) == (planned=0.08, forced=0.0)
-
-    cc = PSIP.CapitalCost(LinearCurve(10000.0), 5.0)
-    PSIP.set_capital_costs!(t, cc)
-    @test PSIP.get_capital_cost(PSIP.get_capital_costs(t)) == LinearCurve(10000.0)
-    @test PSIP.get_interconnection_cost(PSIP.get_capital_costs(t)) == 5.0
+    
+    # operation_costs (usd_per_mwh, OperationalCost)
+    oc = PSIP.get_operation_costs(t, conversion_unit(u"MW" * u"hr", USD))
+    @test oc.variable_operation_cost.value_curve.function_data.proportional_term ≈ 10.0
+    @test oc.fixed ≈ 100.0
+    oc2 = PSIP.get_operation_costs(t, conversion_unit(u"kW" * u"hr", USD))
+    @test oc2.variable_operation_cost.value_curve.function_data.proportional_term ≈ 0.01
+    # lifetime (yr, Int)
+    @test PSIP.get_lifetime(t, u"yr") == 30
+    PSIP.set_lifetime!(t, 20, u"yr")
+    @test PSIP.get_lifetime(t, u"yr") == 20
+    # _unitful companion returns a Quantity
+    @test PSIP.get_unit_size_unitful(t, u"MW") == 100.0u"MW"
 end
 
 @testset "StorageTechnology getters/setters" begin
@@ -828,6 +847,13 @@ end
         # (Sienna component type, field name) for every field corrected on this
         # branch — the 9 scale/basis mismatches plus the 2 fields SiennaSchemas
         # annotated but PSIP never converted at all.
+        #
+        # Three entries are skipped: the schemas no longer carry these fields at all
+        # (ColocatedSupplyStorageTechnology.duration_limits and .operation_costs_power
+        # per the f95da63 restructure; SupplyTechnology.co2 per 7c4ad0c's "move
+        # EmissionsData to Core"), so there is nothing on the schema side left to
+        # compare a unit against. These are parity drifts, not fixed here — see the
+        # parity-drift table in the PR body.
         checked_fields = [
             ("SupplyTechnology", "time_limits"),
             ("StorageTechnology", "duration_limits"),

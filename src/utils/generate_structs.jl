@@ -77,9 +77,9 @@ end
 {{/has_null_values}}
 {{#accessors}}
 {{#needs_conversion}}
-{{#create_docstring}}\"\"\"Get [`{{struct_name}}`](@ref) `{{name}}` as a bare number in the requested `units` (e.g. `SU`, `DU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`{{accessor}}_unitful`](@ref).\"\"\"{{/create_docstring}}
+{{#create_docstring}}\"\"\"Get [`{{struct_name}}`](@ref) `{{name}}` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`{{accessor}}_unitful`](@ref).\"\"\"{{/create_docstring}}
 {{accessor}}(value::{{struct_name}}, units) = InfrastructureSystems._strip_units(get_value(value, Val(:{{name}}), Val({{conversion_unit}}), units))
-{{#create_docstring}}\"\"\"Get [`{{struct_name}}`](@ref) `{{name}}` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `DU`, `MW`). For a bare number see [`{{accessor}}`](@ref).\"\"\"{{/create_docstring}}
+{{#create_docstring}}\"\"\"Get [`{{struct_name}}`](@ref) `{{name}}` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`{{accessor}}`](@ref).\"\"\"{{/create_docstring}}
 {{accessor}}_unitful(value::{{struct_name}}, units) = get_value(value, Val(:{{name}}), Val({{conversion_unit}}), units)
 InfrastructureSystems.display_units_arg(::typeof({{accessor}}), ::{{units_type_sig}}){{#units_bound}} where {T <: {{units_bound}}}{{/units_bound}} = InfrastructureSystems.{{display_units}}
 InfrastructureSystems.display_units_arg(::typeof({{accessor}}_unitful), ::{{units_type_sig}}){{#units_bound}} where {T <: {{units_bound}}}{{/units_bound}} = InfrastructureSystems.{{display_units}}
@@ -105,6 +105,7 @@ InfrastructureSystems.display_units_arg(::typeof({{accessor}}_unitful), ::{{unit
 {{{custom_code}}}
 {{/custom_code}}
 
+{{#has_openapi}}
 {{#has_parametric}}
 function from_openapi(po::PI.{{struct_name}}, refs::OpenAPIRefs)
     parameter = getproperty(PowerSystems, Symbol(po.power_systems_type))
@@ -141,6 +142,7 @@ function to_openapi(value::{{struct_name}}, refs::OpenAPIRefs)
     )
 end
 {{/has_parametric}}
+{{/has_openapi}}
 
 """
 
@@ -570,6 +572,15 @@ function generate_invest_structs(directory, data::JSONSchema.Schema; print_resul
         item["constructor_func"] = struct_name
         item["struct_name"] = struct_name
         item["closing_constructor_text"] = ""
+
+        # Whether to emit `from_openapi`/`to_openapi` for this struct. Opt-out, because most
+        # structs here mirror a schema: a descriptor entry sets `"openapi": false` when the
+        # struct is a portfolio-only concept with no counterpart in SiennaSchemas, and so no
+        # `PI.<Name>` to convert against. `Zone`/`Node` are that case since the schemas
+        # dropped the Regions folder (SiennaSchemas 51f872e) -- they remain real PSIP types,
+        # reachable through `RegionTopology` and the DB parser, but they do not ride in an
+        # OpenAPI document.
+        item["has_openapi"] = get(input, "openapi", true)
 
         item["has_parametric"] = false
         if haskey(input, "parametric")

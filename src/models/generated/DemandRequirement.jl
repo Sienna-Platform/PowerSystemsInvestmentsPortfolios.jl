@@ -78,9 +78,9 @@ get_name(value::DemandRequirement) = value.name
 get_available(value::DemandRequirement) = value.available
 """Get [`DemandRequirement`](@ref) `power_systems_type`."""
 get_power_systems_type(value::DemandRequirement) = value.power_systems_type
-"""Get [`DemandRequirement`](@ref) `new_demand_mw` as a bare number in the requested `units` (e.g. `SU`, `DU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_new_demand_mw_unitful`](@ref)."""
+"""Get [`DemandRequirement`](@ref) `new_demand_mw` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_new_demand_mw_unitful`](@ref)."""
 get_new_demand_mw(value::DemandRequirement, units) = InfrastructureSystems._strip_units(get_value(value, Val(:new_demand_mw), Val(:mw), units))
-"""Get [`DemandRequirement`](@ref) `new_demand_mw` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `DU`, `MW`). For a bare number see [`get_new_demand_mw`](@ref)."""
+"""Get [`DemandRequirement`](@ref) `new_demand_mw` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_new_demand_mw`](@ref)."""
 get_new_demand_mw_unitful(value::DemandRequirement, units) = get_value(value, Val(:new_demand_mw), Val(:mw), units)
 InfrastructureSystems.display_units_arg(::typeof(get_new_demand_mw), ::Type{DemandRequirement{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_new_demand_mw_unitful), ::Type{DemandRequirement{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
@@ -90,15 +90,15 @@ get_new_construction_year(value::DemandRequirement) = value.new_construction_yea
 get_growth_rate(value::DemandRequirement) = value.growth_rate
 """Get [`DemandRequirement`](@ref) `conformity`."""
 get_conformity(value::DemandRequirement) = value.conformity
-"""Get [`DemandRequirement`](@ref) `value_of_lost_load` as a bare number in the requested `units` (e.g. `SU`, `DU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_value_of_lost_load_unitful`](@ref)."""
+"""Get [`DemandRequirement`](@ref) `value_of_lost_load` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_value_of_lost_load_unitful`](@ref)."""
 get_value_of_lost_load(value::DemandRequirement, units) = InfrastructureSystems._strip_units(get_value(value, Val(:value_of_lost_load), Val(:usd_per_mwh_scalar), units))
-"""Get [`DemandRequirement`](@ref) `value_of_lost_load` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `DU`, `MW`). For a bare number see [`get_value_of_lost_load`](@ref)."""
+"""Get [`DemandRequirement`](@ref) `value_of_lost_load` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_value_of_lost_load`](@ref)."""
 get_value_of_lost_load_unitful(value::DemandRequirement, units) = get_value(value, Val(:value_of_lost_load), Val(:usd_per_mwh_scalar), units)
 InfrastructureSystems.display_units_arg(::typeof(get_value_of_lost_load), ::Type{DemandRequirement{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_value_of_lost_load_unitful), ::Type{DemandRequirement{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-"""Get [`DemandRequirement`](@ref) `unserved_demand_curve` as a bare number in the requested `units` (e.g. `SU`, `DU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_unserved_demand_curve_unitful`](@ref)."""
+"""Get [`DemandRequirement`](@ref) `unserved_demand_curve` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_unserved_demand_curve_unitful`](@ref)."""
 get_unserved_demand_curve(value::DemandRequirement, units) = InfrastructureSystems._strip_units(get_value(value, Val(:unserved_demand_curve), Val(:usd_per_mwh), units))
-"""Get [`DemandRequirement`](@ref) `unserved_demand_curve` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `DU`, `MW`). For a bare number see [`get_unserved_demand_curve`](@ref)."""
+"""Get [`DemandRequirement`](@ref) `unserved_demand_curve` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_unserved_demand_curve`](@ref)."""
 get_unserved_demand_curve_unitful(value::DemandRequirement, units) = get_value(value, Val(:unserved_demand_curve), Val(:usd_per_mwh), units)
 InfrastructureSystems.display_units_arg(::typeof(get_unserved_demand_curve), ::Type{DemandRequirement{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_unserved_demand_curve_unitful), ::Type{DemandRequirement{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU

@@ -52,17 +52,17 @@ end
 get_name(value::CarbonCaps) = value.name
 """Get [`CarbonCaps`](@ref) `available`."""
 get_available(value::CarbonCaps) = value.available
-"""Get [`CarbonCaps`](@ref) `max_tons_mwh` as a bare number in the requested `units` (e.g. `SU`, `DU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_max_tons_mwh_unitful`](@ref)."""
+"""Get [`CarbonCaps`](@ref) `max_tons_mwh` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_max_tons_mwh_unitful`](@ref)."""
 get_max_tons_mwh(value::CarbonCaps, units) = InfrastructureSystems._strip_units(get_value(value, Val(:max_tons_mwh), Val(:mt_per_mwh), units))
-"""Get [`CarbonCaps`](@ref) `max_tons_mwh` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `DU`, `MW`). For a bare number see [`get_max_tons_mwh`](@ref)."""
+"""Get [`CarbonCaps`](@ref) `max_tons_mwh` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_max_tons_mwh`](@ref)."""
 get_max_tons_mwh_unitful(value::CarbonCaps, units) = get_value(value, Val(:max_tons_mwh), Val(:mt_per_mwh), units)
 InfrastructureSystems.display_units_arg(::typeof(get_max_tons_mwh), ::Type{CarbonCaps}) = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_max_tons_mwh_unitful), ::Type{CarbonCaps}) = InfrastructureSystems.NU
 """Get [`CarbonCaps`](@ref) `target_year`."""
 get_target_year(value::CarbonCaps) = value.target_year
-"""Get [`CarbonCaps`](@ref) `max_mtons` as a bare number in the requested `units` (e.g. `SU`, `DU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_max_mtons_unitful`](@ref)."""
+"""Get [`CarbonCaps`](@ref) `max_mtons` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_max_mtons_unitful`](@ref)."""
 get_max_mtons(value::CarbonCaps, units) = InfrastructureSystems._strip_units(get_value(value, Val(:max_mtons), Val(:mt), units))
-"""Get [`CarbonCaps`](@ref) `max_mtons` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `DU`, `MW`). For a bare number see [`get_max_mtons`](@ref)."""
+"""Get [`CarbonCaps`](@ref) `max_mtons` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_max_mtons`](@ref)."""
 get_max_mtons_unitful(value::CarbonCaps, units) = get_value(value, Val(:max_mtons), Val(:mt), units)
 InfrastructureSystems.display_units_arg(::typeof(get_max_mtons), ::Type{CarbonCaps}) = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_max_mtons_unitful), ::Type{CarbonCaps}) = InfrastructureSystems.NU

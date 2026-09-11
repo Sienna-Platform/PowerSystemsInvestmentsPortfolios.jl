@@ -1,5 +1,22 @@
-@testset "Technology and topology getters/setters" begin
-    fd = TechnologyFinancialData(
+@testset "Technology and region getters/setters" begin
+    thermal_cost = ThermalGenerationCost(
+        variable_operation_cost=CostCurve(LinearCurve(0.0)),
+        fixed=0.0,
+        start_up=0.0,
+        shut_down=0.0,
+    )
+    storage_cost = StorageCost(
+        charge_variable_cost=CostCurve(LinearCurve(0.0)),
+        discharge_variable_cost=CostCurve(LinearCurve(0.0)),
+        fixed=0.0,
+    )
+    renewable_cost = RenewableGenerationCost(
+        variable_operation_cost=CostCurve(LinearCurve(0.0)),
+        curtailment_cost=CostCurve(LinearCurve(0.0)),
+        fixed=0.0,
+    )
+    inverter_cost = CostCurve(LinearCurve(0.0))
+    tech_financial_data = TechnologyFinancialData(
         capital_recovery_period=20,
         technology_base_year=2020,
         debt_fraction=0.5,

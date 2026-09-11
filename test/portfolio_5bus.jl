@@ -1,5 +1,9 @@
 function build_portfolio()
-    sys = build_system(PSITestSystems, "c_sys5_re")
+    # skip_serialization=true: PowerSystems.jl's OpenAPI export path
+    # (export_cost_conversion.jl) still fails to serialize a CostCurve with no vom_cost
+    # (passes `nothing` where PC.CostCurve requires an InputOutputCurve); that is a
+    # PowerSystems.jl bug, out of scope here. Building in memory does not exercise it.
+    sys = build_system(PSITestSystems, "c_sys5_re"; skip_serialization=true)
 
     ###################
     ###### Zones ######
@@ -86,7 +90,7 @@ function build_portfolio()
     )
 
     thermals = collect(get_components(ThermalStandard, sys))
-    var_cost = PSY.get_variable_operation_cost.((get_operation_cost.((thermals))))
+    var_cost = PSY.get_variable_operation_cost.(get_operation_cost.(thermals))
     op_cost = get_proportional_term.(get_value_curve.(var_cost))
 
     cheap_th_ixs = 2:4
@@ -173,7 +177,7 @@ function build_portfolio()
     wind_op_costs =
         get_proportional_term.(
             get_value_curve.(
-                PSY.get_variable_operation_cost.((get_operation_cost.((renewables))))
+                PSY.get_variable_operation_cost.(get_operation_cost.(renewables))
             )
         )
     wind_op_cost = mean(wind_op_costs)
@@ -574,59 +578,259 @@ function build_portfolio()
     #Time series
     PSIP.add_time_series!(p_5bus, t_th, ts_th_cheap_inv_capex)
     PSIP.add_time_series!(p_5bus, t_th_exp, ts_th_exp_inv_capex)
-    PSIP.add_time_series!(p_5bus, t_th, ts_thermal_2024; year="2024", rep_day=1)
-    PSIP.add_time_series!(p_5bus, t_th, ts_thermal_2028; year="2028", rep_day=2)
-    PSIP.add_time_series!(p_5bus, t_th_exp, ts_thermal_2024; year="2024", rep_day=1)
-    PSIP.add_time_series!(p_5bus, t_th_exp, ts_thermal_2028; year="2028", rep_day=2)
+    PSIP.add_time_series!(
+        p_5bus,
+        t_th,
+        ts_thermal_2024;
+        features=Dict("year" => "2024", "rep_day" => 1),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_th,
+        ts_thermal_2028;
+        features=Dict("year" => "2028", "rep_day" => 2),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_th_exp,
+        ts_thermal_2024;
+        features=Dict("year" => "2024", "rep_day" => 1),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_th_exp,
+        ts_thermal_2028;
+        features=Dict("year" => "2028", "rep_day" => 2),
+    )
 
-    PSIP.add_time_series!(p_5bus, t_wind, ts_wind_2024; year="2024", rep_day=1)
-    PSIP.add_time_series!(p_5bus, t_wind, ts_wind_2028; year="2028", rep_day=2)
+    PSIP.add_time_series!(
+        p_5bus,
+        t_wind,
+        ts_wind_2024;
+        features=Dict("year" => "2024", "rep_day" => 1),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_wind,
+        ts_wind_2028;
+        features=Dict("year" => "2028", "rep_day" => 2),
+    )
     PSIP.add_time_series!(p_5bus, t_wind, ts_wind_inv_capex)
 
-    PSIP.add_time_series!(p_5bus, t_pv1, ts_pv1_2024; year="2024", rep_day=1)
-    PSIP.add_time_series!(p_5bus, t_pv1, ts_pv1_2028; year="2028", rep_day=2)
+    PSIP.add_time_series!(
+        p_5bus,
+        t_pv1,
+        ts_pv1_2024;
+        features=Dict("year" => "2024", "rep_day" => 1),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_pv1,
+        ts_pv1_2028;
+        features=Dict("year" => "2028", "rep_day" => 2),
+    )
     PSIP.add_time_series!(p_5bus, t_pv1, ts_pv1_inv_capex)
-    PSIP.add_time_series!(p_5bus, t_pv2, ts_pv2_2024; year="2024", rep_day=1)
-    PSIP.add_time_series!(p_5bus, t_pv2, ts_pv2_2028; year="2028", rep_day=2)
+    PSIP.add_time_series!(
+        p_5bus,
+        t_pv2,
+        ts_pv2_2024;
+        features=Dict("year" => "2024", "rep_day" => 1),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_pv2,
+        ts_pv2_2028;
+        features=Dict("year" => "2028", "rep_day" => 2),
+    )
     PSIP.add_time_series!(p_5bus, t_pv2, ts_pv2_inv_capex)
 
-    PSIP.add_time_series!(p_5bus, t_stor, ts_sto_2024; year="2024", rep_day=1)
-    PSIP.add_time_series!(p_5bus, t_stor, ts_sto_2028; year="2028", rep_day=2)
+    PSIP.add_time_series!(
+        p_5bus,
+        t_stor,
+        ts_sto_2024;
+        features=Dict("year" => "2024", "rep_day" => 1),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_stor,
+        ts_sto_2028;
+        features=Dict("year" => "2028", "rep_day" => 2),
+    )
 
-    PSIP.add_time_series!(p_5bus, line, ts_line_2024; year="2024", rep_day=1)
-    PSIP.add_time_series!(p_5bus, line, ts_line_2028; year="2028", rep_day=2)
+    PSIP.add_time_series!(
+        p_5bus,
+        line,
+        ts_line_2024;
+        features=Dict("year" => "2024", "rep_day" => 1),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        line,
+        ts_line_2028;
+        features=Dict("year" => "2028", "rep_day" => 2),
+    )
 
-    PSIP.add_time_series!(p_5bus, t_demand_b, ts_demand_b_2024; year="2024", rep_day=1)
-    PSIP.add_time_series!(p_5bus, t_demand_b, ts_demand_b_2028; year="2028", rep_day=2)
-    PSIP.add_time_series!(p_5bus, t_demand_c, ts_demand_c_2024; year="2024", rep_day=1)
-    PSIP.add_time_series!(p_5bus, t_demand_c, ts_demand_c_2028; year="2028", rep_day=2)
-    PSIP.add_time_series!(p_5bus, t_demand_d, ts_demand_d_2024; year="2024", rep_day=1)
-    PSIP.add_time_series!(p_5bus, t_demand_d, ts_demand_d_2028; year="2028", rep_day=2)
+    PSIP.add_time_series!(
+        p_5bus,
+        t_demand_b,
+        ts_demand_b_2024;
+        features=Dict("year" => "2024", "rep_day" => 1),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_demand_b,
+        ts_demand_b_2028;
+        features=Dict("year" => "2028", "rep_day" => 2),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_demand_c,
+        ts_demand_c_2024;
+        features=Dict("year" => "2024", "rep_day" => 1),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_demand_c,
+        ts_demand_c_2028;
+        features=Dict("year" => "2028", "rep_day" => 2),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_demand_d,
+        ts_demand_d_2024;
+        features=Dict("year" => "2024", "rep_day" => 1),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_demand_d,
+        ts_demand_d_2028;
+        features=Dict("year" => "2028", "rep_day" => 2),
+    )
 
-    PSIP.add_time_series!(p_5bus, t_th, ts_thermal_2024; year="2024", rep_day=3)
-    PSIP.add_time_series!(p_5bus, t_th, ts_thermal_2028; year="2028", rep_day=4)
-    PSIP.add_time_series!(p_5bus, t_th_exp, ts_thermal_2024; year="2024", rep_day=3)
-    PSIP.add_time_series!(p_5bus, t_th_exp, ts_thermal_2028; year="2028", rep_day=4)
+    PSIP.add_time_series!(
+        p_5bus,
+        t_th,
+        ts_thermal_2024;
+        features=Dict("year" => "2024", "rep_day" => 3),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_th,
+        ts_thermal_2028;
+        features=Dict("year" => "2028", "rep_day" => 4),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_th_exp,
+        ts_thermal_2024;
+        features=Dict("year" => "2024", "rep_day" => 3),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_th_exp,
+        ts_thermal_2028;
+        features=Dict("year" => "2028", "rep_day" => 4),
+    )
 
-    PSIP.add_time_series!(p_5bus, t_wind, ts_wind_2024; year="2024", rep_day=3)
-    PSIP.add_time_series!(p_5bus, t_wind, ts_wind_2028; year="2028", rep_day=4)
+    PSIP.add_time_series!(
+        p_5bus,
+        t_wind,
+        ts_wind_2024;
+        features=Dict("year" => "2024", "rep_day" => 3),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_wind,
+        ts_wind_2028;
+        features=Dict("year" => "2028", "rep_day" => 4),
+    )
 
-    PSIP.add_time_series!(p_5bus, t_pv1, ts_pv1_2024; year="2024", rep_day=3)
-    PSIP.add_time_series!(p_5bus, t_pv1, ts_pv1_2028; year="2028", rep_day=4)
-    PSIP.add_time_series!(p_5bus, t_pv2, ts_pv2_2024; year="2024", rep_day=3)
-    PSIP.add_time_series!(p_5bus, t_pv2, ts_pv2_2028; year="2028", rep_day=4)
+    PSIP.add_time_series!(
+        p_5bus,
+        t_pv1,
+        ts_pv1_2024;
+        features=Dict("year" => "2024", "rep_day" => 3),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_pv1,
+        ts_pv1_2028;
+        features=Dict("year" => "2028", "rep_day" => 4),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_pv2,
+        ts_pv2_2024;
+        features=Dict("year" => "2024", "rep_day" => 3),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_pv2,
+        ts_pv2_2028;
+        features=Dict("year" => "2028", "rep_day" => 4),
+    )
 
-    PSIP.add_time_series!(p_5bus, t_stor, ts_sto_2024; year="2024", rep_day=3)
-    PSIP.add_time_series!(p_5bus, t_stor, ts_sto_2028; year="2028", rep_day=4)
+    PSIP.add_time_series!(
+        p_5bus,
+        t_stor,
+        ts_sto_2024;
+        features=Dict("year" => "2024", "rep_day" => 3),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_stor,
+        ts_sto_2028;
+        features=Dict("year" => "2028", "rep_day" => 4),
+    )
 
-    PSIP.add_time_series!(p_5bus, line, ts_line_2024; year="2024", rep_day=3)
-    PSIP.add_time_series!(p_5bus, line, ts_line_2028; year="2028", rep_day=4)
+    PSIP.add_time_series!(
+        p_5bus,
+        line,
+        ts_line_2024;
+        features=Dict("year" => "2024", "rep_day" => 3),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        line,
+        ts_line_2028;
+        features=Dict("year" => "2028", "rep_day" => 4),
+    )
 
-    PSIP.add_time_series!(p_5bus, t_demand_b, ts_demand_b_2024; year="2024", rep_day=3)
-    PSIP.add_time_series!(p_5bus, t_demand_b, ts_demand_b_2028; year="2028", rep_day=4)
-    PSIP.add_time_series!(p_5bus, t_demand_c, ts_demand_c_2024; year="2024", rep_day=3)
-    PSIP.add_time_series!(p_5bus, t_demand_c, ts_demand_c_2028; year="2028", rep_day=4)
-    PSIP.add_time_series!(p_5bus, t_demand_d, ts_demand_d_2024; year="2024", rep_day=3)
-    PSIP.add_time_series!(p_5bus, t_demand_d, ts_demand_d_2028; year="2028", rep_day=4)
+    PSIP.add_time_series!(
+        p_5bus,
+        t_demand_b,
+        ts_demand_b_2024;
+        features=Dict("year" => "2024", "rep_day" => 3),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_demand_b,
+        ts_demand_b_2028;
+        features=Dict("year" => "2028", "rep_day" => 4),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_demand_c,
+        ts_demand_c_2024;
+        features=Dict("year" => "2024", "rep_day" => 3),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_demand_c,
+        ts_demand_c_2028;
+        features=Dict("year" => "2028", "rep_day" => 4),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_demand_d,
+        ts_demand_d_2024;
+        features=Dict("year" => "2024", "rep_day" => 3),
+    )
+    PSIP.add_time_series!(
+        p_5bus,
+        t_demand_d,
+        ts_demand_d_2028;
+        features=Dict("year" => "2028", "rep_day" => 4),
+    )
     return p_5bus
 end

@@ -645,16 +645,13 @@ function add_time_series!(
     portfolio::Portfolio,
     component::Technology,
     time_series::PSY.TimeSeriesData;
-    features...,
+    features::Union{Nothing, Dict}=nothing,
 )
-    feature_dict =
-        isempty(features) ? nothing :
-        Dict{String, Any}(string(k) => v for (k, v) in features)
     return IS.add_time_series!(
         portfolio.data,
         component,
         time_series;
-        features=feature_dict,
+        features=features,
     )
 end
 
@@ -670,16 +667,13 @@ function add_time_series!(
     portfolio::Portfolio,
     technologies,
     time_series::PSY.TimeSeriesData;
-    features...,
+    features::Union{Nothing, Dict}=nothing,
 )
-    feature_dict =
-        isempty(features) ? nothing :
-        Dict{String, Any}(string(k) => v for (k, v) in features)
     return IS.add_time_series!(
         portfolio.data,
         technologies,
         time_series;
-        features=feature_dict,
+        features=features,
     )
 end
 

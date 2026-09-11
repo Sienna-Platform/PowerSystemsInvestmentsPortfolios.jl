@@ -41,6 +41,7 @@ function _build_roundtrip_portfolio()
         ),
         operation_costs=ThermalGenerationCost(;
             variable_operation_cost=zero(CostCurve),
+            variable_operation_cost=zero(CostCurve),
             fixed=0.0,
             start_up=0.0,
             shut_down=0.0,

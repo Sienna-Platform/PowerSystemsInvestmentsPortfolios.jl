@@ -153,12 +153,8 @@
           ColocatedSupplyStorageTechnology{PSY.RenewableDispatch}
     @test colocated_supply_storage isa ResourceTechnology
 
-    retirement_potential = RetirementPotential(
-        eligible_generators=String["g1"],
-        retirement_cost=LinearCurve(0.0),
-    )
-    retrofit_potential =
-        RetrofitPotential(eligible_generators=String["g1"], retrofit_cost=LinearCurve(0.0))
+    retirement_potential = RetirementPotential()
+    retrofit_potential = RetrofitPotential()
     existing_devices = ExistingDevices()
     topology_mapping = TopologyMapping()
 

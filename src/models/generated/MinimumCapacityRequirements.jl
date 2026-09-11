@@ -48,9 +48,9 @@ end
 get_name(value::MinimumCapacityRequirements) = value.name
 """Get [`MinimumCapacityRequirements`](@ref) `available`."""
 get_available(value::MinimumCapacityRequirements) = value.available
-"""Get [`MinimumCapacityRequirements`](@ref) `min_capacity_mw` as a bare number in the requested `units` (e.g. `SU`, `DU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_min_capacity_mw_unitful`](@ref)."""
+"""Get [`MinimumCapacityRequirements`](@ref) `min_capacity_mw` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_min_capacity_mw_unitful`](@ref)."""
 get_min_capacity_mw(value::MinimumCapacityRequirements, units) = InfrastructureSystems._strip_units(get_value(value, Val(:min_capacity_mw), Val(:mw), units))
-"""Get [`MinimumCapacityRequirements`](@ref) `min_capacity_mw` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `DU`, `MW`). For a bare number see [`get_min_capacity_mw`](@ref)."""
+"""Get [`MinimumCapacityRequirements`](@ref) `min_capacity_mw` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_min_capacity_mw`](@ref)."""
 get_min_capacity_mw_unitful(value::MinimumCapacityRequirements, units) = get_value(value, Val(:min_capacity_mw), Val(:mw), units)
 InfrastructureSystems.display_units_arg(::typeof(get_min_capacity_mw), ::Type{MinimumCapacityRequirements}) = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_min_capacity_mw_unitful), ::Type{MinimumCapacityRequirements}) = InfrastructureSystems.NU
