@@ -21,7 +21,6 @@
 # code needs one converter entry point per category. `convert_cost` still delegates to
 # `convert_value_curve` for the `ValueCurve` fields nested inside a cost (`CostCurve.value_curve`,
 # `vom_cost`, ...), so there is exactly one implementation of the curve/function-data recursion.
-
 # ── compound extraction, called by generated from_openapi ────────────────────
 #
 # The generated OpenAPI models declare every `$ref`ed field as bare `Any`, so reading
@@ -43,19 +42,32 @@ _updown_from_po(::Nothing) = nothing
 _inout_from_po(x::PC.InOut) = (in=x.in, out=x.out)
 _inout_from_po(::Nothing) = nothing
 
-# ── compound PO constructors, called by generated to_openapi ──────────────────
+_outagefactors_from_po(x::PC.OutageFactors) = (planned=x.planned, forced=x.forced)
+_outagefactors_from_po(::Nothing) = nothing
 
-_minmax_po(v) = PC.MinMax(; min=v.min, max=v.max)
-_minmax_po_optional(::Nothing) = nothing
-_minmax_po_optional(v) = _minmax_po(v)
+const _IMPORT_STORE = Base.ScopedValues.ScopedValue{IS.Store}()
 
-_updown_po(v) = PC.UpDown(; up=v.up, down=v.down)
-_updown_po_optional(::Nothing) = nothing
-_updown_po_optional(v) = _updown_po(v)
+"""
+No sidecar was adopted, so there is nothing to bind; a document that then names a
+time-series-backed cost fails in `_current_import_store`.
+"""
+_with_import_store(f, ::Nothing) = f()
 
-_inout_po(v) = PC.InOut(; in=v.in, out=v.out)
-_inout_po_optional(::Nothing) = nothing
-_inout_po_optional(v) = _inout_po(v)
+"""
+Bind `store` for the duration of `f()`. `ScopedValue`-based, so a nested import and a
+task spawned inside one both see the innermost binding.
+"""
+_with_import_store(f, store::IS.Store) = Base.ScopedValues.with(f, _IMPORT_STORE => store)
+
+function _current_import_store()
+    store = Base.ScopedValues.get(_IMPORT_STORE)
+    isnothing(store) && error(
+        "convert_cost: the document names a time-series-backed cost, but no time series " *
+        "store is bound — either this ran outside an active from_openapi(System, doc) " *
+        "import, or no time_series_storage_path sidecar was adopted for it",
+    )
+    return something(store)
+end
 
 # ── value curves: FunctionData leaves + InputOutputCurve/IncrementalCurve/AverageRateCurve ──
 #
@@ -104,78 +116,8 @@ function convert_value_curve(x)
         "every value curve in the document must be converted, not skipped",
     )
 end
-
-function _value_curve_body_to_openapi(fd::LinearFunctionData)
-    return PC.LinearFunctionData(;
-        proportional_term=get_proportional_term(fd),
-        constant_term=get_constant_term(fd),
-    )
-end
-
-function _value_curve_body_to_openapi(fd::QuadraticFunctionData)
-    return PC.QuadraticFunctionData(;
-        quadratic_term=get_quadratic_term(fd),
-        proportional_term=get_proportional_term(fd),
-        constant_term=get_constant_term(fd),
-    )
-end
-
-function _value_curve_body_to_openapi(fd::PiecewiseLinearData)
-    return PC.PiecewiseLinearData(;
-        points=[PC.XYCoords(; x=p.x, y=p.y) for p in get_points(fd)],
-    )
-end
-
-function _value_curve_body_to_openapi(fd::PiecewiseStepData)
-    return PC.PiecewiseStepData(; x_coords=get_x_coords(fd), y_coords=get_y_coords(fd))
-end
-
-function _value_curve_body_to_openapi(curve::InputOutputCurve)
-    return PC.InputOutputCurve(;
-        function_data=PC.InputOutputCurveFunctionData(
-            _value_curve_body_to_openapi(get_function_data(curve)),
-        ),
-        input_at_zero=get_input_at_zero(curve),
-    )
-end
-
-function _value_curve_body_to_openapi(curve::IncrementalCurve)
-    return PC.IncrementalCurve(;
-        function_data=PC.IncrementalCurveFunctionData(
-            _value_curve_body_to_openapi(get_function_data(curve)),
-        ),
-        initial_input=get_initial_input(curve),
-        input_at_zero=get_input_at_zero(curve),
-    )
-end
-
-function _value_curve_body_to_openapi(curve::AverageRateCurve)
-    return PC.AverageRateCurve(;
-        function_data=PC.IncrementalCurveFunctionData(
-            _value_curve_body_to_openapi(get_function_data(curve)),
-        ),
-        initial_input=get_initial_input(curve),
-        input_at_zero=get_input_at_zero(curve),
-    )
-end
-
-function _value_curve_body_to_openapi(x)
-    return error(
-        "convert_value_curve_to_openapi: no OpenAPI value-curve converter for " *
-        "$(nameof(typeof(x))) — every value curve in the document must be converted, " *
-        "not skipped",
-    )
-end
-
-convert_value_curve_to_openapi(curve::ValueCurve) =
-    PC.ValueCurve(_value_curve_body_to_openapi(curve))
-
 _value_curve_optional(::Nothing) = nothing
 _value_curve_optional(po) = convert_value_curve(po)
-
-_value_curve_po_optional(::Nothing) = nothing
-_value_curve_po_optional(curve) = convert_value_curve_to_openapi(curve)
-
 # ── operational costs ────────────────────────────────────────────────────────
 #
 # `ThermalGenerationCost`, `StorageCost`, `RenewableGenerationCost`, `HydroGenerationCost`,
@@ -494,13 +436,35 @@ function convert_nested_data(po::PI.TechnologyFinancialData)
     )
 end
 
+function convert_nested_data(po::PI.PortfolioFinancialData)
+    return PortfolioFinancialData(
+        po.base_year,
+        po.discount_rate,
+        po.inflation_rate,
+        po.interest_rate,
+    )
+end
+
 function convert_nested_data(po)
     return error(
         "convert_nested_data: no OpenAPI financial-data converter for " *
         "$(nameof(typeof(po))) — every financial data record must be converted, not skipped",
     )
 end
+# ── investment costs: CapitalCost / StorageCapitalCost ────────────────────────
+#
+# Nested cost structs that embed `ValueCurve`s, so unlike `TechnologyFinancialData`
+# (scalar fields only) they recurse through `convert_value_curve`. `interconnection_cost`
+# is schema-optional (defaults to 0.0), so an omitted PO value imports as 0.0.
 
+function convert_nested_data(po::PC.CapitalCost)
+    return CapitalCost(;
+        capital_cost=convert_value_curve(
+            _require(po.capital_cost, "CapitalCost.capital_cost"),
+        ),
+        interconnection_cost=something(po.interconnection_cost, 0.0),
+    )
+end
 function convert_nested_data_to_openapi(fd::TechnologyFinancialData)
     return PI.TechnologyFinancialData(;
         capital_recovery_period=get_capital_recovery_period(fd),
@@ -511,10 +475,45 @@ function convert_nested_data_to_openapi(fd::TechnologyFinancialData)
         tax_rate=get_tax_rate(fd),
     )
 end
+function convert_nested_data(po::PC.StorageCapitalCost)
+    return StorageCapitalCost(;
+        charge_capital_cost=convert_value_curve(
+            _require(po.charge_capital_cost, "StorageCapitalCost.charge_capital_cost"),
+        ),
+        discharge_capital_cost=convert_value_curve(
+            _require(
+                po.discharge_capital_cost,
+                "StorageCapitalCost.discharge_capital_cost",
+            ),
+        ),
+        energy_capital_cost=convert_value_curve(
+            _require(po.energy_capital_cost, "StorageCapitalCost.energy_capital_cost"),
+        ),
+        interconnection_cost=something(po.interconnection_cost, 0.0),
+    )
+end
+# ── capacity bounds: a MinMax, or a per-topology map of MinMax ────────────────
+#
+# The platform model wraps the value in a field-specific AnyOf struct whose `.value` is
+# either a `PC.MinMax` or a `Dict{String, PC.MinMax}`. In the map case the string keys are
+# base-system topology ids, so they resolve to the `PSY.Topology` component through `refs`
+# (seeded from the base system). A nullable bound omitted on the wire imports as the default.
 
-function convert_nested_data_to_openapi(fd)
-    return error(
-        "convert_nested_data_to_openapi: no OpenAPI financial-data converter for " *
-        "$(nameof(typeof(fd))) — every financial data record must be converted, not skipped",
+_capacity_bound_from_po(::Nothing, ::OpenAPIRefs) = (min=0.0, max=1e8)
+_capacity_bound_from_po(po, refs::OpenAPIRefs) = _capacity_bound_value(po.value, refs)
+
+# One `(min, max)` pair, from either the typed wire struct or the `Dict{String,Any}` that
+# `OpenAPI.from_json` leaves an AnyOf value as.
+_minmax_nt(v::PC.MinMax) = (min=Float64(v.min), max=Float64(v.max))
+_minmax_nt(v::AbstractDict) = (min=Float64(v["min"]), max=Float64(v["max"]))
+
+_capacity_bound_value(x::PC.MinMax, ::OpenAPIRefs) = _minmax_nt(x)
+# A plain MinMax deserializes to a dict keyed `"min"`/`"max"`; a per-topology map is keyed by
+# base-system topology ids (integer strings). Distinguish the two by their keys.
+function _capacity_bound_value(d::AbstractDict, refs::OpenAPIRefs)
+    (haskey(d, "min") && haskey(d, "max")) && return _minmax_nt(d)
+    return Dict{PSY.Topology, MinMax}(
+        resolve_ref(refs, parse(Int, string(k)), PSY.Topology) => _minmax_nt(v) for
+        (k, v) in d
     )
 end

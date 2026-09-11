@@ -54,7 +54,7 @@ end
 function show_region_topology_table(io::IO, p::Portfolio; kwargs...)
     header = ["Type", "Count"]
     components = p.data.components
-    region_types = [t for t in keys(components.data) if t <: RegionTopology]
+    region_types = [t for t in keys(components.data) if t <: PSY.Topology]
     isempty(region_types) && return
 
     region_type_names = [(IS.strip_module_name(x), x) for x in region_types]

@@ -4,7 +4,7 @@
 @testset "descriptor and PowerInvestmentsOpenAPIModels agree on fields" begin
     descriptor =
         JSON3.read(joinpath(BASE_DIR, "src", "descriptors", "SiennaInvestSchema.json"))
-    skipped = Set(["ext", "internal"])
+    skipped = Set(["ext", "internal", "requirements"])
     for component in descriptor["components"]
         # `openapi: false` (Zone, Node): no platform OpenAPI model to compare against.
         get(component, "openapi", true) || continue
@@ -71,19 +71,46 @@ function openapi_parity_expected_po_type(kind, bare, stripped_type)
     kind === :enum_compound_dict && return replace(stripped_type, bare[1] => "String")
     kind === :curve && return "ValueCurve"
     kind === :cost && return OPENAPI_PARITY_COST_PO_TYPES[bare]
-    kind === :nested && return "TechnologyFinancialData"
+    kind === :nested && return bare
     return error(
         "test bug: no expected OpenAPI type for classification kind=$kind bare=$bare",
     )
 end
 
+# The platform model's `_property_types_*` map holds Julia `Type`s (usually wrapped in
+# `Union{Nothing, T}`), while the expected side is a module-free type string. Normalize the
+# actual type to the same string form: drop the nullable wrapper and every module qualifier.
+_parity_strip_nothing(t) = (t isa Union && Nothing <: t) ? Base.nonnothingtype(t) : t
+_parity_module_strip(s::AbstractString) = replace(s, r"\b[A-Za-z_][A-Za-z0-9_]*\." => "")
+
 @testset "descriptor and PowerInvestmentsOpenAPIModels agree on field types" begin
-    # `_property_types_<Name>` (a side dict of field-name => type-string, from the old
-    # OpenAPI.jl 0.2 codegen where generated fields were typed `Any`) is not emitted by
-    # the current native OpenAPI.jl 1.x generator for any component — generated fields
-    # carry their real Julia type directly, so there is nothing to look this dict up on.
-    # This whole check needs redesigning around `fieldtype(po_type, field)` (unwrapping
-    # `Union{Absent, T, Nothing}` per `kind`) rather than being ported field-by-field;
-    # left as a documented gap rather than attempted here.
-    @test_broken isdefined(PSIP.PI, :_property_types_SupplyTechnology)
+    descriptor =
+        JSON3.read(joinpath(BASE_DIR, "src", "descriptors", "SiennaInvestSchema.json"))
+    generation = PSIP.StructGeneration
+    for component in descriptor["components"]
+        name = String(component["name"])
+        po_type = getproperty(PSIP.PI, Symbol(name))
+        po_types = getproperty(PSIP.PI, Symbol("_property_types_$name"))
+        for property in component["properties"]
+            field = String(property["name"])
+            kind, bare, _ = generation.openapi_classify_field(name, property)
+            kind === :skip && continue
+            actual_type = _parity_strip_nothing(po_types[Symbol(field)])
+            # A capacity-bound union maps to a field-specific `AnyOf` wrapper whose exact
+            # generated name is not worth pinning; assert it is one rather than a concrete
+            # type.
+            if kind === :union_bound
+                @test occursin("AnyOfAPIModel", string(supertype(actual_type)))
+                continue
+            end
+            stripped, _ = generation.openapi_strip_nullable(String(property["type"]))
+            expected = openapi_parity_expected_po_type(kind, bare, stripped)
+            actual = _parity_module_strip(string(actual_type))
+            @test actual == expected
+            if actual != expected
+                @error "descriptor and OpenAPI model disagree on a field type" name field kind descriptor_type =
+                    String(property["type"]) expected actual
+            end
+        end
+    end
 end

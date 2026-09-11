@@ -7,70 +7,6 @@
   },
   "components": [
     {
-      "name": "Zone",
-      "type": "object",
-      "required": [
-        "name"
-      ],
-      "docstring": "A unit of spatial aggregation for zonal capacity expansion models. Used to define locations for supply, demand, transport, and storage technologies and relevant policy requirements.",
-      "properties": [
-        {
-          "name": "name",
-          "type": "String",
-          "description": "Name of region"
-        },
-        {
-          "name": "ext",
-          "type": "Dict",
-          "default": "Dict()",
-          "description": "Optional dictionary to provide additional data"
-        },
-        {
-          "name": "internal",
-          "type": "InfrastructureSystemsInternal",
-          "default": "InfrastructureSystemsInternal()",
-          "description": "(**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference"
-        }
-      ],
-      "supertype": "RegionTopology",
-      "openapi": false
-    },
-    {
-      "name": "Node",
-      "type": "object",
-      "required": [
-        "name"
-      ],
-      "docstring": "A unit of spatial aggregation for nodal capacity expansion models. Used to define locations for supply, demand, transport, and storage technologies and relevant policy requirements.",
-      "properties": [
-        {
-          "name": "name",
-          "type": "String",
-          "description": "Name of region"
-        },
-        {
-          "name": "bus_type",
-          "type": "ACBusTypes",
-          "default": "ACBusTypes.PQ",
-          "description": "AC Bus Type for a node"
-        },
-        {
-          "name": "ext",
-          "type": "Dict",
-          "default": "Dict()",
-          "description": "Optional dictionary to provide additional data"
-        },
-        {
-          "name": "internal",
-          "type": "InfrastructureSystemsInternal",
-          "default": "InfrastructureSystemsInternal()",
-          "description": "(**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference"
-        }
-      ],
-      "supertype": "RegionTopology",
-      "openapi": false
-    },
-    {
       "name": "SupplyTechnology",
       "type": "object",
       "required": [
@@ -92,7 +28,7 @@
         },
         {
           "name": "region",
-          "type": "Vector{RegionTopology}",
+          "type": "Vector{PSY.Topology}",
           "description": "Location where technology operates. Can be a zone or node.",
           "default": "Vector()"
         },
@@ -115,14 +51,6 @@
           "description": "Prime mover fuel according to EIA 923."
         },
         {
-          "name": "co2",
-          "type": "Dict{ThermalFuels, Float64}",
-          "description": "Carbon Intensity of fuel for generator, units of tons CO2 per MMBTU of fuel. Units: t/MMBtu.",
-          "default": "Dict()",
-          "needs_conversion": true,
-          "conversion_unit": ":t_per_mmbtu"
-        },
-        {
           "name": "cofire_start_limits",
           "type": "Dict{ThermalFuels, MinMax}",
           "description": "Minimum and maximum blending level (%) of each fuel during start-up process for multi-fuel generator",
@@ -136,11 +64,9 @@
         },
         {
           "name": "capital_costs",
-          "type": "PSY.ValueCurve",
+          "type": "CapitalCost",
           "description": "Capital costs for investing in a technology. (USD/MW)",
-          "default": "LinearCurve(0.0)",
-          "needs_conversion": true,
-          "conversion_unit": ":usd_per_mw"
+          "default": "CapitalCost(nothing)"
         },
         {
           "name": "operation_costs",
@@ -160,17 +86,17 @@
         },
         {
           "name": "capacity_limits",
-          "type": "MinMax",
+          "type": "Union{MinMax, Dict{PSY.Topology, MinMax}}",
           "description": "Minimum and maximum allowable installed capacity for a technology (MW)",
-          "default": "(min=0, max=1e8)",
+          "default": "(min = 0.0, max = 1e8)",
           "needs_conversion": true,
           "conversion_unit": ":mw"
         },
         {
           "name": "outage_factor",
-          "type": "Float64",
-          "description": "Derating factor to account for planned or forced outages of a technology. Fraction of hours in a year where technology is unavailable.",
-          "default": "1.0"
+          "type": "OutageFactors",
+          "description": "Planned and forced outage factors for a technology, each a fraction of total availability.",
+          "default": "(planned = 0.0, forced = 0.0)"
         },
         {
           "name": "min_generation_fraction",
@@ -240,14 +166,16 @@
     {
       "name": "RetirementPotential",
       "type": "object",
-      "required": [],
+      "required": [
+        "eligible_generators",
+        "retirement_cost"
+      ],
       "docstring": "Supplemental attribute used to define what existing generators are eligible for retirement for a SupplyTechnology",
       "properties": [
         {
           "name": "eligible_generators",
           "type": "Vector{String}",
-          "description": "Names of individual generation units mapped to a technology that are eligible for retirement",
-          "default": "Vector()"
+          "description": "Names of individual generation units mapped to a technology that are eligible for retirement"
         },
         {
           "name": "planned_retirement_year",
@@ -264,8 +192,9 @@
         {
           "name": "retirement_cost",
           "type": "PSY.ValueCurve",
-          "description": "Cost associated with retiring the eligible generators, in USD/MW",
-          "default": "LinearCurve(0.0)"
+          "description": "Cost associated with retiring the eligible generators. (USD/MW)",
+          "needs_conversion": true,
+          "conversion_unit": ":usd_per_mw"
         },
         {
           "name": "ext",
@@ -285,14 +214,16 @@
     {
       "name": "RetrofitPotential",
       "type": "object",
-      "required": [],
+      "required": [
+        "eligible_generators",
+        "retrofit_cost"
+      ],
       "docstring": "Supplemental attribute used to define what existing generators are eligible for retrofit for a SupplyTechnology",
       "properties": [
         {
           "name": "eligible_generators",
           "type": "Vector{String}",
-          "description": "Names of individual generation units mapped to this technology that can be retrofitted",
-          "default": "Vector()"
+          "description": "Names of individual generation units mapped to this technology that can be retrofitted"
         },
         {
           "name": "retrofit_fraction",
@@ -303,8 +234,9 @@
         {
           "name": "retrofit_cost",
           "type": "PSY.ValueCurve",
-          "description": "Cost associated with retrofitting the eligible generators, in USD/MW",
-          "default": "LinearCurve(0.0)"
+          "description": "Cost associated with retrofitting the eligible generators. (USD/MW)",
+          "needs_conversion": true,
+          "conversion_unit": ":usd_per_mw"
         },
         {
           "name": "ext",
@@ -394,7 +326,7 @@
         },
         {
           "name": "region",
-          "type": "Vector{RegionTopology}",
+          "type": "Vector{PSY.Topology}",
           "description": "Location where technology is operated",
           "default": "Vector()"
         },
@@ -436,32 +368,13 @@
         {
           "name": "storage_tech",
           "type": "StorageTech",
-          "description": "Storage Technology Complementary to EIA 923.",
-          "default": "StorageTech.OTHER_CHEM"
+          "description": "Storage Technology Complementary to EIA 923."
         },
         {
-          "name": "capital_costs_energy",
-          "type": "PSY.ValueCurve",
-          "description": "Capital costs for investing in a technology. (USD/MWh)",
-          "default": "LinearCurve(0.0)",
-          "needs_conversion": true,
-          "conversion_unit": ":usd_per_mwh"
-        },
-        {
-          "name": "capital_costs_charge",
-          "type": "Union{Nothing, PSY.ValueCurve}",
-          "description": "Capital costs for investing in a technology. (USD/MW)",
-          "default": "nothing",
-          "needs_conversion": true,
-          "conversion_unit": ":usd_per_mw"
-        },
-        {
-          "name": "capital_costs_discharge",
-          "type": "PSY.ValueCurve",
-          "description": "Capital costs for investing in a technology. (USD/MW)",
-          "default": "LinearCurve(0.0)",
-          "needs_conversion": true,
-          "conversion_unit": ":usd_per_mw"
+          "name": "capital_costs",
+          "type": "StorageCapitalCost",
+          "description": "Capital costs for investing in a storage technology's charge, discharge, and energy capacity.",
+          "default": "StorageCapitalCost(nothing)"
         },
         {
           "name": "operation_costs",
@@ -503,25 +416,25 @@
         },
         {
           "name": "capacity_limits_charge",
-          "type": "Union{Nothing, MinMax}",
+          "type": "Union{MinMax, Dict{PSY.Topology, MinMax}}",
           "description": "allowable installed power capacity for a storage technology (MW)",
-          "default": "nothing",
+          "default": "(min = 0.0, max = 1e8)",
           "needs_conversion": true,
           "conversion_unit": ":mw"
         },
         {
           "name": "capacity_limits_discharge",
-          "type": "MinMax",
+          "type": "Union{MinMax, Dict{PSY.Topology, MinMax}}",
           "description": "allowable installed power capacity for a storage technology (MW)",
-          "default": "(min=0,max=1e8)",
+          "default": "(min = 0.0, max = 1e8)",
           "needs_conversion": true,
           "conversion_unit": ":mw"
         },
         {
           "name": "capacity_limits_energy",
-          "type": "MinMax",
+          "type": "Union{MinMax, Dict{PSY.Topology, MinMax}}",
           "description": "allowable installed energy capacity for a storage technology (MWh)",
-          "default": "(min=0,max=1e8)",
+          "default": "(min = 0.0, max = 1e8)",
           "needs_conversion": true,
           "conversion_unit": ":mwh"
         },
@@ -607,7 +520,7 @@
         },
         {
           "name": "region",
-          "type": "Vector{RegionTopology}",
+          "type": "Vector{PSY.Topology}",
           "description": "Location where technology is operated",
           "default": "Vector()"
         },
@@ -735,12 +648,12 @@
         },
         {
           "name": "start_node",
-          "type": "RegionTopology",
+          "type": "PSY.Bus",
           "description": "Start node for transport technology"
         },
         {
           "name": "end_node",
-          "type": "RegionTopology",
+          "type": "PSY.Bus",
           "description": "End node for transport technology"
         },
         {
@@ -761,11 +674,9 @@
         },
         {
           "name": "capital_costs",
-          "type": "PSY.ValueCurve",
+          "type": "CapitalCost",
           "description": "Cost of adding new capacity to the nodal transmission line. (USD/MW)",
-          "default": "LinearCurve(0.0)",
-          "needs_conversion": true,
-          "conversion_unit": ":usd_per_mw"
+          "default": "CapitalCost(nothing)"
         },
         {
           "name": "line_loss",
@@ -830,12 +741,12 @@
         },
         {
           "name": "start_region",
-          "type": "RegionTopology",
+          "type": "PSY.AggregationTopology",
           "description": "Start region for transport technology"
         },
         {
           "name": "end_region",
-          "type": "RegionTopology",
+          "type": "PSY.AggregationTopology",
           "description": "End region for transport technology"
         },
         {
@@ -856,11 +767,9 @@
         },
         {
           "name": "capital_costs",
-          "type": "PSY.ValueCurve",
+          "type": "CapitalCost",
           "description": "Cost of adding new capacity to the nodal transmission line. (USD/MW)",
-          "default": "LinearCurve(0.0)",
-          "needs_conversion": true,
-          "conversion_unit": ":usd_per_mw"
+          "default": "CapitalCost(nothing)"
         },
         {
           "name": "line_loss",
@@ -925,12 +834,12 @@
         },
         {
           "name": "start_node",
-          "type": "Node",
+          "type": "PSY.Bus",
           "description": "Start node for transport technology"
         },
         {
           "name": "end_node",
-          "type": "Node",
+          "type": "PSY.Bus",
           "description": "End node for transport technology"
         },
         {
@@ -951,11 +860,9 @@
         },
         {
           "name": "capital_costs",
-          "type": "PSY.ValueCurve",
+          "type": "CapitalCost",
           "description": "Cost of adding new capacity to the nodal transmission line (USD/MW).",
-          "default": "LinearCurve(0.0)",
-          "needs_conversion": true,
-          "conversion_unit": ":usd_per_mw"
+          "default": "CapitalCost(nothing)"
         },
         {
           "name": "resistance",
@@ -1078,7 +985,7 @@
         },
         {
           "name": "region",
-          "type": "Vector{RegionTopology}",
+          "type": "Vector{PSY.Topology}",
           "description": "Zone or node where the demand requirement is located",
           "default": "Vector()"
         },
@@ -1437,6 +1344,8 @@
         "name",
         "power_systems_type",
         "financial_data",
+        "supply_technology",
+        "storage_technology",
         "capital_costs_inverter",
         "operation_costs_inverter",
         "inverter_efficiency",
@@ -1456,8 +1365,8 @@
         },
         {
           "name": "region",
-          "type": "Vector{RegionTopology}",
-          "description": "Zone where tech operates in",
+          "type": "Vector{PSY.Topology}",
+          "description": "Zone or node where the technology operates",
           "default": "Vector()"
         },
         {
@@ -1467,172 +1376,32 @@
           "default": "true"
         },
         {
-          "name": "capital_costs_solar",
-          "type": "PSY.ValueCurve",
-          "description": "Capital costs for investing in a technology. (USD/MW)",
-          "default": "LinearCurve(0.0)",
-          "needs_conversion": true,
-          "conversion_unit": ":usd_per_mw"
-        },
-        {
-          "name": "operation_costs_solar",
-          "type": "PSY.RenewableGenerationCost",
-          "description": "Fixed and variable O&M costs for a technology",
-          "default": "RenewableGenerationCost(nothing)",
-          "needs_conversion": true,
-          "conversion_unit": ":usd_per_mwh"
-        },
-        {
-          "name": "capacity_limits_solar",
-          "type": "MinMax",
-          "description": "Maximum allowable installed capacity for a technology (MW)",
-          "default": "(min=0, max=1e8)",
-          "needs_conversion": true,
-          "conversion_unit": ":mw"
-        },
-        {
-          "name": "lifetime_solar",
-          "type": "Int",
-          "description": "Maximum number of years a technology can be active once installed (years)",
-          "default": "100",
-          "needs_conversion": true,
-          "conversion_unit": ":yr"
-        },
-        {
-          "name": "capital_costs_wind",
-          "type": "PSY.ValueCurve",
-          "description": "Capital costs for investing in a technology. (USD/MW)",
-          "default": "LinearCurve(0.0)",
-          "needs_conversion": true,
-          "conversion_unit": ":usd_per_mw"
-        },
-        {
-          "name": "operation_costs_wind",
-          "type": "PSY.RenewableGenerationCost",
-          "description": "Fixed and variable O&M costs for a technology",
-          "default": "RenewableGenerationCost(nothing)",
-          "needs_conversion": true,
-          "conversion_unit": ":usd_per_mwh"
-        },
-        {
-          "name": "capacity_limits_wind",
-          "type": "MinMax",
-          "description": "Maximum allowable installed capacity for a technology (MW)",
-          "default": "(min=0, max=1e8)",
-          "needs_conversion": true,
-          "conversion_unit": ":mw"
-        },
-        {
-          "name": "lifetime_wind",
-          "type": "Int",
-          "description": "Maximum number of years a technology can be active once installed (years)",
-          "default": "100",
-          "needs_conversion": true,
-          "conversion_unit": ":yr"
-        },
-        {
-          "name": "capital_costs_energy",
-          "type": "PSY.ValueCurve",
-          "description": "Capital costs for investing in a storage technology's energy capacity. (USD/MWh)",
-          "default": "LinearCurve(0.0)",
-          "needs_conversion": true,
-          "conversion_unit": ":usd_per_mwh"
-        },
-        {
-          "name": "capital_costs_power",
-          "type": "PSY.ValueCurve",
-          "description": "Capital costs for investing in a storage technology's charge/discharge capacity. (USD/MW)",
-          "default": "LinearCurve(0.0)",
-          "needs_conversion": true,
-          "conversion_unit": ":usd_per_mw"
-        },
-        {
-          "name": "operation_costs_energy",
-          "type": "PSY.StorageCost",
-          "description": "Fixed and variable O&M costs for a storage technology",
-          "default": "StorageCost(nothing)",
-          "needs_conversion": true,
-          "conversion_unit": ":usd_per_mwh"
-        },
-        {
-          "name": "operation_costs_power",
-          "type": "PSY.StorageCost",
-          "description": "Fixed and variable O&M costs for the storage power component. Units: USD/MWh.",
-          "default": "StorageCost(nothing)",
-          "needs_conversion": true,
-          "conversion_unit": ":usd_per_mwh"
-        },
-        {
-          "name": "capacity_power_limits",
-          "type": "MinMax",
-          "description": "allowable installed power capacity for a storage technology (MW)",
-          "default": "(min=0,max=1e8)",
-          "needs_conversion": true,
-          "conversion_unit": ":mw"
-        },
-        {
-          "name": "capacity_energy_limits",
-          "type": "MinMax",
-          "description": "allowable installed energy capacity for a storage technology (MWh)",
-          "default": "(min=0,max=1e8)",
-          "needs_conversion": true,
-          "conversion_unit": ":mwh"
-        },
-        {
-          "name": "duration_limits",
-          "type": "MinMax",
-          "description": "Minimum and maximum duration limits for the storage component (minutes). Units: min.",
-          "default": "(min=0,max=60000)",
-          "needs_conversion": true,
-          "conversion_unit": ":min"
-        },
-        {
-          "name": "efficiency_storage",
-          "type": "InOut",
-          "description": "Efficiency of charging storage (fraction of total charge (in) and discharge (out) capacity",
-          "default": "(in=1, out=1)"
-        },
-        {
-          "name": "losses_storage",
-          "type": "Float64",
-          "description": "Power loss (fraction of stored energy per hour)",
-          "default": "0.0"
-        },
-        {
-          "name": "lifetime_storage",
-          "type": "Int",
-          "description": "Maximum number of years a technology can be active once installed (years)",
-          "default": "100",
-          "needs_conversion": true,
-          "conversion_unit": ":yr"
-        },
-        {
           "name": "financial_data",
           "type": "TechnologyFinancialData",
           "description": "Struct containing relevant financial information for a technology"
         },
         {
-          "name": "max_inverter_capacity",
-          "type": "Float64",
-          "description": "Limit on inverter capacity (MW)",
-          "default": "1e8",
-          "needs_conversion": true,
-          "conversion_unit": ":mw"
+          "name": "supply_technology",
+          "type": "SupplyTechnology",
+          "description": "The underlying supply technology (e.g. wind or solar) co-located with storage"
         },
         {
-          "name": "min_inverter_capacity",
-          "type": "Float64",
-          "description": "Minimum inverter capacity (MW)",
-          "default": "1e8",
+          "name": "storage_technology",
+          "type": "StorageTechnology",
+          "description": "The underlying storage technology co-located with the supply technology"
+        },
+        {
+          "name": "inverter_capacity_limits",
+          "type": "MinMax",
+          "description": "Limits on inverter capacity (MW)",
+          "default": "(min = 0.0, max = 1e8)",
           "needs_conversion": true,
           "conversion_unit": ":mw"
         },
         {
           "name": "capital_costs_inverter",
-          "type": "PSY.ValueCurve",
-          "description": "Capitals costs for investing in inverter capacity (USD/MW)",
-          "needs_conversion": true,
-          "conversion_unit": ":usd_per_mw"
+          "type": "CapitalCost",
+          "description": "Capital and interconnection cost for investing in inverter capacity (USD/MW)"
         },
         {
           "name": "operation_costs_inverter",
@@ -1650,6 +1419,12 @@
           "name": "inverter_supply_ratio",
           "type": "Float64",
           "description": "Ratio of generation capacity to grid connection capacity"
+        },
+        {
+          "name": "requirements",
+          "type": "Vector{Requirement}",
+          "description": "List of requirements associated with the technology",
+          "default": "Vector()"
         },
         {
           "name": "ext",

@@ -209,15 +209,33 @@ end
 @testset "Test region and requirement APIs" begin
     port = Portfolio()
 
-    zone = Zone(name="zone_test")
-    node = Node(name="node_test")
-    PSIP.add_region!(port, zone)
-    PSIP.add_region!(port, node)
+    zone = PSY.Area(; name="zone_test", base_power=100.0)
+    load_zone = PSY.LoadZone(;
+        name="zone_test_lz",
+        peak_active_power=0.0,
+        peak_reactive_power=0.0,
+        base_power=100.0,
+    )
+    node = PSY.ACBus(;
+        number=910,
+        name="node_test",
+        available=true,
+        bustype=PSY.ACBusTypes.PQ,
+        angle=0.0,
+        magnitude=1.0,
+        voltage_limits=(min=0.9, max=1.1),
+        base_voltage=138.0,
+        area=zone,
+        load_zone=load_zone,
+    )
+    PSIP.add_topology!(port, zone)
+    PSIP.add_topology!(port, load_zone)
+    PSIP.add_topology!(port, node)
 
-    regions = collect(PSIP.get_regions(RegionTopology, port))
-    @test length(regions) == 2
-    @test PSIP.get_region(Zone, port, "zone_test") === zone
-    @test PSIP.get_region(Node, port, "node_test") === node
+    regions = collect(PSIP.get_regions(PSY.Topology, port))
+    @test length(regions) == 3
+    @test PSIP.get_region(PSY.Area, port, "zone_test") === zone
+    @test PSIP.get_region(PSY.ACBus, port, "node_test") === node
 
     req = CarbonTax(name="req_test", available=true)
     PSIP.add_requirement!(port, req)
@@ -257,7 +275,7 @@ end
 
 @testset "Test supplemental attribute APIs" begin
     port = build_portfolio()
-    zone = first(get_regions(Zone, port))
+    zone = first(get_regions(PSY.Area, port))
 
     attr = TopologyMapping(buses=["b1", "b2"])
     PSIP.add_supplemental_attribute!(port, zone, attr)

@@ -5,24 +5,24 @@ DBInterface = "a10d1c49-ce27-4219-8d33-6db1a4562965"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
-InfrastructureCoreOpenAPIModels = "1f5e1c8d-e0cc-4dbf-8c6d-f2a3d2ae70a8"
 InfrastructureSystems = "2cd47ed4-ca9b-11e9-27f2-ab636a7671f1"
-InfrastructureTimeSeriesOpenAPIModels = "37a216c8-a490-47cf-89d7-db2cb9618199"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 LazyArtifacts = "4af54fe1-eca0-43a8-85a7-787d91b784e3"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 PowerCoreOpenAPIModels = "b7b40286-e793-417d-a9a0-b1583e4da1cb"
+InfrastructureCoreOpenAPIModels = "1f5e1c8d-e0cc-4dbf-8c6d-f2a3d2ae70a8"
+InfrastructureTimeSeriesOpenAPIModels = "37a216c8-a490-47cf-89d7-db2cb9618199"
 PowerDynamicsOpenAPIModels = "044a0b22-31f8-4ef6-8282-c9a61b3013f6"
-PowerFlowFileParser = "bed98974-b02e-5e2f-9ee0-a103f5c450dd"
-PowerInvestmentsOpenAPIModels = "33cb4396-f4d9-4f59-8585-787ebb56cb1b"
 PowerOpenAPIModels = "0730f07c-cff6-4c3b-a9df-c546153be50a"
+PowerInvestmentsOpenAPIModels = "33cb4396-f4d9-4f59-8585-787ebb56cb1b"
 PowerOperationsOpenAPIModels = "a372b6d7-45a2-44c2-8199-6a724b72e8ff"
+PowerFlowFileParser = "bed98974-b02e-5e2f-9ee0-a103f5c450dd"
 PowerSystemCaseBuilder = "f00506e0-b84f-492a-93c2-c0a9afc4364e"
+PowerTableDataParser = "2b750c0e-0bff-11f1-9200-1befd75df6be"
 PowerSystems = "bcd98974-b02a-5e2f-9ee0-a103f5c450dd"
 PowerSystemsInvestmentsPortfolios = "bed98974-b02a-5e2f-9fe0-a103f8c450dd"
-PowerTableDataParser = "2b750c0e-0bff-11f1-9200-1befd75df6be"
 ReTest = "e0db7c4e-2690-44b9-bad6-7687da720f89"
 SQLite = "0aa819cd-b072-5ff4-a722-6bc24af294d9"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
@@ -32,26 +32,23 @@ TimeSeries = "9e3dc215-6440-5c97-bce1-76c03772f85e"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [sources]
-# Without this the test environment resolves the REGISTERED PowerSystemsInvestments-
-# Portfolios instead of the working tree, so local changes are never exercised and the
-# registered package's own compat bounds drive resolution.
-PowerSystemsInvestmentsPortfolios = {path = ".."}
-InfrastructureSystems = {path = "../../InfrastructureSystems.jl"}
-PowerSystems = {path = "../../PowerSystems.jl"}
-# Sibling paths, not revs: the OpenAPI packages must be the ones regenerated for
-# OpenAPI.jl 1.x, and the remote revs still carry the pre-1.0 output whose compat pins
-# OpenAPI to 0.2. A dependency's own [sources] are ignored once it is not the root project,
-# so every unregistered package in the graph is pinned here -- PowerOperationsOpenAPIModels
-# is unused by PSIP itself and listed only so Pkg can resolve PowerSystems.
-PowerCoreOpenAPIModels = {path = "../../PowerOpenAPIModels/PowerCoreOpenAPIModels.jl"}
-InfrastructureCoreOpenAPIModels = {path = "../../PowerOpenAPIModels/InfrastructureCoreOpenAPIModels.jl"}
-InfrastructureTimeSeriesOpenAPIModels = {path = "../../PowerOpenAPIModels/InfrastructureTimeSeriesOpenAPIModels.jl"}
-PowerDynamicsOpenAPIModels = {path = "../../PowerOpenAPIModels/PowerDynamicsOpenAPIModels.jl"}
-PowerOpenAPIModels = {path = "../../PowerOpenAPIModels/PowerOpenAPIModels.jl"}
-PowerOperationsOpenAPIModels = {path = "../../PowerOpenAPIModels/PowerOperationsOpenAPIModels.jl"}
-PowerInvestmentsOpenAPIModels = {path = "../../PowerOpenAPIModels/PowerInvestmentsOpenAPIModels.jl"}
-PowerSystemCaseBuilder = {path = "../../PowerSystemCaseBuilder.jl"}
-PowerFlowFileParser = {path = "../../PowerFlowFileParser.jl"}
+InfrastructureSystems = {url = "https://github.com/Sienna-Platform/InfrastructureSystems.jl", rev = "5776a49b329eb6f27027b7ba51302dfaa76eea0b"}
+PowerSystems = {url = "https://github.com/Sienna-Platform/PowerSystems.jl", rev = "jd/serialization_refactor"}
+# Pinned by rev, not by sibling path: the sibling checkout carries in-progress schema
+# renames ahead of the PowerSystems rev above, and the two must agree.
+# PowerOperationsOpenAPIModels is unused here — PSY's own [sources] are ignored once PSY
+# is a dependency rather than the root project, so PSIP pins it for Pkg to resolve.
+PowerCoreOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/PowerCoreOpenAPIModels.jl"}
+InfrastructureCoreOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/InfrastructureCoreOpenAPIModels.jl"}
+InfrastructureTimeSeriesOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/InfrastructureTimeSeriesOpenAPIModels.jl"}
+PowerDynamicsOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/PowerDynamicsOpenAPIModels.jl"}
+PowerOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/PowerOpenAPIModels.jl"}
+PowerOperationsOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/PowerOperationsOpenAPIModels.jl"}
+PowerInvestmentsOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/PowerInvestmentsOpenAPIModels.jl"}
+# PowerSystemCaseBuilder's own [sources] are ignored once it is a dependency rather than the
+# root project, so its unregistered deps are pinned here too.
+PowerSystemCaseBuilder = {url = "https://github.com/Sienna-Platform/PowerSystemCaseBuilder.jl.git", rev = "psy6"}
+PowerFlowFileParser = {url = "https://github.com/Sienna-Platform/PowerFlowFileParser.jl.git", rev = "psy6"}
 PowerTableDataParser = {path = "../../PowerTableDataParser.jl"}
 
 [compat]

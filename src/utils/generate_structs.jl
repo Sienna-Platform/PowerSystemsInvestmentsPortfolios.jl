@@ -156,7 +156,7 @@ end
 #  * Parametric types are generated, not rejected. PSY hand-writes those; PSIP cannot,
 #    since 8 of its 23 types are parametric. `power_systems_type` carries the parameter.
 
-const OPENAPI_SKIP_FIELDS = Set(["ext", "internal"])
+const OPENAPI_SKIP_FIELDS = Set(["ext", "internal", "requirements"])
 
 const OPENAPI_SCALAR_TYPES = Set([
     "Float64",
@@ -169,13 +169,19 @@ const OPENAPI_SCALAR_TYPES = Set([
     "Dict{String, Float64}",
 ])
 
-const OPENAPI_COMPOUND_MEMBERS =
-    Dict("MinMax" => ("min", "max"), "UpDown" => ("up", "down"), "InOut" => ("in", "out"))
+const OPENAPI_COMPOUND_MEMBERS = Dict(
+    "MinMax" => ("min", "max"),
+    "UpDown" => ("up", "down"),
+    "InOut" => ("in", "out"),
+    "OutageFactors" => ("planned", "forced"),
+)
 
 const OPENAPI_COMPOUND_CTORS = Dict(
     "MinMax" => (required="_minmax_po", optional="_minmax_po_optional"),
     "UpDown" => (required="_updown_po", optional="_updown_po_optional"),
     "InOut" => (required="_inout_po", optional="_inout_po_optional"),
+    "OutageFactors" =>
+        (required="_outagefactors_po", optional="_outagefactors_po_optional"),
 )
 
 """
@@ -189,12 +195,28 @@ const OPENAPI_COMPOUND_EXTRACTORS = Dict(
     "MinMax" => "_minmax_from_po",
     "UpDown" => "_updown_from_po",
     "InOut" => "_inout_from_po",
+    "OutageFactors" => "_outagefactors_from_po",
 )
 
 # PSY derives this from the descriptor's own struct names. That fails here: PSIP's
-# reference fields are typed with the ABSTRACT supertypes `RegionTopology` and
-# `Requirement`, which are never component names, so the set is declared instead.
-const OPENAPI_REFERENCE_TYPES = Set(["RegionTopology", "Requirement", "Zone", "Node"])
+# reference fields are typed with the ABSTRACT supertype `Requirement` (a portfolio
+# component) and with PowerSystems topology types (`PSY.Topology`, `PSY.Bus`,
+# `PSY.AggregationTopology`) that live in the base system, so the set is declared instead.
+# Topology references resolve through the same `OpenAPIRefs` registry, which is seeded with
+# the base system's topology components alongside the portfolio's own (see document.jl).
+# `SupplyTechnology`/`StorageTechnology` are concrete portfolio components a
+# `ColocatedSupplyStorageTechnology` co-locates by reference: the struct holds the resolved
+# component in memory, but the wire model carries only its integer id (see
+# `model_ColocatedSupplyStorageTechnology`). `DOCUMENT_PLAN` registers both before the
+# colocated type, so the id resolves in dependency order in either direction.
+const OPENAPI_REFERENCE_TYPES = Set([
+    "Requirement",
+    "PSY.Topology",
+    "PSY.Bus",
+    "PSY.AggregationTopology",
+    "SupplyTechnology",
+    "StorageTechnology",
+])
 
 const OPENAPI_ENUM_TYPES =
     Set(["PrimeMovers", "ThermalFuels", "StorageTech", "ACBusTypes", "PSY.LoadConformity"])
@@ -216,7 +238,8 @@ const OPENAPI_COST_TYPES = Set([
     "IS.ProductionVariableCostCurve",
 ])
 
-const OPENAPI_NESTED_TYPES = Set(["TechnologyFinancialData"])
+const OPENAPI_NESTED_TYPES =
+    Set(["TechnologyFinancialData", "CapitalCost", "StorageCapitalCost"])
 
 """
 Split `Union{Nothing, X}` into `(X, true)`; any other type string is `(type, false)`.
@@ -270,6 +293,11 @@ function openapi_classify_field(struct_name, field)
             value in OPENAPI_SCALAR_TYPES && return (:enum_dict, key, nullable)
         end
     end
+    # A capacity bound: a single `MinMax`, or a per-topology map of `MinMax` bounds keyed by
+    # a base-system topology reference (a value `oneOf`/`anyOf` on the wire). Resolved
+    # through the field-specific `AnyOf` wrapper the platform model generates.
+    bare == "Union{MinMax, Dict{PSY.Topology, MinMax}}" &&
+        return (:union_bound, bare, nullable)
 
     throw(
         DataFormatError(
@@ -400,6 +428,9 @@ function openapi_import_expr(struct_name, name, kind, bare, nullable)
     if kind == :nested
         return "convert_nested_data(po.$name)"
     end
+    if kind == :union_bound
+        return "_capacity_bound_from_po(po.$name, refs)"
+    end
     throw(
         DataFormatError(
             "$struct_name field=$name kind=$kind has no emission rule in " *
@@ -496,6 +527,11 @@ function openapi_export_expr(struct_name, field, kind, bare, nullable, parametri
     end
     if kind == :nested
         return "convert_nested_data_to_openapi($getter)"
+    end
+    if kind == :union_bound
+        # The platform model names the AnyOf wrapper `<StructName><CamelCasedField>`.
+        union_type = struct_name * join(uppercasefirst.(split(name, "_")))
+        return "PI.$union_type(_capacity_bound_po_value($getter, refs))"
     end
     throw(
         DataFormatError(

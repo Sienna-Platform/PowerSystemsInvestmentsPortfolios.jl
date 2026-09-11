@@ -15,7 +15,7 @@ This file is auto-generated. Do not edit.
         conformity::PSY.LoadConformity
         value_of_lost_load::Float64
         unserved_demand_curve::PSY.ValueCurve
-        region::Vector{RegionTopology}
+        region::Vector{PSY.Topology}
         requirements::Vector{Requirement}
         ext::Dict
         internal::InfrastructureSystemsInternal
@@ -33,7 +33,7 @@ Demand requirements for a region.
 - `conformity::PSY.LoadConformity`: (default: `PSY.LoadConformity.UNDEFINED`) Indicator of how the demand requirement should conform to the load profile of existing technologies in the system. Should only be used for new demand requirements.
 - `value_of_lost_load::Float64`: (default: `1e8`) Value of unserved load (USD/MWh)
 - `unserved_demand_curve::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Piecewise curve to scale the cost of unserved load based on the value of lost load
-- `region::Vector{RegionTopology}`: (default: `Vector()`) Zone or node where the demand requirement is located
+- `region::Vector{PSY.Topology}`: (default: `Vector()`) Zone or node where the demand requirement is located
 - `requirements::Vector{Requirement}`: (default: `Vector()`) List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology
 - `ext::Dict`: (default: `Dict()`) Optional dictionary to provide additional data
 - `internal::InfrastructureSystemsInternal`: (default: `InfrastructureSystemsInternal()`) (**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference
@@ -58,7 +58,7 @@ mutable struct DemandRequirement{T <: PSY.StaticInjection} <: DemandTechnology
     "Piecewise curve to scale the cost of unserved load based on the value of lost load"
     unserved_demand_curve::PSY.ValueCurve
     "Zone or node where the demand requirement is located"
-    region::Vector{RegionTopology}
+    region::Vector{PSY.Topology}
     "List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology"
     requirements::Vector{Requirement}
     "Optional dictionary to provide additional data"
@@ -151,8 +151,7 @@ function from_openapi(po::PI.DemandRequirement, refs::OpenAPIRefs)
         conformity = PSY.LoadConformity(po.conformity),
         value_of_lost_load = po.value_of_lost_load,
         unserved_demand_curve = convert_value_curve(po.unserved_demand_curve),
-        region = resolve_refs(refs, po.region, RegionTopology),
-        requirements = resolve_refs(refs, po.requirements, Requirement),
+        region = resolve_refs(refs, po.region, PSY.Topology),
     )
 end
 
@@ -169,6 +168,5 @@ function to_openapi(value::DemandRequirement{T}, refs::OpenAPIRefs) where {T <: 
         value_of_lost_load = get_value_of_lost_load(value, IS.NU),
         unserved_demand_curve = convert_value_curve_to_openapi(get_unserved_demand_curve(value, IS.NU)),
         region = component_ids(refs, get_region(value)),
-        requirements = component_ids(refs, get_requirements(value)),
     )
 end

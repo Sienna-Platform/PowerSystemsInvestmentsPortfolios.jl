@@ -7,22 +7,20 @@ This file is auto-generated. Do not edit.
 """
     mutable struct StorageTechnology{T <: PSY.Storage} <: ResourceTechnology
         name::String
-        region::Vector{RegionTopology}
+        region::Vector{PSY.Topology}
         available::Bool
         power_systems_type::String
         prime_mover_type::PrimeMovers
         storage_tech::StorageTech
-        capital_costs_energy::PSY.ValueCurve
-        capital_costs_charge::Union{Nothing, PSY.ValueCurve}
-        capital_costs_discharge::PSY.ValueCurve
+        capital_costs::StorageCapitalCost
         operation_costs::PSY.StorageCost
         min_discharge_fraction::Float64
         unit_size_charge::Union{Nothing, Float64}
         unit_size_discharge::Float64
         unit_size_energy::Float64
-        capacity_limits_charge::Union{Nothing, MinMax}
-        capacity_limits_discharge::MinMax
-        capacity_limits_energy::MinMax
+        capacity_limits_charge::Union{MinMax, Dict{PSY.Topology, MinMax}}
+        capacity_limits_discharge::Union{MinMax, Dict{PSY.Topology, MinMax}}
+        capacity_limits_energy::Union{MinMax, Dict{PSY.Topology, MinMax}}
         duration_limits::MinMax
         efficiency::InOut
         losses::Float64
@@ -37,22 +35,20 @@ Candidate storage technology in a region.
 
 # Arguments
 - `name::String`: The technology name
-- `region::Vector{RegionTopology}`: (default: `Vector()`) Location where technology is operated
+- `region::Vector{PSY.Topology}`: (default: `Vector()`) Location where technology is operated
 - `available::Bool`: Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)
 - `power_systems_type::String`: Corresponding type in PowerSystems.jl to be used in PCM modeling
 - `prime_mover_type::PrimeMovers`: (default: `PrimeMovers.OT`) Prime mover technology according to EIA 923.
-- `storage_tech::StorageTech`: (default: `StorageTech.OTHER_CHEM`) Storage Technology Complementary to EIA 923.
-- `capital_costs_energy::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Capital costs for investing in a technology. (USD/MWh)
-- `capital_costs_charge::Union{Nothing, PSY.ValueCurve}`: (default: `nothing`) Capital costs for investing in a technology. (USD/MW)
-- `capital_costs_discharge::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Capital costs for investing in a technology. (USD/MW)
+- `storage_tech::StorageTech`: Storage Technology Complementary to EIA 923.
+- `capital_costs::StorageCapitalCost`: (default: `StorageCapitalCost(nothing)`) Capital costs for investing in a storage technology's charge, discharge, and energy capacity.
 - `operation_costs::PSY.StorageCost`: (default: `StorageCost(nothing)`) Fixed and variable O&M costs for a technology
 - `min_discharge_fraction::Float64`: (default: `0.0`) Minimum discharge as a fraction of total discharge capacity
 - `unit_size_charge::Union{Nothing, Float64}`: (default: `nothing`) Used for discrete investment decisions. Unit size of charging capacity (MW)
 - `unit_size_discharge::Float64`: (default: `0.0`) Used for discrete investment decisions. Size of each unit of discharging capacity being built (MW)
 - `unit_size_energy::Float64`: (default: `0.0`) Used for discrete investment decisions. Size of each unit being built (MWh)
-- `capacity_limits_charge::Union{Nothing, MinMax}`: (default: `nothing`) allowable installed power capacity for a storage technology (MW)
-- `capacity_limits_discharge::MinMax`: (default: `(min=0,max=1e8)`) allowable installed power capacity for a storage technology (MW)
-- `capacity_limits_energy::MinMax`: (default: `(min=0,max=1e8)`) allowable installed energy capacity for a storage technology (MWh)
+- `capacity_limits_charge::Union{MinMax, Dict{PSY.Topology, MinMax}}`: (default: `(min = 0.0, max = 1e8)`) allowable installed power capacity for a storage technology (MW)
+- `capacity_limits_discharge::Union{MinMax, Dict{PSY.Topology, MinMax}}`: (default: `(min = 0.0, max = 1e8)`) allowable installed power capacity for a storage technology (MW)
+- `capacity_limits_energy::Union{MinMax, Dict{PSY.Topology, MinMax}}`: (default: `(min = 0.0, max = 1e8)`) allowable installed energy capacity for a storage technology (MWh)
 - `duration_limits::MinMax`: (default: `(min=0,max=60000.0)`) Minimum and maximum duration limits (energy to discharge capacity ratio) for a storage technology (minutes). Units: min.
 - `efficiency::InOut`: (default: `(in=1, out=1)`) Efficiency of charging storage, fraction of total charge (in) and discharge (out) capacity
 - `losses::Float64`: (default: `0.0`) Self-discharge of storage (fraction of energy stored per hour)
@@ -66,7 +62,7 @@ mutable struct StorageTechnology{T <: PSY.Storage} <: ResourceTechnology
     "The technology name"
     name::String
     "Location where technology is operated"
-    region::Vector{RegionTopology}
+    region::Vector{PSY.Topology}
     "Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)"
     available::Bool
     "Corresponding type in PowerSystems.jl to be used in PCM modeling"
@@ -75,12 +71,8 @@ mutable struct StorageTechnology{T <: PSY.Storage} <: ResourceTechnology
     prime_mover_type::PrimeMovers
     "Storage Technology Complementary to EIA 923."
     storage_tech::StorageTech
-    "Capital costs for investing in a technology. (USD/MWh)"
-    capital_costs_energy::PSY.ValueCurve
-    "Capital costs for investing in a technology. (USD/MW)"
-    capital_costs_charge::Union{Nothing, PSY.ValueCurve}
-    "Capital costs for investing in a technology. (USD/MW)"
-    capital_costs_discharge::PSY.ValueCurve
+    "Capital costs for investing in a storage technology's charge, discharge, and energy capacity."
+    capital_costs::StorageCapitalCost
     "Fixed and variable O&M costs for a technology"
     operation_costs::PSY.StorageCost
     "Minimum discharge as a fraction of total discharge capacity"
@@ -92,11 +84,11 @@ mutable struct StorageTechnology{T <: PSY.Storage} <: ResourceTechnology
     "Used for discrete investment decisions. Size of each unit being built (MWh)"
     unit_size_energy::Float64
     "allowable installed power capacity for a storage technology (MW)"
-    capacity_limits_charge::Union{Nothing, MinMax}
+    capacity_limits_charge::Union{MinMax, Dict{PSY.Topology, MinMax}}
     "allowable installed power capacity for a storage technology (MW)"
-    capacity_limits_discharge::MinMax
+    capacity_limits_discharge::Union{MinMax, Dict{PSY.Topology, MinMax}}
     "allowable installed energy capacity for a storage technology (MWh)"
-    capacity_limits_energy::MinMax
+    capacity_limits_energy::Union{MinMax, Dict{PSY.Topology, MinMax}}
     "Minimum and maximum duration limits (energy to discharge capacity ratio) for a storage technology (minutes). Units: min."
     duration_limits::MinMax
     "Efficiency of charging storage, fraction of total charge (in) and discharge (out) capacity"
@@ -116,8 +108,8 @@ mutable struct StorageTechnology{T <: PSY.Storage} <: ResourceTechnology
 end
 
 
-function StorageTechnology{T}(; name, region=Vector(), available, power_systems_type, prime_mover_type=PrimeMovers.OT, storage_tech=StorageTech.OTHER_CHEM, capital_costs_energy=LinearCurve(0.0), capital_costs_charge=nothing, capital_costs_discharge=LinearCurve(0.0), operation_costs=StorageCost(nothing), min_discharge_fraction=0.0, unit_size_charge=nothing, unit_size_discharge=0.0, unit_size_energy=0.0, capacity_limits_charge=nothing, capacity_limits_discharge=(min=0,max=1e8), capacity_limits_energy=(min=0,max=1e8), duration_limits=(min=0,max=60000.0), efficiency=(in=1, out=1), losses=0.0, lifetime=100, requirements=Vector(), financial_data, ext=Dict(), internal=InfrastructureSystemsInternal(), ) where T <: PSY.Storage
-    StorageTechnology{T}(name, region, available, power_systems_type, prime_mover_type, storage_tech, capital_costs_energy, capital_costs_charge, capital_costs_discharge, operation_costs, min_discharge_fraction, unit_size_charge, unit_size_discharge, unit_size_energy, capacity_limits_charge, capacity_limits_discharge, capacity_limits_energy, duration_limits, efficiency, losses, lifetime, requirements, financial_data, ext, internal, )
+function StorageTechnology{T}(; name, region=Vector(), available, power_systems_type, prime_mover_type=PrimeMovers.OT, storage_tech, capital_costs=StorageCapitalCost(nothing), operation_costs=StorageCost(nothing), min_discharge_fraction=0.0, unit_size_charge=nothing, unit_size_discharge=0.0, unit_size_energy=0.0, capacity_limits_charge=(min = 0.0, max = 1e8), capacity_limits_discharge=(min = 0.0, max = 1e8), capacity_limits_energy=(min = 0.0, max = 1e8), duration_limits=(min=0,max=60000.0), efficiency=(in=1, out=1), losses=0.0, lifetime=100, requirements=Vector(), financial_data, ext=Dict(), internal=InfrastructureSystemsInternal(), ) where T <: PSY.Storage
+    StorageTechnology{T}(name, region, available, power_systems_type, prime_mover_type, storage_tech, capital_costs, operation_costs, min_discharge_fraction, unit_size_charge, unit_size_discharge, unit_size_energy, capacity_limits_charge, capacity_limits_discharge, capacity_limits_energy, duration_limits, efficiency, losses, lifetime, requirements, financial_data, ext, internal, )
 end
 
 """Get [`StorageTechnology`](@ref) `name`."""
@@ -132,25 +124,9 @@ get_power_systems_type(value::StorageTechnology) = value.power_systems_type
 get_prime_mover_type(value::StorageTechnology) = value.prime_mover_type
 """Get [`StorageTechnology`](@ref) `storage_tech`."""
 get_storage_tech(value::StorageTechnology) = value.storage_tech
-"""Get [`StorageTechnology`](@ref) `capital_costs_energy` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_capital_costs_energy_unitful`](@ref)."""
-get_capital_costs_energy(value::StorageTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:capital_costs_energy), Val(:usd_per_mwh), units))
-"""Get [`StorageTechnology`](@ref) `capital_costs_energy` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_capital_costs_energy`](@ref)."""
-get_capital_costs_energy_unitful(value::StorageTechnology, units) = get_value(value, Val(:capital_costs_energy), Val(:usd_per_mwh), units)
-InfrastructureSystems.display_units_arg(::typeof(get_capital_costs_energy), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_capital_costs_energy_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
-"""Get [`StorageTechnology`](@ref) `capital_costs_charge` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_capital_costs_charge_unitful`](@ref)."""
-get_capital_costs_charge(value::StorageTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:capital_costs_charge), Val(:usd_per_mw), units))
-"""Get [`StorageTechnology`](@ref) `capital_costs_charge` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_capital_costs_charge`](@ref)."""
-get_capital_costs_charge_unitful(value::StorageTechnology, units) = get_value(value, Val(:capital_costs_charge), Val(:usd_per_mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_capital_costs_charge), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_capital_costs_charge_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
-"""Get [`StorageTechnology`](@ref) `capital_costs_discharge` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_capital_costs_discharge_unitful`](@ref)."""
-get_capital_costs_discharge(value::StorageTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:capital_costs_discharge), Val(:usd_per_mw), units))
-"""Get [`StorageTechnology`](@ref) `capital_costs_discharge` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_capital_costs_discharge`](@ref)."""
-get_capital_costs_discharge_unitful(value::StorageTechnology, units) = get_value(value, Val(:capital_costs_discharge), Val(:usd_per_mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_capital_costs_discharge), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_capital_costs_discharge_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
-"""Get [`StorageTechnology`](@ref) `operation_costs` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_operation_costs_unitful`](@ref)."""
+"""Get [`StorageTechnology`](@ref) `capital_costs`."""
+get_capital_costs(value::StorageTechnology) = value.capital_costs
+"""Get [`StorageTechnology`](@ref) `operation_costs` as a bare number in the requested `units` (e.g. `SU`, `DU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_operation_costs_unitful`](@ref)."""
 get_operation_costs(value::StorageTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:operation_costs), Val(:usd_per_mwh), units))
 """Get [`StorageTechnology`](@ref) `operation_costs` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_operation_costs`](@ref)."""
 get_operation_costs_unitful(value::StorageTechnology, units) = get_value(value, Val(:operation_costs), Val(:usd_per_mwh), units)
@@ -231,12 +207,8 @@ set_power_systems_type!(value::StorageTechnology, val) = value.power_systems_typ
 set_prime_mover_type!(value::StorageTechnology, val) = value.prime_mover_type = val
 """Set [`StorageTechnology`](@ref) `storage_tech`."""
 set_storage_tech!(value::StorageTechnology, val) = value.storage_tech = val
-"""Set [`StorageTechnology`](@ref) `capital_costs_energy`."""
-set_capital_costs_energy!(value::StorageTechnology, val, unit) = value.capital_costs_energy = set_value(value, Val(:capital_costs_energy), val, unit, Val(:usd_per_mwh))
-"""Set [`StorageTechnology`](@ref) `capital_costs_charge`."""
-set_capital_costs_charge!(value::StorageTechnology, val, unit) = value.capital_costs_charge = set_value(value, Val(:capital_costs_charge), val, unit, Val(:usd_per_mw))
-"""Set [`StorageTechnology`](@ref) `capital_costs_discharge`."""
-set_capital_costs_discharge!(value::StorageTechnology, val, unit) = value.capital_costs_discharge = set_value(value, Val(:capital_costs_discharge), val, unit, Val(:usd_per_mw))
+"""Set [`StorageTechnology`](@ref) `capital_costs`."""
+set_capital_costs!(value::StorageTechnology, val) = value.capital_costs = val
 """Set [`StorageTechnology`](@ref) `operation_costs`."""
 set_operation_costs!(value::StorageTechnology, val, unit) = value.operation_costs = set_value(value, Val(:operation_costs), val, unit, Val(:usd_per_mwh))
 """Set [`StorageTechnology`](@ref) `min_discharge_fraction`."""
@@ -275,27 +247,24 @@ function from_openapi(po::PI.StorageTechnology, refs::OpenAPIRefs)
     parameter = getproperty(PowerSystems, Symbol(po.power_systems_type))
     return StorageTechnology{parameter}(;
         name = po.name,
-        region = resolve_refs(refs, po.region, RegionTopology),
+        region = resolve_refs(refs, po.region, PSY.Topology),
         available = po.available,
         power_systems_type = po.power_systems_type,
         prime_mover_type = PrimeMovers(po.prime_mover_type),
         storage_tech = StorageTech(po.storage_tech),
-        capital_costs_energy = convert_value_curve(po.capital_costs_energy),
-        capital_costs_charge = _value_curve_optional(po.capital_costs_charge),
-        capital_costs_discharge = convert_value_curve(po.capital_costs_discharge),
+        capital_costs = convert_nested_data(po.capital_costs),
         operation_costs = convert_cost(po.operation_costs)::PSY.StorageCost,
         min_discharge_fraction = po.min_discharge_fraction,
         unit_size_charge = po.unit_size_charge,
         unit_size_discharge = po.unit_size_discharge,
         unit_size_energy = po.unit_size_energy,
-        capacity_limits_charge = _minmax_from_po(po.capacity_limits_charge),
-        capacity_limits_discharge = _minmax_from_po(po.capacity_limits_discharge),
-        capacity_limits_energy = _minmax_from_po(po.capacity_limits_energy),
+        capacity_limits_charge = _capacity_bound_from_po(po.capacity_limits_charge, refs),
+        capacity_limits_discharge = _capacity_bound_from_po(po.capacity_limits_discharge, refs),
+        capacity_limits_energy = _capacity_bound_from_po(po.capacity_limits_energy, refs),
         duration_limits = _minmax_from_po(po.duration_limits),
         efficiency = _inout_from_po(po.efficiency),
         losses = po.losses,
         lifetime = po.lifetime,
-        requirements = resolve_refs(refs, po.requirements, Requirement),
         financial_data = convert_nested_data(po.financial_data),
     )
 end
@@ -309,22 +278,19 @@ function to_openapi(value::StorageTechnology{T}, refs::OpenAPIRefs) where {T <: 
         power_systems_type = string(nameof(T)),
         prime_mover_type = string(get_prime_mover_type(value)),
         storage_tech = string(get_storage_tech(value)),
-        capital_costs_energy = convert_value_curve_to_openapi(get_capital_costs_energy(value, IS.NU)),
-        capital_costs_charge = _value_curve_po_optional(get_capital_costs_charge(value, IS.NU)),
-        capital_costs_discharge = convert_value_curve_to_openapi(get_capital_costs_discharge(value, IS.NU)),
+        capital_costs = convert_nested_data_to_openapi(get_capital_costs(value)),
         operation_costs = convert_cost_to_openapi(get_operation_costs(value, IS.NU)),
         min_discharge_fraction = get_min_discharge_fraction(value),
         unit_size_charge = get_unit_size_charge(value, IS.NU),
         unit_size_discharge = get_unit_size_discharge(value, IS.NU),
         unit_size_energy = get_unit_size_energy(value, IS.NU),
-        capacity_limits_charge = _minmax_po_optional(get_capacity_limits_charge(value, IS.NU)),
-        capacity_limits_discharge = _minmax_po(get_capacity_limits_discharge(value, IS.NU)),
-        capacity_limits_energy = _minmax_po(get_capacity_limits_energy(value, IS.NU)),
+        capacity_limits_charge = PI.StorageTechnologyCapacityLimitsCharge(_capacity_bound_po_value(get_capacity_limits_charge(value, IS.NU), refs)),
+        capacity_limits_discharge = PI.StorageTechnologyCapacityLimitsDischarge(_capacity_bound_po_value(get_capacity_limits_discharge(value, IS.NU), refs)),
+        capacity_limits_energy = PI.StorageTechnologyCapacityLimitsEnergy(_capacity_bound_po_value(get_capacity_limits_energy(value, IS.NU), refs)),
         duration_limits = _minmax_po(get_duration_limits(value, IS.NU)),
         efficiency = _inout_po(get_efficiency(value)),
         losses = get_losses(value),
         lifetime = get_lifetime(value, IS.NU),
-        requirements = component_ids(refs, get_requirements(value)),
         financial_data = convert_nested_data_to_openapi(get_financial_data(value)),
     )
 end

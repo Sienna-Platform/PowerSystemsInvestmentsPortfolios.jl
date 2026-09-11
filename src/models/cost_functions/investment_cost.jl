@@ -1,0 +1,9 @@
+"""
+Abstract supertype for all investment cost representations.
+
+Concrete subtypes: [`CapitalCost`](@ref) and [`StorageCapitalCost`](@ref).
+"""
+abstract type InvestmentCost <: IS.DeviceParameter end
+
+IS.serialize(val::InvestmentCost) = IS.serialize_struct(val)
+IS.deserialize(T::Type{<:InvestmentCost}, val::Dict) = IS.deserialize_struct(T, val)

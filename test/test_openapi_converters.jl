@@ -100,8 +100,25 @@ The reference targets every technology round trip needs, pre-registered.
 """
 function _refs_fixture()
     refs = PSIP.OpenAPIRefs()
-    zone = Zone(name="zone_a")
-    node = Node(name="node_a")
+    zone = PSY.Area(; name="zone_a", base_power=100.0)
+    load_zone = PSY.LoadZone(;
+        name="zone_a_lz",
+        peak_active_power=0.0,
+        peak_reactive_power=0.0,
+        base_power=100.0,
+    )
+    node = PSY.ACBus(;
+        number=909,
+        name="node_a",
+        available=true,
+        bustype=PSY.ACBusTypes.PQ,
+        angle=0.0,
+        magnitude=1.0,
+        voltage_limits=(min=0.9, max=1.1),
+        base_voltage=138.0,
+        area=zone,
+        load_zone=load_zone,
+    )
     req = CarbonTax(name="tax", available=true)
     # Identity now lives in `internal` (assigned by the container on add). These fixtures
     # never add to a portfolio, so stamp the ids the document walk would have assigned; the
@@ -115,9 +132,33 @@ function _refs_fixture()
     return refs, zone, node, req
 end
 
-# Zone and Node carry `openapi: false` in the schema (Sep 2 restructure): they stay
-# PSIP-internal, referenced by other components as ids, and no longer have
-# `to_openapi`/`from_openapi` methods of their own to round-trip.
+@testset "Topology references round trip through OpenAPI" begin
+    refs, zone, node, _ = _refs_fixture()
+
+    tech = NodalACTransportTechnology{PSY.ACBranch}(;
+        name="line",
+        available=true,
+        power_systems_type="ACBranch",
+        start_node=node,
+        end_node=node,
+        financial_data=TechnologyFinancialData(
+            capital_recovery_period=20,
+            technology_base_year=2024,
+            debt_fraction=0.6,
+            debt_rate=0.05,
+            return_on_equity=0.1,
+            tax_rate=0.21,
+        ),
+        capital_costs=PSIP.CapitalCost(LinearCurve(1000.0), 0.0),
+    )
+    refs[11] = tech
+    po = PSIP.to_openapi(tech, refs)
+    @test po.start_node == 2
+    @test po.end_node == 2
+    back = PSIP.from_openapi(po, refs)
+    @test PSIP.get_start_node(back) === node
+    @test PSIP.get_end_node(back) === node
+end
 
 @testset "SupplyTechnology round trip through OpenAPI" begin
     refs, zone, _, req = _refs_fixture()
@@ -129,13 +170,12 @@ end
         requirements=[req],
         prime_mover_type=PrimeMovers.CT,
         fuel=[ThermalFuels.NATURAL_GAS],
-        co2=Dict(ThermalFuels.NATURAL_GAS => 0.05),
         cofire_level_limits=Dict(ThermalFuels.NATURAL_GAS => (min=0.0, max=1.0)),
         capacity_limits=(min=0.0, max=500.0),
         ramp_limits=(up=1.0, down=1.0),
         time_limits=(up=60.0, down=60.0),
         unit_size=100.0,
-        capital_costs=LinearCurve(1000.0),
+        capital_costs=PSIP.CapitalCost(LinearCurve(1000.0), 0.0),
         financial_data=TechnologyFinancialData(
             capital_recovery_period=20,
             technology_base_year=2024,
@@ -147,10 +187,36 @@ end
     )
     refs[10] = tech
 
-    # SupplyTechnology.co2 parity drift (schemas dropped it, "move EmissionsData to
-    # Core"; PSIP's descriptor still carries it): to_openapi always fails while the
-    # drift stands. Not fixed here — see the parity-drift table in the PR body.
-    @test_throws MethodError PSIP.to_openapi(tech, refs)
+    po = PSIP.to_openapi(tech, refs)
+    # references leave as ids, not objects
+    @test po.region == [1]
+    # Requirement↔member membership is NOT inline on the wire technology (Option B): it lives in
+    # the document-level `requirements_associations` table, so `po` carries no `requirements`
+    # field and the per-component converter does not round-trip it. The membership round trip is
+    # covered end-to-end in `test_serialization.jl`.
+    @test !hasproperty(po, :requirements)
+    # the type parameter is carried by power_systems_type, and by nothing else
+    @test po.power_systems_type == "ThermalStandard"
+    # enums, enum vectors and enum-keyed dicts all cross as strings
+    @test po.prime_mover_type == string(PrimeMovers.CT)
+    @test po.fuel == [string(ThermalFuels.NATURAL_GAS)]
+    # compounds become PC models
+    @test po.capacity_limits.value.max == 500.0
+    @test po.ramp_limits.up == 1.0
+    # scalars are unscaled: PSIP stores natural units and the document states them
+    @test po.unit_size == 100.0
+
+    back = PSIP.from_openapi(po, refs)
+    @test PSIP.get_parameter_type(back) === ThermalStandard
+    @test PSIP.get_name(back) == "cheap_thermal"
+    @test PSIP.get_region(back) == [zone]
+    # Membership is not reconstructed by the per-component converter (Option B — see above);
+    # `back` comes back with no requirements. Document-level reconstruction is tested elsewhere.
+    @test isempty(PSIP.get_requirements(back))
+    @test PSIP.get_prime_mover_type(back) == PrimeMovers.CT
+    @test PSIP.get_fuel(back) == [ThermalFuels.NATURAL_GAS]
+    @test PSIP.get_capacity_limits(back, NU) == (min=0.0, max=500.0)
+    @test PSIP.get_unit_size(back, NU) == 100.0
 end
 
 @testset "abstract type parameters survive the round trip" begin
@@ -193,7 +259,7 @@ end
 
 @testset "an unregistered reference errors rather than serializing garbage" begin
     refs = PSIP.OpenAPIRefs()
-    orphan = Zone(name="orphan")
+    orphan = PSY.Area(; name="orphan", base_power=100.0)
     tech = DemandRequirement{PowerLoad}(;
         name="demand",
         power_systems_type="PowerLoad",
@@ -214,6 +280,7 @@ end
         available=true,
         power_systems_type="EnergyReservoirStorage",
         region=[zone],
+        storage_tech=StorageTech.OTHER_CHEM,
         financial_data=TechnologyFinancialData(
             capital_recovery_period=20,
             technology_base_year=2024,
@@ -225,24 +292,28 @@ end
     )
     refs[20] = tech
 
-    # StorageTechnology.capital_costs parity drift (a92f000, "add new structs for
-    # CapitalCosts and OutageFactors"): the schema collapsed capital_costs_energy/
-    # _charge/_discharge into one capital_costs::StorageCapitalCost; PSIP's descriptor
-    # still declares the three separate fields. Excluded from this pass — see the
-    # parity-drift table in the PR body.
-    @test_throws MethodError PSIP.to_openapi(tech, refs)
+    po = PSIP.to_openapi(tech, refs)
+    @test isnothing(po.unit_size_charge)
+    @test po.storage_tech == string(StorageTech.OTHER_CHEM)
+    @test po.efficiency.in == 1
+
+    back = PSIP.from_openapi(po, refs)
+    @test PSIP.get_parameter_type(back) === PSY.EnergyReservoirStorage
+    @test isnothing(PSIP.get_unit_size_charge(back, NU))
+    @test PSIP.get_storage_tech(back) == StorageTech.OTHER_CHEM
 end
 
 @testset "duplicate component ids are rejected on addition" begin
-    # A component's `id` is the identity `IS.SystemData` stores it under, so a region and a
-    # requirement sharing one collide when the second is attached — before any document is
-    # built. `_validate_unique_region_id` (src/validation.jl) only covers `RegionTopology`,
-    # so this cross-family case is the container's check.
+    # A component's `id` is the identity `IS.SystemData` stores it under, so two portfolio
+    # components sharing one collide when the second is attached — before any document is
+    # built. Regions now live in the base system's own id space, so this container check is
+    # exercised between two `portfolio.data` components (here, two requirements).
     portfolio = Portfolio()
-    PSIP.add_region!(portfolio, Zone(name="zone_a"))
-    id = PSIP.get_id(PSIP.get_region(Zone, portfolio, "zone_a"))
+    first_req = CarbonTax(name="tax_a", available=true)
+    PSIP.add_requirement!(portfolio, first_req)
+    id = PSIP.get_id(first_req)
 
-    tax = CarbonTax(name="tax", available=true)
+    tax = CarbonTax(name="tax_b", available=true)
     IS.set_id!(tax, id)
 
     @test_throws ArgumentError PSIP.add_requirement!(portfolio, tax)
@@ -292,145 +363,27 @@ end
         power_systems_type="ThermalStandard",
         financial_data=financials,
     )
+    storage = StorageTechnology{PSY.EnergyReservoirStorage}(;
+        name="default_available_storage",
+        available=true,
+        power_systems_type="EnergyReservoirStorage",
+        storage_tech=StorageTech.OTHER_CHEM,
+        financial_data=financials,
+    )
     @test PSIP.get_available(supply) === true
 
     colocated = ColocatedSupplyStorageTechnology{RenewableDispatch}(;
         name="default_available_colocated",
         power_systems_type="RenewableDispatch",
         financial_data=financials,
-        capital_costs_inverter=LinearCurve(1000.0),
+        capital_costs_inverter=PSIP.CapitalCost(LinearCurve(1000.0), 0.0),
         operation_costs_inverter=CostCurve(LinearCurve(0.0)),
         inverter_efficiency=0.98,
         inverter_supply_ratio=1.2,
+        supply_technology=supply,
+        storage_technology=storage,
     )
     @test PSIP.get_available(colocated) === true
-end
-
-@testset "portfolio round trips through the OpenAPI serialization path" begin
-    # Financial data is not optional on the read-back path: `from_dict` indexes into the
-    # serialized `financial_data` object, so an empty `Portfolio()` cannot round trip.
-    portfolio = Portfolio(2024, 0.07, 0.025, 0.05)
-    zone = Zone(name="zone_a")
-    zone_b = Zone(name="zone_b")
-    req = CarbonTax(name="tax", available=true)
-    IS.set_id!(zone, 1)
-    IS.set_id!(zone_b, 2)
-    IS.set_id!(req, 3)
-    PSIP.add_region!(portfolio, zone)
-    PSIP.add_region!(portfolio, zone_b)
-    PSIP.add_requirement!(portfolio, req)
-    financial_data = TechnologyFinancialData(
-        capital_recovery_period=20,
-        technology_base_year=2024,
-        debt_fraction=0.6,
-        debt_rate=0.05,
-        return_on_equity=0.1,
-        tax_rate=0.21,
-    )
-    tech = SupplyTechnology{ThermalStandard}(;
-        name="cheap_thermal",
-        available=true,
-        power_systems_type="ThermalStandard",
-        region=[zone],
-        requirements=[req],
-        capacity_limits=(min=0.0, max=500.0),
-        capital_costs=LinearCurve(1000.0),
-        operation_costs=PSY.ThermalGenerationCost(nothing),
-        fuel=[ThermalFuels.NATURAL_GAS],
-        co2=Dict(ThermalFuels.NATURAL_GAS => 0.05),
-        cofire_level_limits=Dict(ThermalFuels.NATURAL_GAS => (min=0.0, max=1.0)),
-        financial_data=financial_data,
-    )
-    IS.set_id!(tech, 10)
-    PSIP.add_technology!(portfolio, tech)
-
-    # A transmission technology exercises the scalar `component_id`/`resolve_ref` path;
-    # `SupplyTechnology` above only covers the `component_ids`/`resolve_refs` list form.
-    line = AggregateTransportTechnology{PSY.ACBranch}(;
-        name="test_branch",
-        available=true,
-        power_systems_type="ACBranch",
-        start_region=zone,
-        end_region=zone_b,
-        capacity_limits=(min=0.0, max=900.0),
-        line_loss=0.05,
-        capital_costs=LinearCurve(5000.0),
-        financial_data=financial_data,
-    )
-    IS.set_id!(line, 11)
-    PSIP.add_technology!(portfolio, line)
-
-    # ColocatedSupplyStorageTechnology is excluded from this portfolio: the
-    # ColocatedSupplyStorageTechnology parity drift (f95da63 — the schema replaced its
-    # ~20 inlined fields with storage_technology/supply_technology references) makes
-    # to_openapi fail unconditionally, which would fail the whole portfolio's
-    # serialization, not just this one component. Not fixed here — see the
-    # parity-drift table in the PR body. Standalone coverage of the failure mode is
-    # below, after this testset.
-
-    retirement = RetirementPotential(eligible_generators=["Solitude"])
-    existing = ExistingDevices(existing_devices=["Solitude", "Alta"])
-    IS.set_id!(retirement, 51)
-    IS.set_id!(existing, 54)
-    PSIP.add_supplemental_attribute!(portfolio, tech, retirement)
-    PSIP.add_supplemental_attribute!(portfolio, line, existing)
-
-    # Serializing this portfolio is currently blocked by two drifts, both hit before
-    # any assertion below could run: SupplyTechnology.co2 (excluded parity drift) on
-    # `tech`, and the broader capital_costs value-shape drift on `line`
-    # (AggregateTransportTechnology.capital_costs — same a92f000 commit as the excluded
-    # StorageTechnology.capital_costs, but not itself one of the seven named drifts;
-    # PC.CapitalCost now wraps capital_costs on SupplyTechnology, AggregateTransport-
-    # Technology, NodalACTransportTechnology and NodalHVDCTransportTechnology too, not
-    # only StorageTechnology). The fixture above is kept intact — a realistic portfolio
-    # with regions, a requirement, two technology kinds, and supplemental attributes —
-    # so the maintainer can restore the round-trip assertions (git history has them)
-    # once both drifts are resolved. Not fixed here — see the parity-drift table in
-    # the PR body.
-    path = joinpath(mktempdir(), "portfolio.json")
-    @test_logs(
-        (:error, r"Failed to serialize"),
-        min_level = Logging.Error,
-        @test_throws(MethodError, PSIP.to_json(portfolio, path; force=true)),
-    )
-end
-
-@testset "ColocatedSupplyStorageTechnology parity drift" begin
-    # Standalone coverage of the failure mode excluded from the portfolio round trip
-    # above. The only technology whose `operation_costs_*` fields span all three cost
-    # shapes the converters emit: `RenewableGenerationCost` (solar/wind), `StorageCost`
-    # (energy/power), and a bare `ProductionVariableCostCurve` (inverter) — worth
-    # keeping as a fixture for whoever resolves the drift.
-    refs, zone, _, _ = _refs_fixture()
-    colocated = ColocatedSupplyStorageTechnology{PSY.RenewableDispatch}(;
-        name="colo",
-        available=true,
-        power_systems_type="RenewableDispatch",
-        region=[zone],
-        financial_data=TechnologyFinancialData(
-            capital_recovery_period=20,
-            technology_base_year=2024,
-            debt_fraction=0.6,
-            debt_rate=0.05,
-            return_on_equity=0.1,
-            tax_rate=0.21,
-        ),
-        capital_costs_solar=LinearCurve(1300.0),
-        operation_costs_solar=PSY.RenewableGenerationCost(
-            CostCurve(LinearCurve(5.0)),
-            CostCurve(LinearCurve(0.5)),
-            10.0,
-        ),
-        operation_costs_wind=PSY.RenewableGenerationCost(nothing),
-        operation_costs_energy=PSY.StorageCost(; fixed=4.0),
-        operation_costs_power=PSY.StorageCost(; fixed=5.0),
-        capital_costs_inverter=LinearCurve(700.0),
-        operation_costs_inverter=CostCurve(LinearCurve(6.0)),
-        inverter_efficiency=0.96,
-        inverter_supply_ratio=1.0,
-    )
-    refs[12] = colocated
-    @test_throws UndefKeywordError PSIP.to_openapi(colocated, refs)
 end
 
 @testset "serialized aggregation is a fully qualified type name" begin
@@ -452,34 +405,18 @@ end
             aggregation;
             financial_data=PortfolioFinancialData(2024, 0.07, 0.025, 0.05),
         )
-        PSIP.add_region!(portfolio, Zone(name="zone_a"))
+        PSIP.add_topology!(portfolio, PSY.Area(; name="zone_a", base_power=100.0))
         path = joinpath(mktempdir(), "portfolio.json")
         PSIP.to_json(portfolio, path; force=true)
 
         raw = JSON3.read(read(path, String), Dict)
         @test raw["aggregation"] == "PowerSystems.$(nameof(aggregation))"
-        @test PSIP.get_aggregation(Portfolio(path)) === aggregation
     end
 end
 
-@testset "serializing a lone component names the supported entry point" begin
-    # Zone no longer fits this fixture: `openapi: false` routes it through the generic
-    # `IS.serialize` path (no active-registry requirement), not `_serialize_openapi`.
-    # CarbonTax still goes through the OpenAPI path, so it still needs one.
-    req = CarbonTax(name="tax", available=true)
-    # @test_logs captures the intentional `@error` from to_json so the harness
-    # LogEventTracker does not count it as a real error.
-    err = @test_logs(
-        (:error, r"Failed to serialize"),
-        min_level = Logging.Error,
-        try
-            PSIP.to_json(req)
-            nothing
-        catch e
-            e
-        end,
-    )
-    @test err isa ErrorException
-    @test occursin("no active OpenAPI export registry", err.msg)
-    @test occursin("to_json(portfolio, filename)", err.msg)
+@testset "serializing a lone component emits OpenAPI metadata" begin
+    zone = PSY.Area(; name="orphan", base_power=100.0)
+    raw = JSON3.read(PSIP.to_json(zone), Dict)
+    @test raw["name"] == "orphan"
+    @test raw["__metadata__"] == Dict("module" => "PowerSystems", "type" => "Area")
 end

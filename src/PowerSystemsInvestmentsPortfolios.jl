@@ -30,6 +30,7 @@ using PowerSystems
 import PowerSystems: ThermalFuels, PrimeMovers, StorageTech, ACBusTypes
 
 import JSONSchema
+import JSON
 import JSON3
 import PrettyTables
 import SQLite
@@ -43,10 +44,18 @@ import PowerCoreOpenAPIModels
 import PowerInvestmentsOpenAPIModels
 const PC = PowerCoreOpenAPIModels
 const PI = PowerInvestmentsOpenAPIModels
+import PowerOpenAPIModels
+import InfrastructureCoreOpenAPIModels
+import InfrastructureTimeSeriesOpenAPIModels
+const PD = PowerOpenAPIModels
+const PO = PowerOpenAPIModels
+const IC = InfrastructureCoreOpenAPIModels
+const PTS = InfrastructureTimeSeriesOpenAPIModels
 import StringEncodings
 import Tables
 import Unitful
 using Unitful: @dimension, @u_str, @refunit, @unit, Quantity, Units, uconvert, ustrip, unit
+using DocStringExtensions
 
 export Portfolio
 export Requirement
@@ -55,7 +64,6 @@ export ResourceTechnology
 export DemandTechnology
 export TransmissionTechnology
 export FinancialData
-export RegionTopology
 export SupplyTechnology
 export ColocatedSupplyStorageTechnology
 export NodalACTransportTechnology
@@ -75,9 +83,6 @@ export HourlyMatching
 export EnergyShareRequirements
 export MinimumCapacityRequirements
 export MaximumCapacityRequirements
-export RegionTopology
-export Zone
-export Node
 export PortfolioFinancialData
 export InvestmentScheduleResults
 export TechnologyFinancialData
@@ -88,6 +93,8 @@ export OperationalPeriods
 export get_name
 export get_description
 export get_regions
+export get_topologies
+export get_topology
 export get_technologies
 export get_technology
 export get_available_technology
@@ -121,6 +128,8 @@ export check_technology
 export check_technologies
 export remove_technology!
 export add_region!
+export add_topology!
+export remove_topology!
 export add_requirement!
 export add_time_series!
 export clear_time_series!
@@ -172,8 +181,10 @@ include("models/technologies.jl")
 include("models/regions.jl")
 include("models/financial_data/financial_data.jl")
 include("models/financial_data/TechnologyFinancialData.jl")
+include("models/cost_functions/investment_cost.jl")
+include("models/cost_functions/CapitalCost.jl")
+include("models/cost_functions/StorageCapitalCost.jl")
 include("openapi/refs.jl")
-include("openapi/converters.jl")
 include("models/generated/includes.jl")
 include("investment_schedule.jl")
 
@@ -182,10 +193,14 @@ include("units/conversions.jl")
 include("units/function_conversions.jl")
 
 include("portfolio.jl")
-include("openapi/document.jl")
+include("openapi/cost_conversion.jl")
+include("openapi/export_cost_conversion.jl")
+include("openapi/sqlite_load.jl")
+include("openapi/import_document.jl")
 include("validation.jl")
 include("time_mapping.jl")
-include("serialization.jl")
+include("openapi/export_document.jl")
+include("openapi/file_io.jl")
 include("utils/getters.jl")
 include("db_parser.jl")
 include("utils/generate_structs.jl")
@@ -196,8 +211,6 @@ else
     include("utils/print_pt_v3.jl")
 end
 include("update_system.jl")
-
-using DocStringExtensions
 
 const localunits = Unitful.basefactors
 const localpromotion = copy(Unitful.promotion)

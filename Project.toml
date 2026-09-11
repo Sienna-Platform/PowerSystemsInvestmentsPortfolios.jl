@@ -9,12 +9,18 @@ DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+InfrastructureCoreOpenAPIModels = "1f5e1c8d-e0cc-4dbf-8c6d-f2a3d2ae70a8"
 InfrastructureSystems = "2cd47ed4-ca9b-11e9-27f2-ab636a7671f1"
+InfrastructureTimeSeriesOpenAPIModels = "37a216c8-a490-47cf-89d7-db2cb9618199"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 JSONSchema = "7d188eb4-7ad8-530c-ae41-71a32a6d4692"
 Mustache = "ffc61752-8dc7-55ee-8c37-f3e9cdd09e70"
 OpenAPI = "d5e62ea6-ddf3-4d43-8e4c-ad5e6c8bfd7d"
 PowerCoreOpenAPIModels = "b7b40286-e793-417d-a9a0-b1583e4da1cb"
+PowerDynamicsOpenAPIModels = "044a0b22-31f8-4ef6-8282-c9a61b3013f6"
+PowerOpenAPIModels = "0730f07c-cff6-4c3b-a9df-c546153be50a"
 PowerInvestmentsOpenAPIModels = "33cb4396-f4d9-4f59-8585-787ebb56cb1b"
 PowerOperationsOpenAPIModels = "a372b6d7-45a2-44c2-8199-6a724b72e8ff"
 PowerSystems = "bcd98974-b02a-5e2f-9ee0-a103f5c450dd"
@@ -28,15 +34,19 @@ URIs = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [sources]
-InfrastructureSystems = {path = "../InfrastructureSystems.jl"}
-PowerSystems = {path = "../PowerSystems.jl"}
+InfrastructureSystems = {url = "https://github.com/Sienna-Platform/InfrastructureSystems.jl", rev = "5776a49b329eb6f27027b7ba51302dfaa76eea0b"}
+PowerSystems = {url = "https://github.com/Sienna-Platform/PowerSystems.jl", rev = "jd/serialization_refactor"}
 # Pinned by rev, not by sibling path: the sibling checkout carries in-progress schema
 # renames ahead of the PowerSystems rev above, and the two must agree.
 # PowerOperationsOpenAPIModels is unused here — PSY's own [sources] are ignored once PSY
 # is a dependency rather than the root project, so PSIP pins it for Pkg to resolve.
-PowerCoreOpenAPIModels = {path = "../PowerOpenAPIModels/PowerCoreOpenAPIModels.jl"}
-PowerOperationsOpenAPIModels = {path = "../PowerOpenAPIModels/PowerOperationsOpenAPIModels.jl"}
-PowerInvestmentsOpenAPIModels = {path = "../PowerOpenAPIModels/PowerInvestmentsOpenAPIModels.jl"}
+PowerCoreOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/PowerCoreOpenAPIModels.jl"}
+PowerOperationsOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/PowerOperationsOpenAPIModels.jl"}
+PowerInvestmentsOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/PowerInvestmentsOpenAPIModels.jl"}
+InfrastructureCoreOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/InfrastructureCoreOpenAPIModels.jl"}
+InfrastructureTimeSeriesOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/InfrastructureTimeSeriesOpenAPIModels.jl"}
+PowerDynamicsOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/PowerDynamicsOpenAPIModels.jl"}
+PowerOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/PowerOpenAPIModels.jl"}
 
 [compat]
 DBInterface = "2.6"
@@ -44,16 +54,22 @@ DataFrames = "1.6"
 DataStructures = "^0.19"
 Dates = "^1.6"
 DocStringExtensions = "~0.9"
+HTTP = "1.10"
 InfrastructureSystems = "^3.1"
+JSON = "^1.5"
 JSON3 = "1.14"
 JSONSchema = "1.3"
 Mustache = "1"
-OpenAPI = "1"
+OpenAPI = "0.2"
+PrettyTables = "2, 3"
 PowerCoreOpenAPIModels = "0.1"
+InfrastructureCoreOpenAPIModels = "0.1"
+InfrastructureTimeSeriesOpenAPIModels = "0.1"
+PowerDynamicsOpenAPIModels = "0.1"
+PowerOpenAPIModels = "0.1"
 PowerInvestmentsOpenAPIModels = "0.1"
 PowerOperationsOpenAPIModels = "0.1"
 PowerSystems = "^5.3"
-PrettyTables = "2, 3"
 SQLite = "1.6.1"
 StringEncodings = "0.3"
 Tables = "1.12"

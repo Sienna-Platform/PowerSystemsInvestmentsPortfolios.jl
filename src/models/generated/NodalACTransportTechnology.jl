@@ -9,11 +9,11 @@ This file is auto-generated. Do not edit.
         name::String
         available::Bool
         power_systems_type::String
-        start_node::Node
-        end_node::Node
+        start_node::PSY.Bus
+        end_node::PSY.Bus
         capacity_limits::MinMax
         unit_size::Float64
-        capital_costs::PSY.ValueCurve
+        capital_costs::CapitalCost
         resistance::Float64
         voltage::Float64
         reactance::Float64
@@ -29,11 +29,11 @@ Nodal representation of candidate AC transmission lines between two regions.
 - `name::String`: Name
 - `available::Bool`: Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)
 - `power_systems_type::String`: Corresponding type in PowerSystems.jl to be used in PCM modeling
-- `start_node::Node`: Start node for transport technology
-- `end_node::Node`: End node for transport technology
+- `start_node::PSY.Bus`: Start node for transport technology
+- `end_node::PSY.Bus`: End node for transport technology
 - `capacity_limits::MinMax`: (default: `(min=0, max=1e8)`) Allowable capacity for a transmission line (MW)
 - `unit_size::Float64`: (default: `1.0`) Used for integer investment decisions. Represents the rating capacity of individual new lines (MW)
-- `capital_costs::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Cost of adding new capacity to the nodal transmission line (USD/MW).
+- `capital_costs::CapitalCost`: (default: `CapitalCost(nothing)`) Cost of adding new capacity to the nodal transmission line (USD/MW).
 - `resistance::Float64`: (default: `1.0`) Technology resistance in Ohms
 - `voltage::Float64`: (default: `230.0`) Voltage rating of transmission line (kV)
 - `reactance::Float64`: (default: `1.0`) Series reactance for a line (ohms)
@@ -50,15 +50,15 @@ mutable struct NodalACTransportTechnology{T <: PSY.Device} <: TransmissionTechno
     "Corresponding type in PowerSystems.jl to be used in PCM modeling"
     power_systems_type::String
     "Start node for transport technology"
-    start_node::Node
+    start_node::PSY.Bus
     "End node for transport technology"
-    end_node::Node
+    end_node::PSY.Bus
     "Allowable capacity for a transmission line (MW)"
     capacity_limits::MinMax
     "Used for integer investment decisions. Represents the rating capacity of individual new lines (MW)"
     unit_size::Float64
     "Cost of adding new capacity to the nodal transmission line (USD/MW)."
-    capital_costs::PSY.ValueCurve
+    capital_costs::CapitalCost
     "Technology resistance in Ohms"
     resistance::Float64
     "Voltage rating of transmission line (kV)"
@@ -76,7 +76,7 @@ mutable struct NodalACTransportTechnology{T <: PSY.Device} <: TransmissionTechno
 end
 
 
-function NodalACTransportTechnology{T}(; name, available, power_systems_type, start_node, end_node, capacity_limits=(min=0, max=1e8), unit_size=1.0, capital_costs=LinearCurve(0.0), resistance=1.0, voltage=230.0, reactance=1.0, requirements=Vector(), financial_data, ext=Dict(), internal=InfrastructureSystemsInternal(), ) where T <: PSY.Device
+function NodalACTransportTechnology{T}(; name, available, power_systems_type, start_node, end_node, capacity_limits=(min=0, max=1e8), unit_size=1.0, capital_costs=CapitalCost(nothing), resistance=1.0, voltage=230.0, reactance=1.0, requirements=Vector(), financial_data, ext=Dict(), internal=InfrastructureSystemsInternal(), ) where T <: PSY.Device
     NodalACTransportTechnology{T}(name, available, power_systems_type, start_node, end_node, capacity_limits, unit_size, capital_costs, resistance, voltage, reactance, requirements, financial_data, ext, internal, )
 end
 
@@ -102,13 +102,9 @@ get_unit_size(value::NodalACTransportTechnology, units) = InfrastructureSystems.
 get_unit_size_unitful(value::NodalACTransportTechnology, units) = get_value(value, Val(:unit_size), Val(:mw), units)
 InfrastructureSystems.display_units_arg(::typeof(get_unit_size), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_unit_size_unitful), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
-"""Get [`NodalACTransportTechnology`](@ref) `capital_costs` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_capital_costs_unitful`](@ref)."""
-get_capital_costs(value::NodalACTransportTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:capital_costs), Val(:usd_per_mw), units))
-"""Get [`NodalACTransportTechnology`](@ref) `capital_costs` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_capital_costs`](@ref)."""
-get_capital_costs_unitful(value::NodalACTransportTechnology, units) = get_value(value, Val(:capital_costs), Val(:usd_per_mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_capital_costs), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_capital_costs_unitful), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
-"""Get [`NodalACTransportTechnology`](@ref) `resistance` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_resistance_unitful`](@ref)."""
+"""Get [`NodalACTransportTechnology`](@ref) `capital_costs`."""
+get_capital_costs(value::NodalACTransportTechnology) = value.capital_costs
+"""Get [`NodalACTransportTechnology`](@ref) `resistance` as a bare number in the requested `units` (e.g. `SU`, `DU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_resistance_unitful`](@ref)."""
 get_resistance(value::NodalACTransportTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:resistance), Val(:ohm), units))
 """Get [`NodalACTransportTechnology`](@ref) `resistance` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_resistance`](@ref)."""
 get_resistance_unitful(value::NodalACTransportTechnology, units) = get_value(value, Val(:resistance), Val(:ohm), units)
@@ -150,7 +146,7 @@ set_capacity_limits!(value::NodalACTransportTechnology, val, unit) = value.capac
 """Set [`NodalACTransportTechnology`](@ref) `unit_size`."""
 set_unit_size!(value::NodalACTransportTechnology, val, unit) = value.unit_size = set_value(value, Val(:unit_size), val, unit, Val(:mw))
 """Set [`NodalACTransportTechnology`](@ref) `capital_costs`."""
-set_capital_costs!(value::NodalACTransportTechnology, val, unit) = value.capital_costs = set_value(value, Val(:capital_costs), val, unit, Val(:usd_per_mw))
+set_capital_costs!(value::NodalACTransportTechnology, val) = value.capital_costs = val
 """Set [`NodalACTransportTechnology`](@ref) `resistance`."""
 set_resistance!(value::NodalACTransportTechnology, val, unit) = value.resistance = set_value(value, Val(:resistance), val, unit, Val(:ohm))
 """Set [`NodalACTransportTechnology`](@ref) `voltage`."""
@@ -173,15 +169,14 @@ function from_openapi(po::PI.NodalACTransportTechnology, refs::OpenAPIRefs)
         name = po.name,
         available = po.available,
         power_systems_type = po.power_systems_type,
-        start_node = resolve_ref(refs, po.start_node, Node),
-        end_node = resolve_ref(refs, po.end_node, Node),
+        start_node = resolve_ref(refs, po.start_node, PSY.Bus),
+        end_node = resolve_ref(refs, po.end_node, PSY.Bus),
         capacity_limits = _minmax_from_po(po.capacity_limits),
         unit_size = po.unit_size,
-        capital_costs = convert_value_curve(po.capital_costs),
+        capital_costs = convert_nested_data(po.capital_costs),
         resistance = po.resistance,
         voltage = po.voltage,
         reactance = po.reactance,
-        requirements = resolve_refs(refs, po.requirements, Requirement),
         financial_data = convert_nested_data(po.financial_data),
     )
 end
@@ -196,11 +191,10 @@ function to_openapi(value::NodalACTransportTechnology{T}, refs::OpenAPIRefs) whe
         end_node = component_id(refs, get_end_node(value)),
         capacity_limits = _minmax_po(get_capacity_limits(value, IS.NU)),
         unit_size = get_unit_size(value, IS.NU),
-        capital_costs = convert_value_curve_to_openapi(get_capital_costs(value, IS.NU)),
+        capital_costs = convert_nested_data_to_openapi(get_capital_costs(value)),
         resistance = get_resistance(value, IS.NU),
         voltage = get_voltage(value, IS.NU),
         reactance = get_reactance(value, IS.NU),
-        requirements = component_ids(refs, get_requirements(value)),
         financial_data = convert_nested_data_to_openapi(get_financial_data(value)),
     )
 end

@@ -9,7 +9,7 @@ This file is auto-generated. Do not edit.
         name::String
         available::Bool
         power_systems_type::String
-        region::Vector{RegionTopology}
+        region::Vector{PSY.Topology}
         technology_efficiency::Float64
         price_per_unit::PSY.ValueCurve
         min_power::Float64
@@ -31,7 +31,7 @@ Represents demand side technologies such as electric vehicles or hydrogen electr
 - `name::String`: The technology name
 - `available::Bool`: Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)
 - `power_systems_type::String`: Corresponding type in PowerSystems.jl to be used in PCM modeling
-- `region::Vector{RegionTopology}`: (default: `Vector()`) Location where technology is operated
+- `region::Vector{PSY.Topology}`: (default: `Vector()`) Location where technology is operated
 - `technology_efficiency::Float64`: (default: `0.0`) MWh of electricity per unit of output. Ex: MWh per ton of hydrogen for electrolyzers
 - `price_per_unit::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Price or value per unit of output. Ex: USD per ton of hydrogen for electrolyzers. Units: USD/t.
 - `min_power::Float64`: (default: `0.0`) Minimum operation of demandside unit as a fraction of peak demand
@@ -54,7 +54,7 @@ mutable struct DemandSideTechnology{T <: PSY.StaticInjection} <: DemandTechnolog
     "Corresponding type in PowerSystems.jl to be used in PCM modeling"
     power_systems_type::String
     "Location where technology is operated"
-    region::Vector{RegionTopology}
+    region::Vector{PSY.Topology}
     "MWh of electricity per unit of output. Ex: MWh per ton of hydrogen for electrolyzers"
     technology_efficiency::Float64
     "Price or value per unit of output. Ex: USD per ton of hydrogen for electrolyzers. Units: USD/t."
@@ -189,7 +189,7 @@ function from_openapi(po::PI.DemandSideTechnology, refs::OpenAPIRefs)
         name = po.name,
         available = po.available,
         power_systems_type = po.power_systems_type,
-        region = resolve_refs(refs, po.region, RegionTopology),
+        region = resolve_refs(refs, po.region, PSY.Topology),
         technology_efficiency = po.technology_efficiency,
         price_per_unit = convert_value_curve(po.price_per_unit),
         min_power = po.min_power,
@@ -200,7 +200,6 @@ function from_openapi(po::PI.DemandSideTechnology, refs::OpenAPIRefs)
         max_demand_advance = po.max_demand_advance,
         demand_energy_efficiency = po.demand_energy_efficiency,
         shift_variable_cost = convert_value_curve(po.shift_variable_cost),
-        requirements = resolve_refs(refs, po.requirements, Requirement),
     )
 end
 
@@ -221,6 +220,5 @@ function to_openapi(value::DemandSideTechnology{T}, refs::OpenAPIRefs) where {T 
         max_demand_advance = get_max_demand_advance(value, IS.NU),
         demand_energy_efficiency = get_demand_energy_efficiency(value),
         shift_variable_cost = convert_value_curve_to_openapi(get_shift_variable_cost(value, IS.NU)),
-        requirements = component_ids(refs, get_requirements(value)),
     )
 end

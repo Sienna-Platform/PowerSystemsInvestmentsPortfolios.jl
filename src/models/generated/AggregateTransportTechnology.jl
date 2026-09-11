@@ -9,11 +9,11 @@ This file is auto-generated. Do not edit.
         name::String
         available::Bool
         power_systems_type::String
-        start_region::RegionTopology
-        end_region::RegionTopology
+        start_region::PSY.AggregationTopology
+        end_region::PSY.AggregationTopology
         capacity_limits::MinMax
         unit_size::Float64
-        capital_costs::PSY.ValueCurve
+        capital_costs::CapitalCost
         line_loss::Float64
         requirements::Vector{Requirement}
         financial_data::TechnologyFinancialData
@@ -27,11 +27,11 @@ An aggregated representation of a transmission interchange between two regions.
 - `name::String`: Name
 - `available::Bool`: Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)
 - `power_systems_type::String`: Corresponding type in PowerSystems.jl to be used in PCM modeling
-- `start_region::RegionTopology`: Start region for transport technology
-- `end_region::RegionTopology`: End region for transport technology
+- `start_region::PSY.AggregationTopology`: Start region for transport technology
+- `end_region::PSY.AggregationTopology`: End region for transport technology
 - `capacity_limits::MinMax`: (default: `(min=0, max=1e8)`) Allowable capacity for a transmission line (MW)
 - `unit_size::Float64`: (default: `1`) Used for integer investment decisions. Represents the rating capacity of individual new lines (MW)
-- `capital_costs::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Cost of adding new capacity to the nodal transmission line. (USD/MW)
+- `capital_costs::CapitalCost`: (default: `CapitalCost(nothing)`) Cost of adding new capacity to the nodal transmission line. (USD/MW)
 - `line_loss::Float64`: (default: `0.0`) Transmission loss for each transport technology (%)
 - `requirements::Vector{Requirement}`: (default: `Vector()`) List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology
 - `financial_data::TechnologyFinancialData`: Struct containing relevant financial information for a technology
@@ -46,15 +46,15 @@ mutable struct AggregateTransportTechnology{T <: PSY.Device} <: TransmissionTech
     "Corresponding type in PowerSystems.jl to be used in PCM modeling"
     power_systems_type::String
     "Start region for transport technology"
-    start_region::RegionTopology
+    start_region::PSY.AggregationTopology
     "End region for transport technology"
-    end_region::RegionTopology
+    end_region::PSY.AggregationTopology
     "Allowable capacity for a transmission line (MW)"
     capacity_limits::MinMax
     "Used for integer investment decisions. Represents the rating capacity of individual new lines (MW)"
     unit_size::Float64
     "Cost of adding new capacity to the nodal transmission line. (USD/MW)"
-    capital_costs::PSY.ValueCurve
+    capital_costs::CapitalCost
     "Transmission loss for each transport technology (%)"
     line_loss::Float64
     "List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology"
@@ -68,7 +68,7 @@ mutable struct AggregateTransportTechnology{T <: PSY.Device} <: TransmissionTech
 end
 
 
-function AggregateTransportTechnology{T}(; name, available, power_systems_type, start_region, end_region, capacity_limits=(min=0, max=1e8), unit_size=1, capital_costs=LinearCurve(0.0), line_loss=0.0, requirements=Vector(), financial_data, ext=Dict(), internal=InfrastructureSystemsInternal(), ) where T <: PSY.Device
+function AggregateTransportTechnology{T}(; name, available, power_systems_type, start_region, end_region, capacity_limits=(min=0, max=1e8), unit_size=1, capital_costs=CapitalCost(nothing), line_loss=0.0, requirements=Vector(), financial_data, ext=Dict(), internal=InfrastructureSystemsInternal(), ) where T <: PSY.Device
     AggregateTransportTechnology{T}(name, available, power_systems_type, start_region, end_region, capacity_limits, unit_size, capital_costs, line_loss, requirements, financial_data, ext, internal, )
 end
 
@@ -94,12 +94,8 @@ get_unit_size(value::AggregateTransportTechnology, units) = InfrastructureSystem
 get_unit_size_unitful(value::AggregateTransportTechnology, units) = get_value(value, Val(:unit_size), Val(:mw), units)
 InfrastructureSystems.display_units_arg(::typeof(get_unit_size), ::Type{AggregateTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_unit_size_unitful), ::Type{AggregateTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
-"""Get [`AggregateTransportTechnology`](@ref) `capital_costs` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_capital_costs_unitful`](@ref)."""
-get_capital_costs(value::AggregateTransportTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:capital_costs), Val(:usd_per_mw), units))
-"""Get [`AggregateTransportTechnology`](@ref) `capital_costs` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_capital_costs`](@ref)."""
-get_capital_costs_unitful(value::AggregateTransportTechnology, units) = get_value(value, Val(:capital_costs), Val(:usd_per_mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_capital_costs), ::Type{AggregateTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_capital_costs_unitful), ::Type{AggregateTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
+"""Get [`AggregateTransportTechnology`](@ref) `capital_costs`."""
+get_capital_costs(value::AggregateTransportTechnology) = value.capital_costs
 """Get [`AggregateTransportTechnology`](@ref) `line_loss`."""
 get_line_loss(value::AggregateTransportTechnology) = value.line_loss
 """Get [`AggregateTransportTechnology`](@ref) `requirements`."""
@@ -126,7 +122,7 @@ set_capacity_limits!(value::AggregateTransportTechnology, val, unit) = value.cap
 """Set [`AggregateTransportTechnology`](@ref) `unit_size`."""
 set_unit_size!(value::AggregateTransportTechnology, val, unit) = value.unit_size = set_value(value, Val(:unit_size), val, unit, Val(:mw))
 """Set [`AggregateTransportTechnology`](@ref) `capital_costs`."""
-set_capital_costs!(value::AggregateTransportTechnology, val, unit) = value.capital_costs = set_value(value, Val(:capital_costs), val, unit, Val(:usd_per_mw))
+set_capital_costs!(value::AggregateTransportTechnology, val) = value.capital_costs = val
 """Set [`AggregateTransportTechnology`](@ref) `line_loss`."""
 set_line_loss!(value::AggregateTransportTechnology, val) = value.line_loss = val
 """Set [`AggregateTransportTechnology`](@ref) `requirements`."""
@@ -145,13 +141,12 @@ function from_openapi(po::PI.AggregateTransportTechnology, refs::OpenAPIRefs)
         name = po.name,
         available = po.available,
         power_systems_type = po.power_systems_type,
-        start_region = resolve_ref(refs, po.start_region, RegionTopology),
-        end_region = resolve_ref(refs, po.end_region, RegionTopology),
+        start_region = resolve_ref(refs, po.start_region, PSY.AggregationTopology),
+        end_region = resolve_ref(refs, po.end_region, PSY.AggregationTopology),
         capacity_limits = _minmax_from_po(po.capacity_limits),
         unit_size = po.unit_size,
-        capital_costs = convert_value_curve(po.capital_costs),
+        capital_costs = convert_nested_data(po.capital_costs),
         line_loss = po.line_loss,
-        requirements = resolve_refs(refs, po.requirements, Requirement),
         financial_data = convert_nested_data(po.financial_data),
     )
 end
@@ -166,9 +161,8 @@ function to_openapi(value::AggregateTransportTechnology{T}, refs::OpenAPIRefs) w
         end_region = component_id(refs, get_end_region(value)),
         capacity_limits = _minmax_po(get_capacity_limits(value, IS.NU)),
         unit_size = get_unit_size(value, IS.NU),
-        capital_costs = convert_value_curve_to_openapi(get_capital_costs(value, IS.NU)),
+        capital_costs = convert_nested_data_to_openapi(get_capital_costs(value)),
         line_loss = get_line_loss(value),
-        requirements = component_ids(refs, get_requirements(value)),
         financial_data = convert_nested_data_to_openapi(get_financial_data(value)),
     )
 end
