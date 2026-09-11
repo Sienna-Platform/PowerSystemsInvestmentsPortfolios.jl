@@ -647,12 +647,7 @@ function add_time_series!(
     time_series::PSY.TimeSeriesData;
     features::Union{Nothing, Dict}=nothing,
 )
-    return IS.add_time_series!(
-        portfolio.data,
-        component,
-        time_series;
-        features=features,
-    )
+    return IS.add_time_series!(portfolio.data, component, time_series; features=features)
 end
 
 """
@@ -669,12 +664,7 @@ function add_time_series!(
     time_series::PSY.TimeSeriesData;
     features::Union{Nothing, Dict}=nothing,
 )
-    return IS.add_time_series!(
-        portfolio.data,
-        technologies,
-        time_series;
-        features=features,
-    )
+    return IS.add_time_series!(portfolio.data, technologies, time_series; features=features)
 end
 
 """

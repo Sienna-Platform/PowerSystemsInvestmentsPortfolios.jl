@@ -99,7 +99,7 @@ has_time_series_data(portfolio::Portfolio) = !iszero(IS.get_num_time_series(port
 
 # PSY's `to_file` takes `power_units::Symbol` (`:component_base`/`:natural_units`), decoupled from
 # the IS unit-system markers PSIP's public `to_file` accepts (`DU`/`NU`). Map at the boundary.
-_base_system_power_units(::DeviceBaseUnit) = :component_base
+_base_system_power_units(::ComponentBaseUnit) = :component_base
 _base_system_power_units(::NaturalUnit) = :natural_units
 _base_system_power_units(u::IS.AbstractUnitSystem) = error(
     "base_system_units=$(u) is not exportable for the base system; use DU (component base) " *

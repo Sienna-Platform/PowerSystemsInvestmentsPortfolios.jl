@@ -122,34 +122,39 @@ function _linear_curve_or_nothing(curve::InputOutputCurve)
     end
     return _value_curve_body_to_openapi(curve)
 end
-_vom_cost_to_openapi(curve) = _linear_curve_or_nothing(curve)
+# `CostCurve.vom_cost`/`FuelCurve.vom_cost` are REQUIRED (non-nullable `InputOutputCurve`) in the
+# OpenAPI 1.x schema, so — unlike the nullable `startup_fuel_offtake` — vom_cost must always be
+# emitted, even the `LinearCurve(0.0)` "no VOM" sentinel. Emitting the zero curve round-trips
+# cleanly: import's `_vom_cost(::InputOutputCurve)` maps a zero curve back to `LinearCurve(0.0)`.
+_vom_cost_to_openapi(curve) = _value_curve_body_to_openapi(curve)
 _startup_fuel_offtake_to_openapi(curve) = _linear_curve_or_nothing(curve)
 # ── fuel_cost: a bare number, or (unimplemented) a time-series reference ──────
 
 _fuel_cost_to_openapi(v::Real) = Float64(v)
 _power_units_to_string(::NaturalUnit, ::ProductionVariableCostCurve) = "NATURAL_UNITS"
-_power_units_to_string(::DeviceBaseUnit, ::ProductionVariableCostCurve) = "DEVICE_BASE"
+_power_units_to_string(::ComponentBaseUnit, ::ProductionVariableCostCurve) =
+    "COMPONENT_BASE"
 
 """
 `CostCurve.power_units`/`FuelCurve.power_units` carry no system-base member — a curve whose
 per-unit data is on the system base is expected to record that base in the owning component's
-`base_power` and ride as `DEVICE_BASE`. This converter is handed the curve alone, so it can
+`base_power` and ride as `COMPONENT_BASE`. This converter is handed the curve alone, so it can
 neither check that the component's `base_power` really is the system base nor rescale the
-curve's x-coordinates by `system_base / device_base` if it is not. Relabelling would silently
+curve's x-coordinates by `system_base / component_base` if it is not. Relabelling would silently
 corrupt magnitudes, so fail loudly instead (psy6 rule).
 """
 function _power_units_to_string(::SystemBaseUnit, cost::ProductionVariableCostCurve)
     error(
         "cannot export $(typeof(cost)) with power_units = SystemBaseUnit(): the OpenAPI " *
-        "power_units enum accepts only DEVICE_BASE and NATURAL_UNITS, and this converter " *
+        "power_units enum accepts only COMPONENT_BASE and NATURAL_UNITS, and this converter " *
         "has no access to the owning component's base_power to rescale the curve. Rebuild " *
-        "the curve on the component's own base (DeviceBaseUnit) or in natural units first.",
+        "the curve on the component's own base (ComponentBaseUnit) or in natural units first.",
     )
 end
 
 function convert_cost_to_openapi(cost::CostCurve)
     return PC.CostCurve(;
-        power_units=_power_units_to_string(get_power_units(cost), cost),
+        power_units=PC.UnitSystem(_power_units_to_string(get_power_units(cost), cost)),
         value_curve=convert_value_curve_to_openapi(get_value_curve(cost)),
         vom_cost=_vom_cost_to_openapi(get_vom_cost(cost)),
     )
@@ -157,7 +162,7 @@ end
 
 function convert_cost_to_openapi(cost::FuelCurve)
     return PC.FuelCurve(;
-        power_units=_power_units_to_string(get_power_units(cost), cost),
+        power_units=PC.UnitSystem(_power_units_to_string(get_power_units(cost), cost)),
         value_curve=convert_value_curve_to_openapi(get_value_curve(cost)),
         fuel_cost=_fuel_cost_to_openapi(IS.get_fuel_cost(cost)),
         startup_fuel_offtake=_startup_fuel_offtake_to_openapi(

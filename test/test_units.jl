@@ -522,7 +522,7 @@ end
 
     PSIP.set_outage_factor!(t, (planned=0.08, forced=0.0))
     @test PSIP.get_outage_factor(t) == (planned=0.08, forced=0.0)
-    
+
     # operation_costs (usd_per_mwh, OperationalCost)
     oc = PSIP.get_operation_costs(t, conversion_unit(u"MW" * u"hr", USD))
     @test oc.variable_operation_cost.value_curve.function_data.proportional_term ≈ 10.0

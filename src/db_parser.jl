@@ -1194,26 +1194,26 @@ function add_loads!(
     end
 end
 
-function transform_natural_impedance_to_device_base(natural_units_impedance, arc, sys)
+function transform_natural_impedance_to_component_base(natural_units_impedance, arc, sys)
     base_voltage = arc.from.base_voltage
     if isnothing(base_voltage)
         error("Base voltage is not defined")
     end
     base_power = get_base_power(sys)
     z_base = base_voltage^2 / base_power
-    device_base_impedance = natural_units_impedance / z_base
-    return device_base_impedance
+    component_base_impedance = natural_units_impedance / z_base
+    return component_base_impedance
 end
 
-function transform_natural_admittance_to_device_base(natural_units_admittance, arc, sys)
+function transform_natural_admittance_to_component_base(natural_units_admittance, arc, sys)
     base_voltage = arc.from.base_voltage
     if isnothing(base_voltage)
         error("Base voltage is not defined")
     end
     base_power = get_base_power(sys)
     z_base = base_voltage^2 / base_power
-    device_base_impedance = natural_units_admittance * z_base
-    return device_base_impedance
+    component_base_impedance = natural_units_admittance * z_base
+    return component_base_impedance
 end
 
 function add_system_lines!(
@@ -1251,12 +1251,12 @@ function add_system_lines!(
 
         if component_type == PSY.Line
             b = (
-                from=transform_natural_admittance_to_device_base(
+                from=transform_natural_admittance_to_component_base(
                     component_attr["b"]["from"],
                     arc_dict[arc],
                     portfolio.base_system,
                 ),
-                to=transform_natural_admittance_to_device_base(
+                to=transform_natural_admittance_to_component_base(
                     component_attr["b"]["to"],
                     arc_dict[arc],
                     portfolio.base_system,
@@ -1277,12 +1277,12 @@ function add_system_lines!(
                                   get_base_power(portfolio.base_system),
                 available=component_attr["available"],
                 angle_limits=angle_limits,
-                x=transform_natural_impedance_to_device_base(
+                x=transform_natural_impedance_to_component_base(
                     component_attr["x"],
                     arc_dict[arc],
                     portfolio.base_system,
                 ),
-                r=transform_natural_impedance_to_device_base(
+                r=transform_natural_impedance_to_component_base(
                     component_attr["r"],
                     arc_dict[arc],
                     portfolio.base_system,
@@ -1297,12 +1297,12 @@ function add_system_lines!(
                 rating=rec.continuous_rating / get_base_power(portfolio.base_system),
                 base_power=component_attr["base_power"],
                 available=component_attr["available"],
-                x=transform_natural_impedance_to_device_base(
+                x=transform_natural_impedance_to_component_base(
                     component_attr["x"],
                     arc_dict[arc],
                     portfolio.base_system,
                 ),
-                r=transform_natural_impedance_to_device_base(
+                r=transform_natural_impedance_to_component_base(
                     component_attr["r"],
                     arc_dict[arc],
                     portfolio.base_system,
@@ -1316,7 +1316,7 @@ function add_system_lines!(
             line = component_type(;
                 name=rec.name,
                 circuit=circuit,
-                magnetizing_shunt=transform_natural_impedance_to_device_base(
+                magnetizing_shunt=transform_natural_impedance_to_component_base(
                     component_attr["primary_shunt"]["real"],
                     arc_dict[arc],
                     portfolio.base_system,

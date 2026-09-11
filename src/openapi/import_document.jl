@@ -67,7 +67,7 @@ const DOCUMENT_PLAN_KEYS = _document_plan_keys(DOCUMENT_PLAN)
 # A `oneOf` field holds its member wrapped only after deserialization; a document built in
 # memory assigns the member directly. Unwrap by dispatch, the way `convert_cost` does
 # (`cost_conversion.jl`), so both shapes read the same.
-_unwrap_oneof(x::OpenAPI.OneOfAPIModel) = _unwrap_oneof(x.value)
+_unwrap_oneof(x::PowerOpenAPIModels.OneOfAPIModel) = _unwrap_oneof(x.value)
 _unwrap_oneof(x) = x
 
 """
