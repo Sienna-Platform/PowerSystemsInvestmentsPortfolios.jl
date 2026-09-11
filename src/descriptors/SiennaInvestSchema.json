@@ -175,7 +175,8 @@
         {
           "name": "eligible_generators",
           "type": "Vector{String}",
-          "description": "Names of individual generation units mapped to a technology that are eligible for retirement"
+          "description": "Names of individual generation units mapped to a technology that are eligible for retirement",
+          "default": "Vector()"
         },
         {
           "name": "planned_retirement_year",
@@ -194,7 +195,8 @@
           "type": "PSY.ValueCurve",
           "description": "Cost associated with retiring the eligible generators. (USD/MW)",
           "needs_conversion": true,
-          "conversion_unit": ":usd_per_mw"
+          "conversion_unit": ":usd_per_mw",
+          "default": "PSY.LinearCurve(0.0)"
         },
         {
           "name": "ext",
@@ -223,7 +225,8 @@
         {
           "name": "eligible_generators",
           "type": "Vector{String}",
-          "description": "Names of individual generation units mapped to this technology that can be retrofitted"
+          "description": "Names of individual generation units mapped to this technology that can be retrofitted",
+          "default": "Vector()"
         },
         {
           "name": "retrofit_fraction",
@@ -236,7 +239,8 @@
           "type": "PSY.ValueCurve",
           "description": "Cost associated with retrofitting the eligible generators. (USD/MW)",
           "needs_conversion": true,
-          "conversion_unit": ":usd_per_mw"
+          "conversion_unit": ":usd_per_mw",
+          "default": "PSY.LinearCurve(0.0)"
         },
         {
           "name": "ext",

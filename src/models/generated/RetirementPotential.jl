@@ -17,10 +17,10 @@ This file is auto-generated. Do not edit.
 Supplemental attribute used to define what existing generators are eligible for retirement for a SupplyTechnology
 
 # Arguments
-- `eligible_generators::Vector{String}`: Names of individual generation units mapped to a technology that are eligible for retirement
+- `eligible_generators::Vector{String}`: (default: `Vector()`) Names of individual generation units mapped to a technology that are eligible for retirement
 - `planned_retirement_year::Dict{String, Int64}`: (default: `Dict{String, Int64}()`) Optional dictionary to indicate the year in which the forced/planned retirement will occur
 - `build_year::Dict{String, Int64}`: (default: `Dict{String, Int64}()`) Optional dictionary to indicate the year in which existing generators in the base system were built
-- `retirement_cost::PSY.ValueCurve`: Cost associated with retiring the eligible generators. (USD/MW)
+- `retirement_cost::PSY.ValueCurve`: (default: `PSY.LinearCurve(0.0)`) Cost associated with retiring the eligible generators. (USD/MW)
 - `ext::Dict`: (default: `Dict()`) Optional dictionary to provide additional data
 - `internal::InfrastructureSystemsInternal`: (default: `InfrastructureSystemsInternal()`) (**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference
 """
@@ -40,8 +40,20 @@ mutable struct RetirementPotential <: IS.SupplementalAttribute
 end
 
 
-function RetirementPotential(; eligible_generators, planned_retirement_year=Dict{String, Int64}(), build_year=Dict{String, Int64}(), retirement_cost, ext=Dict(), internal=InfrastructureSystemsInternal(), )
+function RetirementPotential(; eligible_generators=Vector(), planned_retirement_year=Dict{String, Int64}(), build_year=Dict{String, Int64}(), retirement_cost=PSY.LinearCurve(0.0), ext=Dict(), internal=InfrastructureSystemsInternal(), )
     RetirementPotential(eligible_generators, planned_retirement_year, build_year, retirement_cost, ext, internal, )
+end
+
+# Constructor for demo purposes; non-functional.
+function RetirementPotential(::Nothing)
+    RetirementPotential(;
+        eligible_generators=InfrastructureSystemsInternal(),
+        planned_retirement_year=InfrastructureSystemsInternal(),
+        build_year=InfrastructureSystemsInternal(),
+        retirement_cost=InfrastructureSystemsInternal(),
+        ext=InfrastructureSystemsInternal(),
+        internal=InfrastructureSystemsInternal(),
+    )
 end
 
 """Get [`RetirementPotential`](@ref) `eligible_generators`."""
@@ -50,9 +62,9 @@ get_eligible_generators(value::RetirementPotential) = value.eligible_generators
 get_planned_retirement_year(value::RetirementPotential) = value.planned_retirement_year
 """Get [`RetirementPotential`](@ref) `build_year`."""
 get_build_year(value::RetirementPotential) = value.build_year
-"""Get [`RetirementPotential`](@ref) `retirement_cost` as a bare number in the requested `units` (e.g. `SU`, `DU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_retirement_cost_unitful`](@ref)."""
+"""Get [`RetirementPotential`](@ref) `retirement_cost` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_retirement_cost_unitful`](@ref)."""
 get_retirement_cost(value::RetirementPotential, units) = InfrastructureSystems._strip_units(get_value(value, Val(:retirement_cost), Val(:usd_per_mw), units))
-"""Get [`RetirementPotential`](@ref) `retirement_cost` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `DU`, `MW`). For a bare number see [`get_retirement_cost`](@ref)."""
+"""Get [`RetirementPotential`](@ref) `retirement_cost` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_retirement_cost`](@ref)."""
 get_retirement_cost_unitful(value::RetirementPotential, units) = get_value(value, Val(:retirement_cost), Val(:usd_per_mw), units)
 InfrastructureSystems.display_units_arg(::typeof(get_retirement_cost), ::Type{RetirementPotential}) = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_retirement_cost_unitful), ::Type{RetirementPotential}) = InfrastructureSystems.NU
