@@ -39,7 +39,6 @@ const SUPPLEMENTAL_ATTRIBUTE_PLAN = [
     (RetirementPotential, "RetirementPotential"),
     (RetrofitPotential, "RetrofitPotential"),
     (ExistingDevices, "ExistingDevices"),
-    (TopologyMapping, "TopologyMapping"),
 ]
 
 """

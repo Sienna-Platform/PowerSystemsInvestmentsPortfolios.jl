@@ -17,10 +17,10 @@ This file is auto-generated. Do not edit.
 Supplemental attribute used to define what existing generators are eligible for retirement for a SupplyTechnology
 
 # Arguments
-- `eligible_generators::Vector{String}`: (default: `Vector()`) Names of individual generation units mapped to a technology that are eligible for retirement
+- `eligible_generators::Vector{String}`: Names of individual generation units mapped to a technology that are eligible for retirement
 - `planned_retirement_year::Dict{String, Int64}`: (default: `Dict{String, Int64}()`) Optional dictionary to indicate the year in which the forced/planned retirement will occur
 - `build_year::Dict{String, Int64}`: (default: `Dict{String, Int64}()`) Optional dictionary to indicate the year in which existing generators in the base system were built
-- `retirement_cost::PSY.ValueCurve`: (default: `PSY.LinearCurve(0.0)`) Cost associated with retiring the eligible generators. (USD/MW)
+- `retirement_cost::PSY.ValueCurve`: Cost associated with retiring the eligible generators. (USD/MW)
 - `ext::Dict`: (default: `Dict()`) Optional dictionary to provide additional data
 - `internal::InfrastructureSystemsInternal`: (default: `InfrastructureSystemsInternal()`) (**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference
 """
@@ -40,20 +40,8 @@ mutable struct RetirementPotential <: IS.SupplementalAttribute
 end
 
 
-function RetirementPotential(; eligible_generators=Vector(), planned_retirement_year=Dict{String, Int64}(), build_year=Dict{String, Int64}(), retirement_cost=PSY.LinearCurve(0.0), ext=Dict(), internal=InfrastructureSystemsInternal(), )
+function RetirementPotential(; eligible_generators, planned_retirement_year=Dict{String, Int64}(), build_year=Dict{String, Int64}(), retirement_cost, ext=Dict(), internal=InfrastructureSystemsInternal(), )
     RetirementPotential(eligible_generators, planned_retirement_year, build_year, retirement_cost, ext, internal, )
-end
-
-# Constructor for demo purposes; non-functional.
-function RetirementPotential(::Nothing)
-    RetirementPotential(;
-        eligible_generators=InfrastructureSystemsInternal(),
-        planned_retirement_year=InfrastructureSystemsInternal(),
-        build_year=InfrastructureSystemsInternal(),
-        retirement_cost=InfrastructureSystemsInternal(),
-        ext=InfrastructureSystemsInternal(),
-        internal=InfrastructureSystemsInternal(),
-    )
 end
 
 """Get [`RetirementPotential`](@ref) `eligible_generators`."""

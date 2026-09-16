@@ -175,8 +175,7 @@
         {
           "name": "eligible_generators",
           "type": "Vector{String}",
-          "description": "Names of individual generation units mapped to a technology that are eligible for retirement",
-          "default": "Vector()"
+          "description": "Names of individual generation units mapped to a technology that are eligible for retirement"
         },
         {
           "name": "planned_retirement_year",
@@ -195,8 +194,7 @@
           "type": "PSY.ValueCurve",
           "description": "Cost associated with retiring the eligible generators. (USD/MW)",
           "needs_conversion": true,
-          "conversion_unit": ":usd_per_mw",
-          "default": "PSY.LinearCurve(0.0)"
+          "conversion_unit": ":usd_per_mw"
         },
         {
           "name": "ext",
@@ -225,8 +223,7 @@
         {
           "name": "eligible_generators",
           "type": "Vector{String}",
-          "description": "Names of individual generation units mapped to this technology that can be retrofitted",
-          "default": "Vector()"
+          "description": "Names of individual generation units mapped to this technology that can be retrofitted"
         },
         {
           "name": "retrofit_fraction",
@@ -239,8 +236,7 @@
           "type": "PSY.ValueCurve",
           "description": "Cost associated with retrofitting the eligible generators. (USD/MW)",
           "needs_conversion": true,
-          "conversion_unit": ":usd_per_mw",
-          "default": "PSY.LinearCurve(0.0)"
+          "conversion_unit": ":usd_per_mw"
         },
         {
           "name": "ext",
@@ -267,33 +263,6 @@
           "name": "existing_devices",
           "type": "Vector{String}",
           "description": "List of individual existing devices to map to a specific technology in the portfolio",
-          "default": "Vector()"
-        },
-        {
-          "name": "ext",
-          "type": "Dict",
-          "default": "Dict()",
-          "description": "Optional dictionary to provide additional data"
-        },
-        {
-          "name": "internal",
-          "type": "InfrastructureSystemsInternal",
-          "default": "InfrastructureSystemsInternal()",
-          "description": "(**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference"
-        }
-      ],
-      "supertype": "IS.SupplementalAttribute"
-    },
-    {
-      "name": "TopologyMapping",
-      "type": "object",
-      "required": [],
-      "docstring": "Supplemental attributed used to store mapping between the PSIP Zone and the associated buses in the base system.",
-      "properties": [
-        {
-          "name": "buses",
-          "type": "Vector{String}",
-          "description": "List of buses in the base system that are associated with a zone",
           "default": "Vector()"
         },
         {
