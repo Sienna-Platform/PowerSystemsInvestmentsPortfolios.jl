@@ -5,9 +5,13 @@
 An investment cost for candidate generation and transmission technologies which includes
 overnight capital costs and last-mile interconnection costs.
 """
-@kwdef mutable struct CapitalCost <: InvestmentCost
+mutable struct CapitalCost <: InvestmentCost
     capital_cost::ValueCurve
     interconnection_cost::Float64
+end
+
+function CapitalCost(; capital_cost=LinearCurve(0.0), interconnection_cost=0.0)
+    return CapitalCost(capital_cost, interconnection_cost)
 end
 
 # Sentinel constructor used as the descriptor default (`CapitalCost(nothing)`).

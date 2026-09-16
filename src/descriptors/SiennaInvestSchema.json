@@ -967,9 +967,9 @@
         },
         {
           "name": "conformity",
-          "type": "PSY.LoadConformity",
+          "type": "LoadConformity",
           "description": "Indicator of how the demand requirement should conform to the load profile of existing technologies in the system. Should only be used for new demand requirements.",
-          "default": "PSY.LoadConformity.UNDEFINED"
+          "default": "LoadConformity.UNDEFINED"
         },
         {
           "name": "value_of_lost_load",

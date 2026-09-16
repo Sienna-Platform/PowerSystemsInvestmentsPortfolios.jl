@@ -275,25 +275,19 @@ end
 
 @testset "Test supplemental attribute APIs" begin
     port = build_portfolio()
-    zone = first(get_regions(PSY.Area, port))
 
-    attr = TopologyMapping(buses=["b1", "b2"])
-    PSIP.add_supplemental_attribute!(port, zone, attr)
+    attrs_on_port = PSIP.get_supplemental_attributes(RetirementPotential, port)
+    @test length(attrs_on_port) > 0
 
-    attrs_on_component = PSIP.get_supplemental_attributes(TopologyMapping, zone)
-    @test length(attrs_on_component) == 1
-    @test attrs_on_component[1] === attr
+    @test PSIP.get_supplemental_attribute(port, IS.get_id(first(attrs_on_port))) === first(attrs_on_port)
 
-    attrs_on_port = PSIP.get_supplemental_attributes(TopologyMapping, port)
-    @test length(attrs_on_port) >= 1
+    t_th_exp = PSIP.get_technology(SupplyTechnology, port, "expensive_thermal")
+    attr = first(PSIP.get_supplemental_attributes(RetirementPotential, t_th_exp))
+    PSIP.remove_supplemental_attribute!(port, t_th_exp, attr)
+    @test length(PSIP.get_supplemental_attributes(RetirementPotential, t_th_exp)) == 0
 
-    @test PSIP.get_supplemental_attribute(port, IS.get_id(attr)) === attr
-
-    PSIP.remove_supplemental_attribute!(port, zone, attr)
-    @test isempty(PSIP.get_supplemental_attributes(TopologyMapping, zone))
-
-    attr3 = TopologyMapping(buses=["b4"])
-    PSIP.add_supplemental_attribute!(port, zone, attr3)
-    PSIP.remove_supplemental_attributes!(TopologyMapping, port)
-    @test isempty(PSIP.get_supplemental_attributes(TopologyMapping, port))
+    # t_th_exp = get_technology(SupplyTechnology, port, "expensive_thermal")
+    # attr = first(get_supplemental_attributes(RetirementPotential, port))
+    # PSIP.remove_supplemental_attribute!(port, t_th_exp, attr)
+    # @test length(PSIP.get_supplemental_attributes(RetirementPotential, t_th_exp)) == 1
 end

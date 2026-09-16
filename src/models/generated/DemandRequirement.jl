@@ -12,7 +12,7 @@ This file is auto-generated. Do not edit.
         new_demand_mw::Float64
         new_construction_year::Int64
         growth_rate::Float64
-        conformity::PSY.LoadConformity
+        conformity::LoadConformity
         value_of_lost_load::Float64
         unserved_demand_curve::PSY.ValueCurve
         region::Vector{PSY.Topology}
@@ -30,7 +30,7 @@ Demand requirements for a region.
 - `new_demand_mw::Float64`: (default: `0.0`) The value of the peak demand to be used for new DemandRequirements (MW).
 - `new_construction_year::Int64`: (default: `2020`) The year in which the new demand requirement will be installed. Should only be used for new demand requirements.
 - `growth_rate::Float64`: (default: `0.0`) The annual growth rate of the demand requirement, used to scale present-day loads into future projections. Should only be used for conforming loads
-- `conformity::PSY.LoadConformity`: (default: `PSY.LoadConformity.UNDEFINED`) Indicator of how the demand requirement should conform to the load profile of existing technologies in the system. Should only be used for new demand requirements.
+- `conformity::LoadConformity`: (default: `LoadConformity.UNDEFINED`) Indicator of how the demand requirement should conform to the load profile of existing technologies in the system. Should only be used for new demand requirements.
 - `value_of_lost_load::Float64`: (default: `1e8`) Value of unserved load (USD/MWh)
 - `unserved_demand_curve::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Piecewise curve to scale the cost of unserved load based on the value of lost load
 - `region::Vector{PSY.Topology}`: (default: `Vector()`) Zone or node where the demand requirement is located
@@ -52,7 +52,7 @@ mutable struct DemandRequirement{T <: PSY.StaticInjection} <: DemandTechnology
     "The annual growth rate of the demand requirement, used to scale present-day loads into future projections. Should only be used for conforming loads"
     growth_rate::Float64
     "Indicator of how the demand requirement should conform to the load profile of existing technologies in the system. Should only be used for new demand requirements."
-    conformity::PSY.LoadConformity
+    conformity::LoadConformity
     "Value of unserved load (USD/MWh)"
     value_of_lost_load::Float64
     "Piecewise curve to scale the cost of unserved load based on the value of lost load"
@@ -68,7 +68,7 @@ mutable struct DemandRequirement{T <: PSY.StaticInjection} <: DemandTechnology
 end
 
 
-function DemandRequirement{T}(; name, available=true, power_systems_type, new_demand_mw=0.0, new_construction_year=2020, growth_rate=0.0, conformity=PSY.LoadConformity.UNDEFINED, value_of_lost_load=1e8, unserved_demand_curve=LinearCurve(0.0), region=Vector(), requirements=Vector(), ext=Dict(), internal=InfrastructureSystemsInternal(), ) where T <: PSY.StaticInjection
+function DemandRequirement{T}(; name, available=true, power_systems_type, new_demand_mw=0.0, new_construction_year=2020, growth_rate=0.0, conformity=LoadConformity.UNDEFINED, value_of_lost_load=1e8, unserved_demand_curve=LinearCurve(0.0), region=Vector(), requirements=Vector(), ext=Dict(), internal=InfrastructureSystemsInternal(), ) where T <: PSY.StaticInjection
     DemandRequirement{T}(name, available, power_systems_type, new_demand_mw, new_construction_year, growth_rate, conformity, value_of_lost_load, unserved_demand_curve, region, requirements, ext, internal, )
 end
 
@@ -148,7 +148,7 @@ function from_openapi(po::PI.DemandRequirement, refs::OpenAPIRefs)
         new_demand_mw = po.new_demand_mw,
         new_construction_year = po.new_construction_year,
         growth_rate = po.growth_rate,
-        conformity = PSY.LoadConformity(po.conformity),
+        conformity = LoadConformity(string(po.conformity)),
         value_of_lost_load = po.value_of_lost_load,
         unserved_demand_curve = convert_value_curve(po.unserved_demand_curve),
         region = resolve_refs(refs, po.region, PSY.Topology),
@@ -164,7 +164,7 @@ function to_openapi(value::DemandRequirement{T}, refs::OpenAPIRefs) where {T <: 
         new_demand_mw = get_new_demand_mw(value, IS.NU),
         new_construction_year = get_new_construction_year(value),
         growth_rate = get_growth_rate(value),
-        conformity = string(get_conformity(value)),
+        conformity = PO.LoadConformity(string(get_conformity(value))),
         value_of_lost_load = get_value_of_lost_load(value, IS.NU),
         unserved_demand_curve = convert_value_curve_to_openapi(get_unserved_demand_curve(value, IS.NU)),
         region = component_ids(refs, get_region(value)),

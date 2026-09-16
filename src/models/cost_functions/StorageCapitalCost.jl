@@ -5,11 +5,15 @@
 An investment cost for candidate storage technologies which includes overnight capital
 costs (for charge, discharge, and energy capacity) and last-mile interconnection costs.
 """
-@kwdef mutable struct StorageCapitalCost <: InvestmentCost
+mutable struct StorageCapitalCost <: InvestmentCost
     charge_capital_cost::ValueCurve
     discharge_capital_cost::ValueCurve
     energy_capital_cost::ValueCurve
     interconnection_cost::Float64
+end
+
+function StorageCapitalCost(; charge_capital_cost=LinearCurve(0.0), discharge_capital_cost=LinearCurve(0.0), energy_capital_cost=LinearCurve(0.0), interconnection_cost=0.0)
+    return StorageCapitalCost(charge_capital_cost, discharge_capital_cost, energy_capital_cost, interconnection_cost)
 end
 
 # Sentinel constructor used as the descriptor default (`StorageCapitalCost(nothing)`).
