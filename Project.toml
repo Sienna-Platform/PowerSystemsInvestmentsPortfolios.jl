@@ -33,20 +33,23 @@ TimeZones = "f269a46b-ccf7-5d73-abea-4c690281aa53"
 URIs = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
+[extras]
+# Present only so the `[sources]
+# LOCAL PATH CO-DEV PINS (temporary): the power_units/cost-rename regen of PowerOpenAPIModels
+# exists only on local disk, not on `main` yet. Revert to the git pins once pushed/merged.` pin below is legal: Pkg requires a sourced package to
+# appear in `deps` or `extras`.
+InfraStore = "6aee0376-896a-4a59-96ff-12f221c99746"
+
 [sources]
-InfrastructureSystems = {url = "https://github.com/Sienna-Platform/InfrastructureSystems.jl", rev = "jd/openapi-1x-suite"}
-PowerSystems = {url = "https://github.com/Sienna-Platform/PowerSystems.jl", rev = "jd/openapi-1x"}
-# Pinned by rev, not by sibling path: the sibling checkout carries in-progress schema
-# renames ahead of the PowerSystems rev above, and the two must agree.
-# PowerOperationsOpenAPIModels is unused here — PSY's own [sources] are ignored once PSY
-# is a dependency rather than the root project, so PSIP pins it for Pkg to resolve.
-PowerCoreOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/PowerCoreOpenAPIModels.jl"}
-PowerOperationsOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/PowerOperationsOpenAPIModels.jl"}
-PowerInvestmentsOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/PowerInvestmentsOpenAPIModels.jl"}
-InfrastructureCoreOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/InfrastructureCoreOpenAPIModels.jl"}
-InfrastructureTimeSeriesOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/InfrastructureTimeSeriesOpenAPIModels.jl"}
-PowerDynamicsOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/PowerDynamicsOpenAPIModels.jl"}
-PowerOpenAPIModels = {path = "/Users/jpotts/Documents/Repos/OpenAPI/PowerOpenAPIModels/PowerOpenAPIModels.jl"}
+InfrastructureCoreOpenAPIModels = {rev = "main", subdir = "InfrastructureCoreOpenAPIModels.jl", url = "https://github.com/Sienna-Platform/PowerOpenAPIModels.git"}
+InfrastructureSystems = {rev = "IS4", url = "https://github.com/Sienna-Platform/InfrastructureSystems.jl"}
+InfrastructureTimeSeriesOpenAPIModels = {rev = "main", subdir = "InfrastructureTimeSeriesOpenAPIModels.jl", url = "https://github.com/Sienna-Platform/PowerOpenAPIModels.git"}
+PowerCoreOpenAPIModels = {rev = "main", subdir = "PowerCoreOpenAPIModels.jl", url = "https://github.com/Sienna-Platform/PowerOpenAPIModels.git"}
+PowerDynamicsOpenAPIModels = {rev = "main", subdir = "PowerDynamicsOpenAPIModels.jl", url = "https://github.com/Sienna-Platform/PowerOpenAPIModels.git"}
+PowerInvestmentsOpenAPIModels = {rev = "main", subdir = "PowerInvestmentsOpenAPIModels.jl", url = "https://github.com/Sienna-Platform/PowerOpenAPIModels.git"}
+PowerOpenAPIModels = {rev = "main", subdir = "PowerOpenAPIModels.jl", url = "https://github.com/Sienna-Platform/PowerOpenAPIModels.git"}
+PowerOperationsOpenAPIModels = {rev = "main", subdir = "PowerOperationsOpenAPIModels.jl", url = "https://github.com/Sienna-Platform/PowerOpenAPIModels.git"}
+PowerSystems = {rev = "psy6", url = "https://github.com/Sienna-Platform/PowerSystems.jl"}
 
 [compat]
 DBInterface = "2.6"
@@ -55,6 +58,7 @@ DataStructures = "^0.19"
 Dates = "^1.6"
 DocStringExtensions = "~0.9"
 HTTP = "2"
+InfraStore = "0.13.1"
 InfrastructureCoreOpenAPIModels = "0.1"
 InfrastructureSystems = "3.6.0"
 InfrastructureTimeSeriesOpenAPIModels = "0.1"
@@ -63,13 +67,13 @@ JSON3 = "1.14"
 JSONSchema = "1.3"
 Mustache = "1"
 OpenAPI = "1"
-PowerSystems = "5.10.0"
-PrettyTables = "2, 3"
 PowerCoreOpenAPIModels = "0.1"
 PowerDynamicsOpenAPIModels = "0.1"
-PowerOpenAPIModels = "0.1"
 PowerInvestmentsOpenAPIModels = "0.1"
+PowerOpenAPIModels = "0.1"
 PowerOperationsOpenAPIModels = "0.1"
+PowerSystems = "5.10.0"
+PrettyTables = "2, 3"
 SQLite = "1.6.1"
 StringEncodings = "0.3"
 Tables = "1.12"

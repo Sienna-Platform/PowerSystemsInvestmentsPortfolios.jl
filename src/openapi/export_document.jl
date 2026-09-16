@@ -153,7 +153,7 @@ before `to_openapi(attr, refs)` reads that id back. The store's rows already arr
 `(component_id, attribute_id)`, so document order tracks component order with no local sort.
 """
 function _export_supplemental_attributes(refs::OpenAPIRefs, portfolio::Portfolio)
-    attribute_rows = OpenAPI.APIModel[]
+    attribute_rows = IC.APIModel[]
     association_rows = IC.SupplementalAttributeAssociation[]
     attributes_by_id = Dict{Int, SupplementalAttribute}(
         IS.get_id(attr) => attr for
@@ -279,15 +279,9 @@ function _export_all_time_series(
               "no OpenAPI converter ($types) — they remain in the sidecar but are not " *
               "described in the document and will not survive a round trip"
     end
-    # The rows above go into the document either way; `write_catalog` decides only whether
-    # InfraStore's own `.sqlite` is written beside the arrays as well. See `to_file`.
-    store = IS.get_data_store(portfolio.data)
-    path = String(time_series_storage_path)
-    if write_catalog
-        IS.serialize(store, path)
-    else
-        IS.serialize_arrays(store, path)
-    end
+    IS.serialize(
+        portfolio.data.time_series_manager.data_store, String(time_series_storage_path),
+    )
     return rows
 end
 

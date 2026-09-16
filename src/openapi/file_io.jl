@@ -162,7 +162,7 @@ and selects the basis its values are written on; it does not affect the portfoli
 function to_file(
     portfolio::Portfolio,
     path::AbstractString;
-    base_system_units::IS.AbstractUnitSystem=DU,
+    base_system_units::IS.AbstractUnitSystem=CU,
     force::Bool=false,
     pretty::Bool=false,
 )
@@ -319,7 +319,7 @@ function _to_file_sienna(
         _to_file_directory(
             portfolio,
             bundle;
-            base_system_units=DU,
+            base_system_units=CU,
             force=true,
             pretty=pretty,
             write_catalog=true,

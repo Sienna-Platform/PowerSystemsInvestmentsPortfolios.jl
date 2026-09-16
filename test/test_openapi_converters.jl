@@ -197,9 +197,9 @@ end
     @test !hasproperty(po, :requirements)
     # the type parameter is carried by power_systems_type, and by nothing else
     @test po.power_systems_type == "ThermalStandard"
-    # enums, enum vectors and enum-keyed dicts all cross as strings
-    @test po.prime_mover_type == string(PrimeMovers.CT)
-    @test po.fuel == [string(ThermalFuels.NATURAL_GAS)]
+    # enums and enum vectors cross as typed OpenAPI enum objects (stringify to compare)
+    @test string(po.prime_mover_type) == string(PrimeMovers.CT)
+    @test string.(po.fuel) == [string(ThermalFuels.NATURAL_GAS)]
     # compounds become PC models
     @test po.capacity_limits.value.max == 500.0
     @test po.ramp_limits.up == 1.0
@@ -238,12 +238,10 @@ end
     )
     refs[40] = tech
 
-    # capital_costs shape drift: the a92f000 schema commit ("add new structs for
-    # CapitalCosts and OutageFactors") wraps capital_costs in a new PC.CapitalCost on
-    # every transport/supply/storage technology; PSIP's descriptor still emits a bare
-    # ValueCurve. Same commit as the excluded StorageTechnology.capital_costs drift —
-    # not fixed here, see the parity-drift table in the PR body.
-    @test_throws MethodError PSIP.to_openapi(tech, refs)
+    po = PSIP.to_openapi(tech, refs)
+    @test po.start_region == 1
+    @test po.power_systems_type == "ACBranch"
+    @test PSIP.get_parameter_type(PSIP.from_openapi(po, refs)) === ACBranch
 end
 
 @testset "supplemental attribute round trip through OpenAPI" begin
@@ -294,7 +292,7 @@ end
 
     po = PSIP.to_openapi(tech, refs)
     @test isnothing(po.unit_size_charge)
-    @test po.storage_tech == string(StorageTech.OTHER_CHEM)
+    @test string(po.storage_tech) == string(StorageTech.OTHER_CHEM)
     @test po.efficiency.in == 1
 
     back = PSIP.from_openapi(po, refs)

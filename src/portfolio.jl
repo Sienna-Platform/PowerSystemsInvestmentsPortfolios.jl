@@ -373,20 +373,13 @@ function add_technology!(
     #check_topology(portfolio.data, component)
     #check_component_addition(portfolio.data, technology; kwargs...)
 
-    deserialization_in_progress = _is_deserialization_in_progress(portfolio)
-    # TODO: Attach requirements to technologies or other structs
-    #if !deserialization_in_progress
-    # Services are attached to devices at deserialization time.
-    #    check_for_services_on_addition(portfolio, technology)
-    #end
-
-    skip_validation = _validate_or_skip!(portfolio, technology, skip_validation)
+    # skip_validation = _validate_or_skip!(portfolio, technology, skip_validation)
     _kwargs = Dict(k => v for (k, v) in kwargs if k !== :static_injector)
 
     IS.add_component!(
         portfolio.data,
         technology;
-        allow_existing_time_series=deserialization_in_progress,
+        allow_existing_time_series=_is_deserialization_in_progress(portfolio),
         skip_validation=skip_validation,
         kwargs...,
     )

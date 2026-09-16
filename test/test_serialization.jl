@@ -65,7 +65,7 @@ function _build_roundtrip_portfolio()
         collect(DateTime("2024-01-01T00:00:00"):Hour(1):DateTime("2024-01-01T23:00:00"))
     ts =
         SingleTimeSeries(; data=TimeArray(timestamps, collect(1.0:24.0)), name="cap_factor")
-    PSIP.add_time_series!(port, gen, ts; year="2024", rep_day=1)
+    PSIP.add_time_series!(port, gen, ts; features=Dict("year"=>"2024", "rep_day"=>1))
 
     # An investment schedule (model output).
     schedule = InvestmentScheduleResults(

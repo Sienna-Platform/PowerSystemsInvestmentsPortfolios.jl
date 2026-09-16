@@ -219,7 +219,7 @@ const OPENAPI_REFERENCE_TYPES = Set([
 ])
 
 const OPENAPI_ENUM_TYPES =
-    Set(["PrimeMovers", "ThermalFuels", "StorageTech", "ACBusTypes", "PSY.LoadConformity"])
+    Set(["PrimeMovers", "ThermalFuels", "StorageTech", "ACBusTypes", "LoadConformity"])
 
 const OPENAPI_CURVE_TYPES =
     Set(["PSY.ValueCurve", "Union{IS.LinearCurve, IS.PiecewiseIncrementalCurve}"])
@@ -240,6 +240,17 @@ const OPENAPI_COST_TYPES = Set([
 
 const OPENAPI_NESTED_TYPES =
     Set(["TechnologyFinancialData", "CapitalCost", "StorageCapitalCost"])
+
+"""Whether a `:cost`-kind field's declared PSY type carries its own OpenAPI `oneOf` wrapper —
+true for the abstract `"OperationalCost"` or a `Union` of concrete cost types, false when the
+field is already one concrete cost struct."""
+openapi_cost_needs_wrapper(bare) = bare == "PSY.OperationalCost" || startswith(bare, "Union{")
+
+"""The OpenAPI `oneOf` wrapper type name for a `:cost`-kind field that needs one:
+`<StructName><PascalCase(field_name)>`, e.g. `operation_cost` -> `OperationCost`."""
+function openapi_cost_po_type(struct_name, field_name)
+    return struct_name * join(uppercasefirst.(split(field_name, "_")))
+end
 
 """
 Split `Union{Nothing, X}` into `(X, true)`; any other type string is `(type, false)`.
@@ -332,6 +343,10 @@ const OPENAPI_NULLABLE_UNSUPPORTED_KINDS = Set([
     :nested,
 ])
 
+function openapi_enum_po_type(field, bare)
+    return get(field, "openapi_enum", bare)
+end
+
 """
 Raise when a field is nullable and its kind has no nullable emission rule, naming the
 driver that would otherwise emit `nothing`-indexing code.
@@ -401,10 +416,10 @@ function openapi_import_expr(struct_name, name, kind, bare, nullable)
         return "resolve_refs(refs, po.$name, $bare)"
     end
     if kind == :enum
-        return "$bare(po.$name)"
+        return "$bare(string(po.$name))"
     end
     if kind == :enum_vector
-        return "[$bare(v) for v in po.$name]"
+        return "[$bare(string(v)) for v in po.$name]"
     end
     if kind == :enum_dict
         return "Dict($bare(k) => v for (k, v) in po.$name)"
@@ -424,7 +439,8 @@ function openapi_import_expr(struct_name, name, kind, bare, nullable)
     if kind == :cost
         # `convert_cost` returns one of many cost types and reads an `Any`-typed oneOf
         # wrapper, so the call infers as `Any`. The descriptor states the field's type.
-        return "convert_cost(po.$name)::$bare"
+        po_cost = openapi_cost_needs_wrapper(bare) ? "po.$name.value" : "po.$name"
+        return "convert_cost($po_cost)::$bare"
     end
     if kind == :nested
         return "convert_nested_data(po.$name)"
@@ -504,13 +520,16 @@ function openapi_export_expr(struct_name, field, kind, bare, nullable, parametri
         return "component_ids(refs, $getter)"
     end
     if kind == :enum
-        return "string($getter)"
+        po_enum = openapi_enum_po_type(field, bare)
+        return "PO.$po_enum(string($getter))"
     end
     if kind == :enum_vector
-        return "[string(v) for v in $getter]"
+        po_enum = openapi_enum_po_type(field, bare)
+        return "[PO.$po_enum(string(v)) for v in $getter]"
     end
     if kind == :enum_dict
-        return "Dict(string(k) => v for (k, v) in $getter)"
+        po_enum = openapi_enum_po_type(field, bare)
+        return "Dict(PO.$po_enum(string(v)) => v for (k, v) in $getter)"
     end
     if kind == :enum_compound_dict
         key, value = bare
@@ -525,7 +544,15 @@ function openapi_export_expr(struct_name, field, kind, bare, nullable, parametri
         return "convert_value_curve_to_openapi($getter)"
     end
     if kind == :cost
-        return "convert_cost_to_openapi($getter)"
+        inner = "convert_cost_to_openapi($getter)"
+        # A field typed as one concrete cost struct is already the PO field's declared
+        # type; `openapi_cost_needs_wrapper` says when wrapping applies instead.
+        expr = if openapi_cost_needs_wrapper(bare)
+            po_type = openapi_cost_po_type(struct_name, field["name"])
+            return "PO.$po_type($inner)"
+        else
+            return inner
+        end
     end
     if kind == :nested
         return "convert_nested_data_to_openapi($getter)"

@@ -23,11 +23,21 @@ import InfrastructureSystems:
     LinearCurve,
     InfrastructureSystemsComponent,
     InfrastructureSystemsType,
-    get_available
+    get_available,
+    TimeSeriesInputOutputCurve,
+    TimeSeriesIncrementalCurve,
+    TimeSeriesAverageRateCurve,
+    TimeSeriesFunctionData,
+    StaticFunctionData,
+    TimeSeriesLinearCurve,
+    TimeSeriesQuadraticCurve,
+    TimeSeriesPiecewisePointCurve,
+    TimeSeriesPiecewiseIncrementalCurve,
+    TimeSeriesPiecewiseAverageCurve
 
 # Using PowerSystems in order to support deserializing with PSY parametric typing
 using PowerSystems
-import PowerSystems: ThermalFuels, PrimeMovers, StorageTech, ACBusTypes
+import PowerSystems: ThermalFuels, PrimeMovers, StorageTech, ACBusTypes, LoadConformity
 
 import JSONSchema
 import JSON
@@ -89,6 +99,8 @@ export TechnologyFinancialData
 export TimeMapping
 export InvestmentIntervals
 export OperationalPeriods
+export CapitalCost
+export StorageCapitalCost
 
 export get_name
 export get_description
