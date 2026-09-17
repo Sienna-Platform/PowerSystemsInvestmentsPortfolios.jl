@@ -153,10 +153,14 @@
           ColocatedSupplyStorageTechnology{PSY.RenewableDispatch}
     @test colocated_supply_storage isa ResourceTechnology
 
-    retirement_potential = RetirementPotential()
-    retrofit_potential = RetrofitPotential()
+    # `eligible_generators` and the cost are required, not defaulted: a retirement or
+    # retrofit potential that names neither the units it applies to nor what it costs
+    # describes nothing.
+    retirement_potential =
+        RetirementPotential(; eligible_generators=["gen1"], retirement_cost=1.0)
+    retrofit_potential =
+        RetrofitPotential(; eligible_generators=["gen1"], retrofit_cost=1.0)
     existing_devices = ExistingDevices()
-    topology_mapping = TopologyMapping()
 
     @test retirement_potential isa RetirementPotential
     @test retirement_potential isa IS.SupplementalAttribute
@@ -164,6 +168,4 @@
     @test retrofit_potential isa IS.SupplementalAttribute
     @test existing_devices isa ExistingDevices
     @test existing_devices isa IS.SupplementalAttribute
-    @test topology_mapping isa TopologyMapping
-    @test topology_mapping isa IS.SupplementalAttribute
 end

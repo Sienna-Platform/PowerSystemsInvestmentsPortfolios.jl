@@ -2,7 +2,6 @@ include("SupplyTechnology.jl")
 include("RetirementPotential.jl")
 include("RetrofitPotential.jl")
 include("ExistingDevices.jl")
-include("TopologyMapping.jl")
 include("StorageTechnology.jl")
 include("DemandSideTechnology.jl")
 include("NodalHVDCTransportTechnology.jl")
@@ -20,7 +19,6 @@ include("ColocatedSupplyStorageTechnology.jl")
 
 export get_available
 export get_build_year
-export get_buses
 export get_capacity_limits
 export get_capacity_limits_charge
 export get_capacity_limits_discharge
@@ -99,7 +97,6 @@ export get_value_of_lost_load
 export get_voltage
 export set_available!
 export set_build_year!
-export set_buses!
 export set_capacity_limits!
 export set_capacity_limits_charge!
 export set_capacity_limits_discharge!

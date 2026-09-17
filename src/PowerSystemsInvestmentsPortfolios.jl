@@ -85,7 +85,6 @@ export DemandSideTechnology
 export RetirementPotential
 export RetrofitPotential
 export ExistingDevices
-export TopologyMapping
 export CarbonCaps
 export CapacityReserveMargin
 export CarbonTax

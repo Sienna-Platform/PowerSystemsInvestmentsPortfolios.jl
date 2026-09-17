@@ -16,9 +16,9 @@ This file is auto-generated. Do not edit.
 Supplemental attribute used to define what existing generators are eligible for retrofit for a SupplyTechnology
 
 # Arguments
-- `eligible_generators::Vector{String}`: (default: `Vector()`) Names of individual generation units mapped to this technology that can be retrofitted
+- `eligible_generators::Vector{String}`: Names of individual generation units mapped to this technology that can be retrofitted
 - `retrofit_fraction::Float64`: (default: `1.0`) Fraction of existing capacity that is eligible for retrofits
-- `retrofit_cost::PSY.ValueCurve`: (default: `PSY.LinearCurve(0.0)`) Cost associated with retrofitting the eligible generators. (USD/MW)
+- `retrofit_cost::PSY.ValueCurve`: Cost associated with retrofitting the eligible generators. (USD/MW)
 - `ext::Dict`: (default: `Dict()`) Optional dictionary to provide additional data
 - `internal::InfrastructureSystemsInternal`: (default: `InfrastructureSystemsInternal()`) (**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference
 """
@@ -36,19 +36,8 @@ mutable struct RetrofitPotential <: IS.SupplementalAttribute
 end
 
 
-function RetrofitPotential(; eligible_generators=Vector(), retrofit_fraction=1.0, retrofit_cost=PSY.LinearCurve(0.0), ext=Dict(), internal=InfrastructureSystemsInternal(), )
+function RetrofitPotential(; eligible_generators, retrofit_fraction=1.0, retrofit_cost, ext=Dict(), internal=InfrastructureSystemsInternal(), )
     RetrofitPotential(eligible_generators, retrofit_fraction, retrofit_cost, ext, internal, )
-end
-
-# Constructor for demo purposes; non-functional.
-function RetrofitPotential(::Nothing)
-    RetrofitPotential(;
-        eligible_generators=InfrastructureSystemsInternal(),
-        retrofit_fraction=InfrastructureSystemsInternal(),
-        retrofit_cost=InfrastructureSystemsInternal(),
-        ext=InfrastructureSystemsInternal(),
-        internal=InfrastructureSystemsInternal(),
-    )
 end
 
 """Get [`RetrofitPotential`](@ref) `eligible_generators`."""
