@@ -48,7 +48,7 @@ mutable struct PortfolioFinancialData <: IS.InfrastructureSystemsType
     interest_rate::Float64
 end
 
-mutable struct Portfolio <: IS.InfrastructureSystemsType
+mutable struct Portfolio <: IS.ComponentContainer
     aggregation::Type{<:Union{PSY.ACBus, PSY.AggregationTopology}}
     data::IS.SystemData # Inputs to the model
     base_system::PSY.System #Base system storing existing data
