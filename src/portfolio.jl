@@ -407,6 +407,8 @@ function get_technology(
     return IS.get_component(T, portfolio.data, name)
 end
 
+IS.get_components(::Type{T}, portfolio::Portfolio) where {T <: IS.InfrastructureSystemsComponent} = IS.get_components(T, portfolio.data)
+
 """
 Returns an iterator of technologies. T can be concrete or abstract.
 Call collect on the result if an array is desired.
