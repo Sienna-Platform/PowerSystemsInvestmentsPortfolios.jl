@@ -197,7 +197,7 @@ const OPENAPI_COMPOUND_EXTRACTORS = Dict(
 const OPENAPI_REFERENCE_TYPES = Set(["RegionTopology", "Requirement", "Zone", "Node"])
 
 const OPENAPI_ENUM_TYPES =
-    Set(["PrimeMovers", "ThermalFuels", "StorageTech", "ACBusTypes", "PSY.LoadConformity"])
+    Set(["PrimeMovers.Value", "ThermalFuels.Value", "StorageTech.Value", "ACBusTypes.Value", "PSY.LoadConformity.Value"])
 
 const OPENAPI_CURVE_TYPES =
     Set(["PSY.ValueCurve", "Union{IS.LinearCurve, IS.PiecewiseIncrementalCurve}"])

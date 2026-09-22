@@ -7,7 +7,7 @@ This file is auto-generated. Do not edit.
 """
     mutable struct Node <: RegionTopology
         name::String
-        bus_type::ACBusTypes
+        bus_type::ACBusTypes.Value
         ext::Dict
         internal::InfrastructureSystemsInternal
     end
@@ -16,7 +16,7 @@ A unit of spatial aggregation for nodal capacity expansion models. Used to defin
 
 # Arguments
 - `name::String`: Name of region
-- `bus_type::ACBusTypes`: (default: `ACBusTypes.PQ`) AC Bus Type for a node
+- `bus_type::ACBusTypes.Value`: (default: `ACBusTypes.PQ`) AC Bus Type for a node
 - `ext::Dict`: (default: `Dict()`) Optional dictionary to provide additional data
 - `internal::InfrastructureSystemsInternal`: (default: `InfrastructureSystemsInternal()`) (**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference
 """
@@ -24,7 +24,7 @@ mutable struct Node <: RegionTopology
     "Name of region"
     name::String
     "AC Bus Type for a node"
-    bus_type::ACBusTypes
+    bus_type::ACBusTypes.Value
     "Optional dictionary to provide additional data"
     ext::Dict
     "(**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference"

@@ -10,8 +10,8 @@ This file is auto-generated. Do not edit.
         region::Vector{RegionTopology}
         available::Bool
         power_systems_type::String
-        prime_mover_type::PrimeMovers
-        storage_tech::StorageTech
+        prime_mover_type::PrimeMovers.Value
+        storage_tech::StorageTech.Value
         capital_costs_energy::PSY.ValueCurve
         capital_costs_charge::Union{Nothing, PSY.ValueCurve}
         capital_costs_discharge::PSY.ValueCurve
@@ -40,8 +40,8 @@ Candidate storage technology in a region.
 - `region::Vector{RegionTopology}`: (default: `Vector()`) Location where technology is operated
 - `available::Bool`: Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)
 - `power_systems_type::String`: Corresponding type in PowerSystems.jl to be used in PCM modeling
-- `prime_mover_type::PrimeMovers`: (default: `PrimeMovers.OT`) Prime mover technology according to EIA 923.
-- `storage_tech::StorageTech`: (default: `StorageTech.OTHER_CHEM`) Storage Technology Complementary to EIA 923.
+- `prime_mover_type::PrimeMovers.Value`: (default: `PrimeMovers.OT`) Prime mover technology according to EIA 923.
+- `storage_tech::StorageTech.Value`: (default: `StorageTech.OTHER_CHEM`) Storage Technology Complementary to EIA 923.
 - `capital_costs_energy::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Capital costs for investing in a technology. (USD/MWh)
 - `capital_costs_charge::Union{Nothing, PSY.ValueCurve}`: (default: `nothing`) Capital costs for investing in a technology. (USD/MW)
 - `capital_costs_discharge::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Capital costs for investing in a technology. (USD/MW)
@@ -72,9 +72,9 @@ mutable struct StorageTechnology{T <: PSY.Storage} <: ResourceTechnology
     "Corresponding type in PowerSystems.jl to be used in PCM modeling"
     power_systems_type::String
     "Prime mover technology according to EIA 923."
-    prime_mover_type::PrimeMovers
+    prime_mover_type::PrimeMovers.Value
     "Storage Technology Complementary to EIA 923."
-    storage_tech::StorageTech
+    storage_tech::StorageTech.Value
     "Capital costs for investing in a technology. (USD/MWh)"
     capital_costs_energy::PSY.ValueCurve
     "Capital costs for investing in a technology. (USD/MW)"
@@ -278,8 +278,8 @@ function from_openapi(po::PI.StorageTechnology, refs::OpenAPIRefs)
         region = resolve_refs(refs, po.region, RegionTopology),
         available = po.available,
         power_systems_type = po.power_systems_type,
-        prime_mover_type = PrimeMovers(po.prime_mover_type),
-        storage_tech = StorageTech(po.storage_tech),
+        prime_mover_type = PrimeMovers.Value(po.prime_mover_type),
+        storage_tech = StorageTech.Value(po.storage_tech),
         capital_costs_energy = convert_value_curve(po.capital_costs_energy),
         capital_costs_charge = _value_curve_optional(po.capital_costs_charge),
         capital_costs_discharge = convert_value_curve(po.capital_costs_discharge),

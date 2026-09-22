@@ -10,11 +10,11 @@ This file is auto-generated. Do not edit.
         power_systems_type::String
         region::Vector{RegionTopology}
         available::Bool
-        prime_mover_type::PrimeMovers
-        fuel::Vector{ThermalFuels}
-        co2::Dict{ThermalFuels, Float64}
-        cofire_start_limits::Dict{ThermalFuels, MinMax}
-        cofire_level_limits::Dict{ThermalFuels, MinMax}
+        prime_mover_type::PrimeMovers.Value
+        fuel::Vector{ThermalFuels.Value}
+        co2::Dict{ThermalFuels.Value, Float64}
+        cofire_start_limits::Dict{ThermalFuels.Value, MinMax}
+        cofire_level_limits::Dict{ThermalFuels.Value, MinMax}
         capital_costs::PSY.ValueCurve
         operation_costs::PSY.OperationalCost
         unit_size::Float64
@@ -38,11 +38,11 @@ Candidate generation technology for a region. Can represent either a thermal or 
 - `power_systems_type::String`: Corresponding type in PowerSystems.jl to be used in PCM modeling
 - `region::Vector{RegionTopology}`: (default: `Vector()`) Location where technology operates. Can be a zone or node.
 - `available::Bool`: (default: `true`) Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)
-- `prime_mover_type::PrimeMovers`: (default: `PrimeMovers.OT`) Prime mover technology according to EIA 923.
-- `fuel::Vector{ThermalFuels}`: (default: `[ThermalFuels.OTHER]`) Prime mover fuel according to EIA 923.
-- `co2::Dict{ThermalFuels, Float64}`: (default: `Dict()`) Carbon Intensity of fuel for generator, units of tons CO2 per MMBTU of fuel. Units: t/MMBtu.
-- `cofire_start_limits::Dict{ThermalFuels, MinMax}`: (default: `Dict()`) Minimum and maximum blending level (%) of each fuel during start-up process for multi-fuel generator
-- `cofire_level_limits::Dict{ThermalFuels, MinMax}`: (default: `Dict()`) Minimum and maximum blending level (%) of each fuel during normal generation process for multi-fuel generator
+- `prime_mover_type::PrimeMovers.Value`: (default: `PrimeMovers.OT`) Prime mover technology according to EIA 923.
+- `fuel::Vector{ThermalFuels.Value}`: (default: `[ThermalFuels.OTHER]`) Prime mover fuel according to EIA 923.
+- `co2::Dict{ThermalFuels.Value, Float64}`: (default: `Dict()`) Carbon Intensity of fuel for generator, units of tons CO2 per MMBTU of fuel. Units: t/MMBtu.
+- `cofire_start_limits::Dict{ThermalFuels.Value, MinMax}`: (default: `Dict()`) Minimum and maximum blending level (%) of each fuel during start-up process for multi-fuel generator
+- `cofire_level_limits::Dict{ThermalFuels.Value, MinMax}`: (default: `Dict()`) Minimum and maximum blending level (%) of each fuel during normal generation process for multi-fuel generator
 - `capital_costs::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Capital costs for investing in a technology. (USD/MW)
 - `operation_costs::PSY.OperationalCost`: (default: `ThermalGenerationCost(nothing)`) Fixed and variable O&M costs for a technology
 - `unit_size::Float64`: (default: `0.0`) Used for discrete investment decisions. Size of each unit being built (MW)
@@ -68,15 +68,15 @@ mutable struct SupplyTechnology{T <: PSY.Generator} <: ResourceTechnology
     "Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)"
     available::Bool
     "Prime mover technology according to EIA 923."
-    prime_mover_type::PrimeMovers
+    prime_mover_type::PrimeMovers.Value
     "Prime mover fuel according to EIA 923."
-    fuel::Vector{ThermalFuels}
+    fuel::Vector{ThermalFuels.Value}
     "Carbon Intensity of fuel for generator, units of tons CO2 per MMBTU of fuel. Units: t/MMBtu."
-    co2::Dict{ThermalFuels, Float64}
+    co2::Dict{ThermalFuels.Value, Float64}
     "Minimum and maximum blending level (%) of each fuel during start-up process for multi-fuel generator"
-    cofire_start_limits::Dict{ThermalFuels, MinMax}
+    cofire_start_limits::Dict{ThermalFuels.Value, MinMax}
     "Minimum and maximum blending level (%) of each fuel during normal generation process for multi-fuel generator"
-    cofire_level_limits::Dict{ThermalFuels, MinMax}
+    cofire_level_limits::Dict{ThermalFuels.Value, MinMax}
     "Capital costs for investing in a technology. (USD/MW)"
     capital_costs::PSY.ValueCurve
     "Fixed and variable O&M costs for a technology"
@@ -250,11 +250,11 @@ function from_openapi(po::PI.SupplyTechnology, refs::OpenAPIRefs)
         power_systems_type = po.power_systems_type,
         region = resolve_refs(refs, po.region, RegionTopology),
         available = po.available,
-        prime_mover_type = PrimeMovers(po.prime_mover_type),
-        fuel = [ThermalFuels(v) for v in po.fuel],
-        co2 = Dict(ThermalFuels(k) => v for (k, v) in po.co2),
-        cofire_start_limits = Dict(ThermalFuels(k) => _minmax_from_po(v) for (k, v) in po.cofire_start_limits),
-        cofire_level_limits = Dict(ThermalFuels(k) => _minmax_from_po(v) for (k, v) in po.cofire_level_limits),
+        prime_mover_type = PrimeMovers.Value(po.prime_mover_type),
+        fuel = [ThermalFuels.Value(v) for v in po.fuel],
+        co2 = Dict(ThermalFuels.Value(k) => v for (k, v) in po.co2),
+        cofire_start_limits = Dict(ThermalFuels.Value(k) => _minmax_from_po(v) for (k, v) in po.cofire_start_limits),
+        cofire_level_limits = Dict(ThermalFuels.Value(k) => _minmax_from_po(v) for (k, v) in po.cofire_level_limits),
         capital_costs = convert_value_curve(po.capital_costs),
         operation_costs = convert_cost(po.operation_costs)::PSY.OperationalCost,
         unit_size = po.unit_size,
