@@ -95,7 +95,7 @@
     PSIP.set_financial_data!(supply, tech_financial_data)
     PSIP.set_start_fuel_mmbtu_per_mw!(supply, 1.7, IS.NU)
     PSIP.set_operation_costs!(supply, thermal_cost, IS.NU)
-    PSIP.set_fuel!(supply, ThermalFuels[ThermalFuels.COAL, ThermalFuels.OTHER])
+    PSIP.set_fuel!(supply, [ThermalFuels.COAL, ThermalFuels.OTHER])
     PSIP.set_power_systems_type!(supply, "ThermalStandardUpdated")
     PSIP.set_cofire_level_limits!(supply, supply_cofire_level)
     PSIP.set_internal!(supply, supply_internal)
@@ -121,7 +121,7 @@
     @test PSIP.get_financial_data(supply) === tech_financial_data
     @test PSIP.get_start_fuel_mmbtu_per_mw(supply, IS.NU) == 1.7
     @test IS.compare_values(PSIP.get_operation_costs(supply, IS.NU), thermal_cost)
-    @test PSIP.get_fuel(supply) == ThermalFuels[ThermalFuels.COAL, ThermalFuels.OTHER]
+    @test PSIP.get_fuel(supply) == [ThermalFuels.COAL, ThermalFuels.OTHER]
     @test PSIP.get_power_systems_type(supply) == "ThermalStandardUpdated"
     @test PSIP.get_cofire_level_limits(supply) === supply_cofire_level
     @test PSIP.get_internal(supply) === supply_internal
