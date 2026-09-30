@@ -94,5 +94,5 @@ Pkg.add("PowerSystemsInvestmentsPortfolios")
     as a utility library. Many methods are re-exported from `InfrastructureSystems.jl`.
     For most users there is no need to import `InfrastructureSystems.jl` directly.
 
-  - [Sienna Documentation Hub](https://sienna-platform.github.io/Sienna/SiennaDocs/docs/build/index.html):
-    Links to all Sienna packages' documentation
+  - [Central Sienna documentation](https://sienna-platform.github.io/Sienna/SiennaDocs/docs/build/index.html):
+    Cross-linked documentation website for the core user-facing Sienna packages
