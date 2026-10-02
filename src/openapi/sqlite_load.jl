@@ -77,7 +77,7 @@ function load_supplemental_attribute_associations!(
         for assoc in doc.supplemental_attribute_associations
             attribute_id = Int(assoc.attribute_id)
             component_id = Int(assoc.component_id)
-            has_ref(refs, component_id) || error(
+            has_component_ref(refs, component_id) || error(
                 "load_supplemental_attribute_associations!: association references " *
                 "unresolved component_id=$component_id (attribute_id=$attribute_id)",
             )

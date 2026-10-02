@@ -92,6 +92,15 @@ has_ref(refs::OpenAPIRefs, id::Integer) =
     haskey(refs.by_topology_id, Int(id)) || haskey(refs.by_component_id, Int(id))
 
 """
+Whether `id` names a registered **portfolio** component (technology, requirement, or
+supplemental attribute) — the family every document association row and time-series owner
+refers to. Use this, not [`has_ref`](@ref), for those checks: topology ids come from the base
+system's own counter and overlap portfolio ids, so `has_ref` answers `true` for a portfolio id
+that is unregistered whenever a bus or arc happens to share it.
+"""
+has_component_ref(refs::OpenAPIRefs, id::Integer) = haskey(refs.by_component_id, Int(id))
+
+"""
 Resolve an **optional** component reference from a document.
 
 `nothing` in means `nothing` out: a schema-optional reference the document omits is an

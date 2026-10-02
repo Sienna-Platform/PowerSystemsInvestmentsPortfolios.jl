@@ -65,6 +65,13 @@ _enum_dict_from_po(v, ::Type{T}, f) where {T} =
 _additional_properties(v::AbstractDict) = v
 _additional_properties(v) = v.additional_properties
 
+"""
+A string-keyed map (`:keyed_map`) from its field-specific wrapper, copied out so the
+component does not share storage with the transport struct.
+"""
+_keyed_map_from_po(::_NoWireValue) = nothing
+_keyed_map_from_po(v) = copy(_additional_properties(v))
+
 _nested_optional(::_NoWireValue) = nothing
 _nested_optional(po) = convert_nested_data(po)
 

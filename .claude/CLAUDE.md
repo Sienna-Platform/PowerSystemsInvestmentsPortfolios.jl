@@ -56,7 +56,7 @@ The extension of `path` picks the form on both sides (no content sniffing, no `f
 
 Files in `src/openapi/`, in include order:
 
-- `refs.jl` — `OpenAPIRefs`, the id⇄component registry for one conversion pass, plus the empty `from_openapi` / `to_openapi` generics. **Must precede `models/generated/includes.jl`.** Topology (base system) and portfolio components have two overlapping id spaces, so lookups are typed (`resolve_ref(refs, id, T)`).
+- `refs.jl` — `OpenAPIRefs`, the id⇄component registry for one conversion pass, plus the empty `from_openapi` / `to_openapi` generics. **Must precede `models/generated/includes.jl`.** Topology (base system) and portfolio components have two overlapping id spaces, so lookups are typed (`resolve_ref(refs, id, T)`). For "is this portfolio component/attribute/requirement registered?" use `has_component_ref`, **never `has_ref`** — `has_ref` also searches the topology map, so it answers `true` for an unregistered portfolio id that a bus or arc happens to share (this once silently dropped supplemental attributes from the document).
 - `cost_conversion.jl` — import-direction hand-written converters (`convert_value_curve`, `convert_cost`, `convert_nested_data`, compound extractors) and the `Absent` helpers (`_NoWireValue`, `_or_default`, `_optional_from_wire`, `_enum_from_po`, ...).
 - `export_cost_conversion.jl` — export-direction converters (`convert_cost_to_openapi`, `convert_nested_data_to_openapi`, compound `_minmax_po`/... constructors, `_curve_to_openapi`).
 - `sqlite_load.jl` — attaches supplemental attributes from the document's association table.
@@ -66,7 +66,7 @@ Files in `src/openapi/`, in include order:
 
 Identity is the component's own integer `id`: `from_openapi` sets each component's id with `IS.set_id!` before adding it, so a document id, a container id, and an association row all name the same number.
 
-**The `Absent` contract.** Every optional field of a platform model is `Union{Absent, Nothing, T}` and defaults to `IC.ABSENT`; a field the producer omitted reads back as `IC.Absent`, a JSON `null` as `nothing`. Every import helper must treat both as "no value" (dispatch on `_NoWireValue`), and a field with a descriptor `default` must fall back to it (`_or_default`). The generator emits this; hand-written converters must follow it too. On export, a missing optional value is emitted as `IC.ABSENT` (`_optional_to_wire`), not `nothing`.
+**The `Absent` contract.** Every optional field of a platform model is `Union{Absent, Nothing, T}` and defaults to `IC.ABSENT`; a field the producer omitted reads back as `IC.Absent`, a JSON `null` as `nothing`. Every import helper must treat both as "no value" (dispatch on `_NoWireValue`), and a field with a descriptor `default` must fall back to it (`_or_default`). The generator emits this; hand-written converters must follow it too. On export, a missing optional value is emitted as `IC.ABSENT` (omitted), **never `nothing`**: the platform schemas mark optional fields as optional, not nullable, so a written `null` fails schema validation when the document is read back. Every export-side optional helper (`_optional_to_wire`, `_*_po_optional`, `_curve_to_openapi`, `_keyed_map_to_openapi`, `_optional_cost_curve_to_openapi`) returns `IC.ABSENT` for a missing value, and the generator wraps nullable scalar fields in `_optional_to_wire`.
 
 ## Auto-generated structs — do NOT hand-edit
 
@@ -78,6 +78,7 @@ Each generated file carries, besides the struct and its accessors/setters, a **`
 
 - Enums export through `OPENAPI_ENUM_WIRE_TYPES` (`PC.PrimeMovers`, `PC.ThermalFuels`, `PC.StorageTech`); an enum not in that table is a plain `String` on the wire (`conformity`). Import rebuilds through the PSY enum's own string constructor.
 - Every `oneOf`/`anyOf` field — curve fields, abstract-cost fields (`PSY.OperationalCost`, `IS.ProductionVariableCostCurve`), capacity bounds — is wrapped in the platform's field-specific `PI.<Struct><PascalCaseField>` type (`openapi_field_wrapper_type`). Import unwraps any of them through a `convert_value_curve` / `convert_cost` method on `IC.OneOfAPIModel`.
+- String-keyed maps (`Dict{String, Int64}` etc.) are the `:keyed_map` kind, not scalars: on the wire each is a field-specific wrapper holding the map in `additional_properties` (`_keyed_map_to_openapi` / `_keyed_map_from_po`).
 - Fields with a descriptor `default` import as `_or_default(<absent-safe expr>, default)`.
 
 Parametric types are **generated, not hand-written** (8 of PSIP's 18 are parametric). `power_systems_type::String` is the single carrier of the type parameter: `from_openapi` resolves `getproperty(PowerSystems, Symbol(po.power_systems_type))`, and `to_openapi` regenerates the string as `string(nameof(T))`. Never set `power_systems_type` to anything but a real PowerSystems type name.
@@ -90,7 +91,7 @@ julia --project=test -e 'using PowerSystemsInvestmentsPortfolios; PowerSystemsIn
 
 `StructGeneration` is never `include`d or called unqualified. The spec (`src/descriptors/SiennaInvestSchema.json`) is the single source of truth: to change a generated component's fields/defaults/docstring, edit the spec and rerun generation; never patch the output file. Defaults are copied through **verbatim as Julia source**, so a Python literal in the spec (`True`, `False`, `None`) becomes an `UndefVarError` — write `true`/`false`/`nothing`. New abstract supertypes, hand-written accessors, and dispatch logic belong in the non-generated `models/*.jl` files; new value converters belong in `src/openapi/cost_conversion.jl` (import) / `export_cost_conversion.jl` (export).
 
-`test/test_openapi_parity.jl` guards descriptor⇄platform-model field parity, and `test/test_openapi_converters.jl` asserts every generated type has both converters and that each parametric `where` bound matches the descriptor. Run both after any regeneration.
+`test/test_openapi_parity.jl` guards the descriptor against the platform models at three levels: field names; field wire types, with the expected type derived from the generator's own tables (`OPENAPI_ENUM_WIRE_TYPES`, `openapi_field_wrapper_type`, `openapi_cost_needs_wrapper`) so the test and the generator cannot drift apart; and a `to_file`/`from_file` round trip of every `DOCUMENT_PLAN` and `SUPPLEMENTAL_ATTRIBUTE_PLAN` type, comparing each component's encoded payload before and after. That last level fails if the fixture stops covering a type. `test/test_openapi_converters.jl` asserts every generated type has both converters and that each parametric `where` bound matches the descriptor. Run both after any regeneration.
 
 ## Main public API
 
@@ -132,6 +133,6 @@ julia --project=docs docs/make.jl
 
 Test notes:
 
-- **ReTest aborts the whole run on the first exception raised outside a `@test`** (a bare `MethodError` in setup code, for example), so one broken testset hides every testset after it. When the suite stops early, run testsets one by one (`retest(mod, id)` for `id in 1:N`, catching each throw) to get the full failure list. `retest(mod; dry=true)` lists the registered testsets with their ids.
+- **ReTest stops the whole run at the first failing testset** — whether from an exception outside a `@test` or an ordinary failed `@test` — so one broken testset hides every testset after it. When the suite stops early, run testsets one by one (`retest(mod, id)` for `id in 1:N`, catching each throw) to get the full failure list. `retest(mod; dry=true)` lists the registered testsets with their ids.
 - Top-level testset descriptions must be **unique** across all test files — ReTest silently keeps only the last of a duplicate name.
 - The runner pulls test data from the `CaseData` artifact in `test/Artifacts.toml` and runs Aqua checks (unbound args, undefined exports, ambiguities, stale/compat deps) at module load. Test deps live in `test/Project.toml`; always use `--project=test`. Uses `PowerSystemCaseBuilder` — don't mutate a cached system without `deepcopy`.

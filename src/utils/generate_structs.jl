@@ -158,16 +158,16 @@ end
 
 const OPENAPI_SKIP_FIELDS = Set(["ext", "internal", "requirements"])
 
-const OPENAPI_SCALAR_TYPES = Set([
-    "Float64",
-    "Int",
-    "Int64",
-    "String",
-    "Bool",
-    "Vector{String}",
-    "Dict{String, Int64}",
-    "Dict{String, Float64}",
-])
+const OPENAPI_SCALAR_TYPES =
+    Set(["Float64", "Int", "Int64", "String", "Bool", "Vector{String}"])
+
+"""
+Value types a string-keyed map may hold and still be a `:keyed_map`. On the wire such a field
+is its own field-specific wrapper struct (`PI.RetirementPotentialBuildYear`) whose map lives in
+`additional_properties` — the same shape `MinMaxByKey` has for an enum-keyed compound map — so
+it cannot pass through as a scalar.
+"""
+const OPENAPI_KEYED_MAP_VALUE_TYPES = Set(["Int64", "Float64", "String", "Bool"])
 
 const OPENAPI_COMPOUND_MEMBERS = Dict(
     "MinMax" => ("min", "max"),
@@ -279,7 +279,8 @@ openapi_cost_needs_wrapper(bare) =
 """
 The platform model's field-specific wrapper type name, `<StructName><PascalCase(field)>`
 (`operation_costs` -> `SupplyTechnologyOperationCosts`). Every `oneOf`/`anyOf`-typed field —
-abstract costs, value curves, capacity bounds — is wrapped under this name.
+abstract costs, value curves, capacity bounds — and every string-keyed map (`:keyed_map`) is
+wrapped under this name.
 """
 function openapi_field_wrapper_type(struct_name, field_name)
     return struct_name * join(uppercasefirst.(split(field_name, "_")))
@@ -299,8 +300,8 @@ end
 """
 Classify one field's role in an OpenAPI converter, returning `(kind, bare, nullable)`
 with `kind` one of `:skip`, `:scalar`, `:compound`, `:reference`, `:reference_vector`,
-`:enum`, `:enum_vector`, `:enum_dict`, `:enum_compound_dict`, `:curve`, `:cost`,
-`:nested`.
+`:enum`, `:enum_vector`, `:enum_dict`, `:enum_compound_dict`, `:keyed_map`, `:curve`, `:cost`,
+`:nested`, `:union_bound`.
 
 Raises `DataFormatError` rather than guessing: a field whose Julia type matches none of
 the declared tables is a descriptor change the generator has not been taught about, and
@@ -336,6 +337,9 @@ function openapi_classify_field(struct_name, field)
                 return (:enum_compound_dict, (key, value), nullable)
             value in OPENAPI_SCALAR_TYPES && return (:enum_dict, key, nullable)
         end
+        key == "String" &&
+            value in OPENAPI_KEYED_MAP_VALUE_TYPES &&
+            return (:keyed_map, bare, nullable)
     end
     # A capacity bound: a single `MinMax`, or a per-topology map of `MinMax` bounds keyed by
     # a base-system topology reference (a value `oneOf`/`anyOf` on the wire). Resolved
@@ -494,6 +498,10 @@ function openapi_import_expr(struct_name, name, kind, bare, nullable)
         # The wire type is a `<Value>ByKey` object; its map lives in `additional_properties`.
         return "_enum_dict_from_po(po.$name, $key, $extractor)"
     end
+    if kind == :keyed_map
+        # The wire type is a field-specific wrapper; its map lives in `additional_properties`.
+        return "_keyed_map_from_po(po.$name)"
+    end
     if kind == :curve
         if nullable
             return "_value_curve_optional(po.$name)"
@@ -559,6 +567,9 @@ function openapi_export_expr(struct_name, field, kind, bare, nullable, parametri
         if parametric && name == "power_systems_type"
             return "string(nameof(T))"
         end
+        # A nullable field with no value is omitted, not written as `null`: the platform
+        # schemas mark these optional, not nullable, so `null` fails decoding.
+        nullable && return "_optional_to_wire($getter)"
         return getter
     end
     if kind == :compound
@@ -599,6 +610,10 @@ function openapi_export_expr(struct_name, field, kind, bare, nullable, parametri
         ctor = OPENAPI_COMPOUND_CTORS[value].required
         # The wire type is a `<Value>ByKey` object whose `additional_properties` holds the map.
         return "PC.$(value)ByKey(; additional_properties = Dict(string(k) => $ctor(v) for (k, v) in $getter))"
+    end
+    if kind == :keyed_map
+        wrapper = openapi_field_wrapper_type(struct_name, name)
+        return "_keyed_map_to_openapi(PI.$wrapper, $getter)"
     end
     if kind == :curve
         # Every curve-typed field is wrapped in its own field-specific `oneOf` on the wire;

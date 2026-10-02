@@ -281,7 +281,7 @@ function to_openapi(value::StorageTechnology{T}, refs::OpenAPIRefs) where {T <: 
         capital_costs = convert_nested_data_to_openapi(get_capital_costs(value)),
         operation_costs = convert_cost_to_openapi(get_operation_costs(value, IS.NU)),
         min_discharge_fraction = get_min_discharge_fraction(value),
-        unit_size_charge = get_unit_size_charge(value, IS.NU),
+        unit_size_charge = _optional_to_wire(get_unit_size_charge(value, IS.NU)),
         unit_size_discharge = get_unit_size_discharge(value, IS.NU),
         unit_size_energy = get_unit_size_energy(value, IS.NU),
         capacity_limits_charge = PI.StorageTechnologyCapacityLimitsCharge(_capacity_bound_po_value(get_capacity_limits_charge(value, IS.NU), refs)),

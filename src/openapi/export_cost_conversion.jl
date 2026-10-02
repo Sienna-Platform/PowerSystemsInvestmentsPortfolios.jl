@@ -24,26 +24,37 @@ end
 # ── compound PO constructors, called by generated to_openapi ──────────────────
 
 _minmax_po(v) = PC.MinMax(; min=v.min, max=v.max)
-_minmax_po_optional(::Nothing) = nothing
+_minmax_po_optional(::Nothing) = IC.ABSENT
 _minmax_po_optional(v) = _minmax_po(v)
 
 _updown_po(v) = PC.UpDown(; up=v.up, down=v.down)
-_updown_po_optional(::Nothing) = nothing
+_updown_po_optional(::Nothing) = IC.ABSENT
 _updown_po_optional(v) = _updown_po(v)
 
 _inout_po(v) = PC.InOut(; in=v.in, out=v.out)
-_inout_po_optional(::Nothing) = nothing
+_inout_po_optional(::Nothing) = IC.ABSENT
 _inout_po_optional(v) = _inout_po(v)
 _outagefactors_po(v) = PC.OutageFactors(; planned=v.planned, forced=v.forced)
-_outagefactors_po_optional(::Nothing) = nothing
+_outagefactors_po_optional(::Nothing) = IC.ABSENT
 _outagefactors_po_optional(v) = _outagefactors_po(v)
 
 """
 A curve-typed field in the field-specific `oneOf` wrapper its platform model declares
-(`PI.RetirementPotentialRetirementCost`, ...); `nothing` stays `nothing` for a nullable one.
+(`PI.RetirementPotentialRetirementCost`, ...). A nullable one with no value is omitted
+(`IC.ABSENT`): the schemas mark these fields optional, not nullable, so `null` fails
+decoding.
 """
-_curve_to_openapi(::Type, ::Nothing) = nothing
+_curve_to_openapi(::Type, ::Nothing) = IC.ABSENT
 _curve_to_openapi(::Type{W}, curve) where {W} = W(convert_cost_to_openapi(curve))
+
+"""
+A string-keyed map (`:keyed_map`) in the field-specific wrapper its platform model declares
+(`PI.RetirementPotentialBuildYear`), which holds the map in `additional_properties`. A nullable
+one with no value is omitted (`IC.ABSENT`), as for `_curve_to_openapi`.
+"""
+_keyed_map_to_openapi(::Type, ::Nothing) = IC.ABSENT
+_keyed_map_to_openapi(::Type{W}, map::AbstractDict) where {W} =
+    W(; additional_properties=map)
 
 """
 `initial_input`/`input_at_zero` are optional-by-omission on the wire (not nullable) —
@@ -235,12 +246,14 @@ function convert_cost_to_openapi(cost::FuelCurve)
 end
 
 """
-`zero(CostCurve)` is the sentinel `_optional_cost_curve` maps `nothing` to on import;
-reverse it back to `nothing` (curtailment_cost, storage charge/discharge_variable_cost).
+`zero(CostCurve)` is the sentinel `_optional_cost_curve` maps a missing value to on import;
+reverse it back to an omitted field (curtailment_cost, storage charge/discharge_variable_cost).
+Omitted (`IC.ABSENT`), not `nothing`: the schema marks these optional, not nullable, so a
+written `null` fails decoding.
 """
 function _optional_cost_curve_to_openapi(cost::CostCurve)
     if cost == zero(CostCurve)
-        return nothing
+        return IC.ABSENT
     end
     return convert_cost_to_openapi(cost)
 end

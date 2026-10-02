@@ -180,11 +180,11 @@ function load_requirements_associations!(portfolio::Portfolio, refs::OpenAPIRefs
     for assoc in doc.requirements_associations
         entity_id = Int(assoc.entity_id)
         requirement_id = Int(assoc.requirement_id)
-        has_ref(refs, entity_id) || error(
+        has_component_ref(refs, entity_id) || error(
             "load_requirements_associations!: row references unresolved entity_id=" *
             "$entity_id (requirement_id=$requirement_id)",
         )
-        has_ref(refs, requirement_id) || error(
+        has_component_ref(refs, requirement_id) || error(
             "load_requirements_associations!: row references unresolved requirement_id=" *
             "$requirement_id (entity_id=$entity_id)",
         )

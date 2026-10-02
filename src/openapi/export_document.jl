@@ -49,7 +49,7 @@ function _build_export_refs(portfolio::Portfolio)
         end
     end
     # Supplemental attributes are registered (and their rows emitted) by
-    # `_export_supplemental_attributes`, which keys off `has_ref` to emit each attribute exactly
+    # `_export_supplemental_attributes`, which keys off `has_component_ref` to emit each attribute exactly
     # once — so they must NOT be pre-registered here, or their rows would be silently skipped.
     return refs
 end
@@ -109,7 +109,7 @@ function _export_supplemental_attributes(refs::OpenAPIRefs, portfolio::Portfolio
     )
     for row in IS.openapi_supplemental_attribute_association_rows(portfolio.data)
         entity_id = Int(row.component_id)
-        has_ref(refs, entity_id) || continue
+        has_component_ref(refs, entity_id) || continue
         attr_id = Int(row.attribute_id)
         haskey(attributes_by_id, attr_id) || error(
             "to_openapi: supplemental attribute association (attribute id $attr_id, " *
@@ -117,7 +117,7 @@ function _export_supplemental_attributes(refs::OpenAPIRefs, portfolio::Portfolio
             "manager — the store and the attribute manager disagree about what exists",
         )
         attr = attributes_by_id[attr_id]
-        if !has_ref(refs, attr_id)
+        if !has_component_ref(refs, attr_id)
             refs[attr_id] = attr
             push!(attribute_rows, to_openapi(attr, refs))
         end
@@ -208,7 +208,7 @@ function _export_all_time_series(
     for assoc in IS.openapi_time_series_association_rows(portfolio.data)
         row = assoc.value
         owner_id = Int(row.owner_id)
-        if !has_ref(refs, owner_id)
+        if !has_component_ref(refs, owner_id)
             _absent_owner_is_tolerated(row) || error(
                 "to_openapi: supplemental attribute (owner id $owner_id, type " *
                 "$(row.owner_type)) owns time series \"$(row.name)\", but is not " *

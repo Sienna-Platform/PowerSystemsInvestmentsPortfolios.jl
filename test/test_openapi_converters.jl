@@ -76,12 +76,13 @@ end
     @test PSIP._inout_po((in=0.9, out=0.8)).out == 0.8
     # `OPENAPI_COMPOUND_CTORS` names an `_optional` constructor for all three compounds,
     # so all three are reachable the moment any compound field is made nullable; test all
-    # three rather than leave two of the table's entries unexercised.
-    @test isnothing(PSIP._minmax_po_optional(nothing))
+    # three rather than leave two of the table's entries unexercised. A missing value is
+    # omitted from the wire (`IC.ABSENT`), not written as `null`, which the schemas reject.
+    @test PSIP._minmax_po_optional(nothing) === PSIP.IC.ABSENT
     @test PSIP._minmax_po_optional((min=0.0, max=1.0)).max == 1.0
-    @test isnothing(PSIP._updown_po_optional(nothing))
+    @test PSIP._updown_po_optional(nothing) === PSIP.IC.ABSENT
     @test PSIP._updown_po_optional((up=3.0, down=4.0)).down == 4.0
-    @test isnothing(PSIP._inout_po_optional(nothing))
+    @test PSIP._inout_po_optional(nothing) === PSIP.IC.ABSENT
     @test PSIP._inout_po_optional((in=0.9, out=0.8)).in == 0.9
 end
 
@@ -293,7 +294,8 @@ end
     refs[20] = tech
 
     po = PSIP.to_openapi(tech, refs)
-    @test isnothing(po.unit_size_charge)
+    # Omitted from the wire rather than written as `null`, which the schema rejects.
+    @test po.unit_size_charge === PSIP.IC.ABSENT
     @test string(po.storage_tech) == string(StorageTech.OTHER_CHEM)
     @test po.efficiency.in == 1
 
