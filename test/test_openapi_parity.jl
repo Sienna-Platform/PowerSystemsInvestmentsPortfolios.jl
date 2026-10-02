@@ -2,13 +2,15 @@
 # the platform package drives the wire format; a field present in one and absent from the
 # other, or carried as a different type, is a silent data-loss bug — so it fails here instead.
 #
-# Three layers, each catching what the one before cannot:
+# Two layers, each catching what the one before cannot:
 #   1. field names — every descriptor field exists on the platform model;
 #   2. field types — every field's wire type is what the generator emits for its kind, with
-#      the expectation derived from the generator's own tables so the two cannot drift;
-#   3. round trip — every document and supplemental-attribute type actually survives
-#      `to_file`/`from_file`, since a name and a type can both match while the emitted
-#      converter still cannot construct the wire struct.
+#      the expectation derived from the generator's own tables so the two cannot drift.
+#
+# A name and a type can both match while the emitted converter still cannot build or read the
+# wire struct, so the third layer — every document type, with its value variants, surviving a
+# real `to_file`/`from_file` round trip — lives with the other serialization tests in
+# `test_serialization.jl`.
 
 const _PARITY_DESCRIPTOR_FILE =
     joinpath(BASE_DIR, "src", "descriptors", "SiennaInvestSchema.json")
@@ -117,111 +119,5 @@ end
                     String(property["type"]) expected actual shape_ok
             end
         end
-    end
-end
-
-# ── round trip ──────────────────────────────────────────────────────────────────
-
-"""
-The 5-bus portfolio plus every document type it does not already hold, with the optional
-`RetirementPotential` maps populated so the `:keyed_map` path carries data rather than `{}`.
-"""
-function _parity_roundtrip_portfolio()
-    portfolio = build_portfolio()
-    base = PSIP.get_base_system(portfolio)
-    supply = PSIP.get_technology(
-        SupplyTechnology{PSY.ThermalStandard},
-        portfolio,
-        "cheap_thermal",
-    )
-    storage = first(PSIP.get_technologies(StorageTechnology, portfolio))
-    financial_data = PSIP.get_financial_data(supply)
-    buses = collect(PSY.get_components(PSY.ACBus, base))
-
-    PSIP.add_technology!(
-        portfolio,
-        ColocatedSupplyStorageTechnology{PSY.RenewableDispatch}(;
-            name="parity_colocated",
-            financial_data=financial_data,
-            power_systems_type="RenewableDispatch",
-            operation_costs_inverter=CostCurve(LinearCurve(0.8)),
-            inverter_efficiency=0.96,
-            inverter_supply_ratio=1.0,
-            capital_costs_inverter=PSIP.CapitalCost(LinearCurve(70.0), 0.0),
-            available=true,
-            region=PSIP.get_region(supply),
-            supply_technology=supply,
-            storage_technology=storage,
-        ),
-    )
-    PSIP.add_technology!(
-        portfolio,
-        NodalHVDCTransportTechnology{PSY.ACBranch}(;
-            name="parity_hvdc",
-            start_node=buses[1],
-            end_node=buses[2],
-            financial_data=financial_data,
-            power_systems_type="ACBranch",
-            available=true,
-        ),
-    )
-
-    retirement = first(IS.get_supplemental_attributes(RetirementPotential, supply))
-    PSIP.set_planned_retirement_year!(retirement, Dict("unit_a" => 2035))
-    PSIP.set_build_year!(retirement, Dict("unit_a" => 1990, "unit_b" => 2001))
-    return portfolio
-end
-
-"""
-Every `to_openapi` payload of `T` in `portfolio`, as plain JSON keyed by component name.
-"""
-function _parity_payloads(portfolio, ::Type{T}) where {T}
-    refs = PSIP._build_export_refs(portfolio)
-    components = if T <: IS.SupplementalAttribute
-        IS.get_supplemental_attributes(T, portfolio.data)
-    else
-        collect(PSIP._plan_components(portfolio, T))
-    end
-    return Dict(
-        string(IS.get_id(c)) =>
-            JSON3.read(JSON3.write(PSIP.IC.encode(PSIP.to_openapi(c, refs))), Dict) for
-        c in components
-    )
-end
-
-@testset "every document type round trips through to_file/from_file" begin
-    portfolio = _parity_roundtrip_portfolio()
-    plan = vcat(PSIP.DOCUMENT_PLAN, PSIP.SUPPLEMENTAL_ATTRIBUTE_PLAN)
-
-    mktempdir() do dir
-        path = joinpath(dir, "parity.json")
-        PSIP.to_file(portfolio, path; force=true)
-        portfolio2 = PSIP.from_file(path)
-
-        for (T, key) in plan
-            before = _parity_payloads(portfolio, T)
-            after = _parity_payloads(portfolio2, T)
-            # Coverage: a type this portfolio does not hold is not exercised at all.
-            @test !isempty(before)
-            isempty(before) && @error "round-trip fixture holds no $key"
-            @test keys(after) == keys(before)
-            for (id, payload) in before
-                @test get(after, id, nothing) == payload
-                get(after, id, nothing) == payload ||
-                    @error "$key id=$id changed across the round trip" payload after =
-                        get(after, id, nothing)
-            end
-        end
-
-        supply = PSIP.get_technology(
-            SupplyTechnology{PSY.ThermalStandard},
-            portfolio2,
-            "cheap_thermal",
-        )
-        retirements = IS.get_supplemental_attributes(RetirementPotential, supply)
-        @test any(
-            r -> PSIP.get_build_year(r) == Dict("unit_a" => 1990, "unit_b" => 2001),
-            retirements,
-        )
     end
 end

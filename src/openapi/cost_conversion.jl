@@ -424,7 +424,19 @@ _capacity_bound_from_po(po, refs::OpenAPIRefs) = _capacity_bound_value(po.value,
 _minmax_nt(v::PC.MinMax) = (min=Float64(v.min), max=Float64(v.max))
 _minmax_nt(v::AbstractDict) = (min=Float64(v["min"]), max=Float64(v["max"]))
 
-_capacity_bound_value(x::PC.MinMax, ::OpenAPIRefs) = _minmax_nt(x)
+# Upstream ambiguity (PowerOpenAPIModels / SiennaSchemas): `MinMax`'s schema leaves `min` and
+# `max` optional and allows additional properties, so a per-topology map is valid against both
+# `oneOf` members and the generated decoder — which takes the first match — reads it back as a
+# `MinMax` with no `min`/`max` and the map in `additional_properties`. Recognise that shape
+# rather than reading `Absent` bounds; a `MinMax` missing only one bound still errors.
+_capacity_bound_value(x::PC.MinMax, refs::OpenAPIRefs) =
+    _capacity_bound_value(x, x.min, x.max, refs)
+_capacity_bound_value(x::PC.MinMax, ::IC.Absent, ::IC.Absent, refs::OpenAPIRefs) =
+    _capacity_bound_value(x.additional_properties, refs)
+_capacity_bound_value(x::PC.MinMax, ::Any, ::Any, ::OpenAPIRefs) = _minmax_nt(x)
+# The per-topology member of the bound's `oneOf`: its map lives in `additional_properties`.
+_capacity_bound_value(x::PC.MinMaxByKey, refs::OpenAPIRefs) =
+    _capacity_bound_value(x.additional_properties, refs)
 # A plain MinMax deserializes to a dict keyed `"min"`/`"max"`; a per-topology map is keyed by
 # base-system topology ids (integer strings). Distinguish the two by their keys.
 function _capacity_bound_value(d::AbstractDict, refs::OpenAPIRefs)

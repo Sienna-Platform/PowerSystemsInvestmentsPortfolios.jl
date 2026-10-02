@@ -412,5 +412,10 @@ end
 # (seeded from the base system). A nullable bound omitted on the wire imports as the default.
 
 _capacity_bound_po_value(v::NamedTuple, ::OpenAPIRefs) = PC.MinMax(; min=v.min, max=v.max)
-_capacity_bound_po_value(d::AbstractDict, refs::OpenAPIRefs) =
-    Dict(string(component_id(refs, k)) => PC.MinMax(; min=v.min, max=v.max) for (k, v) in d)
+# The map member of the bound's `oneOf` is `PC.MinMaxByKey`, keyed by topology id; a bare
+# `Dict` is not a member and fails to convert into the wrapper.
+_capacity_bound_po_value(d::AbstractDict, refs::OpenAPIRefs) = PC.MinMaxByKey(;
+    additional_properties=Dict(
+        string(component_id(refs, k)) => PC.MinMax(; min=v.min, max=v.max) for (k, v) in d
+    ),
+)

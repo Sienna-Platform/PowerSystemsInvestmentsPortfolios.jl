@@ -37,6 +37,23 @@ function _validate_nonnegative_limits(technology, limits, field_name)
     return is_valid
 end
 
+"""
+A per-topology capacity bound (`Dict{PSY.Topology, MinMax}`) is valid when every topology's
+bound is; each is checked — not short-circuited — so every bad entry is logged, named by its
+topology.
+"""
+function _validate_nonnegative_limits(technology, limits::AbstractDict, field_name)
+    is_valid = true
+    for (topology, bound) in limits
+        is_valid &= _validate_nonnegative_limits(
+            technology,
+            bound,
+            "$field_name[$(PSY.get_name(topology))]",
+        )
+    end
+    return is_valid
+end
+
 function _validate_nonnegative_value(technology, value, field_name)
     if !isfinite(value) || value < 0.0
         @error(
