@@ -8,21 +8,24 @@
         tax_rate=0.21,
     )
 
-    zone_a = PSY.Area(; name="zone_a", base_power=100.0)
-    zone_b = PSY.Area(; name="zone_b", base_power=100.0)
+    zone_a = PSY.Area(; input_basis=PSY.CU, name="zone_a", base_power=100.0)
+    zone_b = PSY.Area(; input_basis=PSY.CU, name="zone_b", base_power=100.0)
     load_zone_a = PSY.LoadZone(;
+        input_basis=PSY.CU,
         name="lz_a",
         peak_active_power=0.0,
         peak_reactive_power=0.0,
         base_power=100.0,
     )
     load_zone_b = PSY.LoadZone(;
+        input_basis=PSY.CU,
         name="lz_b",
         peak_active_power=0.0,
         peak_reactive_power=0.0,
         base_power=100.0,
     )
     node_a = PSY.ACBus(;
+        input_basis=PSY.CU,
         number=901,
         name="node_a",
         available=true,
@@ -35,6 +38,7 @@
         load_zone=load_zone_a,
     )
     node_b = PSY.ACBus(;
+        input_basis=PSY.CU,
         number=902,
         name="node_b",
         available=true,
@@ -156,10 +160,12 @@
     # `eligible_generators` and the cost are required, not defaulted: a retirement or
     # retrofit potential that names neither the units it applies to nor what it costs
     # describes nothing.
-    retirement_potential =
-        RetirementPotential(; eligible_generators=["gen1"], retirement_cost=1.0)
+    retirement_potential = RetirementPotential(;
+        eligible_generators=["gen1"],
+        retirement_cost=LinearCurve(1.0),
+    )
     retrofit_potential =
-        RetrofitPotential(; eligible_generators=["gen1"], retrofit_cost=1.0)
+        RetrofitPotential(; eligible_generators=["gen1"], retrofit_cost=LinearCurve(1.0))
     existing_devices = ExistingDevices()
 
     @test retirement_potential isa RetirementPotential

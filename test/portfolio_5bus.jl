@@ -9,11 +9,12 @@ function build_portfolio()
     ###### Zones ######
     ###################
 
-    z1 = PSY.Area(; name="Zone_1", base_power=100.0)
+    z1 = PSY.Area(; input_basis=PSY.CU, name="Zone_1", base_power=100.0)
 
-    z2 = PSY.Area(; name="Zone_2", base_power=100.0)
+    z2 = PSY.Area(; input_basis=PSY.CU, name="Zone_2", base_power=100.0)
 
     lz1 = PSY.LoadZone(;
+        input_basis=PSY.CU,
         name="Zone_1_load_zone",
         peak_active_power=0.0,
         peak_reactive_power=0.0,
@@ -21,6 +22,7 @@ function build_portfolio()
     )
 
     lz2 = PSY.LoadZone(;
+        input_basis=PSY.CU,
         name="Zone_2_load_zone",
         peak_active_power=0.0,
         peak_reactive_power=0.0,
@@ -28,6 +30,7 @@ function build_portfolio()
     )
 
     n1 = PSY.ACBus(;
+        input_basis=PSY.CU,
         number=101,
         name="node101",
         available=true,
@@ -41,6 +44,7 @@ function build_portfolio()
     )
 
     n2 = PSY.ACBus(;
+        input_basis=PSY.CU,
         number=102,
         name="node102",
         available=true,

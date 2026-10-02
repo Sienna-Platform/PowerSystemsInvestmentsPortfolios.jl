@@ -589,6 +589,7 @@ function add_buses!(
     for rec in DBInterface.execute(stmts[:zones])
         component_attr = get(attributes, rec.id, Dict{String, Any}())
         area = Area(;
+            input_basis=PSY.NU,
             name=rec.name,
             load_response=component_attr["load_response"],
             peak_active_power=component_attr["peak_active_power"],
@@ -601,6 +602,7 @@ function add_buses!(
         component_attr = get(attributes, rec.id, Dict{String, Any}())
         area_name = first(DBInterface.execute(stmts[:zone], [rec.area])).name
         bus = PSY.ACBus(;
+            input_basis=PSY.NU,
             name=rec.name,
             number=rec.id,
             available=component_attr["available"],
@@ -784,6 +786,7 @@ function add_generation_units!(
 
             ops_cost = parse_operational_cost(component_attr["operation_cost"])
             generator = component_type(;
+                input_basis=PSY.CU,
                 name=rec.name,
                 rating=rec.rating / rec.base_power,
                 base_power=rec.base_power,
@@ -811,6 +814,7 @@ function add_generation_units!(
             )
             ops_cost = parse_operational_cost(component_attr["operation_cost"])
             generator = component_type(;
+                input_basis=PSY.CU,
                 name=rec.name,
                 rating=rec.rating / rec.base_power,
                 base_power=rec.base_power,
@@ -829,6 +833,7 @@ function add_generation_units!(
         elseif component_type == PSY.RenewableNonDispatch
             ops_cost = RenewableGenerationCost(nothing)
             generator = component_type(;
+                input_basis=PSY.CU,
                 name=rec.name,
                 rating=rec.rating / rec.base_power,
                 base_power=rec.base_power,
@@ -859,6 +864,7 @@ function add_generation_units!(
                 max=component_attr["reactive_power_limits"]["max"] / rec.base_power,
             )
             generator = component_type(;
+                input_basis=PSY.CU,
                 name=rec.name,
                 rating=rec.rating / rec.base_power,
                 base_power=rec.base_power,
@@ -895,6 +901,7 @@ function add_generation_units!(
             ops_cost = parse_operational_cost(component_attr["operation_cost"])
 
             turbine = HydroTurbine(;
+                input_basis=PSY.CU,
                 name=rec.name,
                 available=component_attr["available"],
                 bus=PSY.get_component(PSY.ACBus, portfolio.base_system, bus_name),
@@ -1061,6 +1068,7 @@ function add_storage_units!(
         ops_cost = parse_operational_cost(component_attr["operation_cost"])
 
         storage_unit = component_type(;
+            input_basis=PSY.CU,
             #Data pulled from DB
             name=rec.name,
             rating=rec.rating / rec.base_power,
@@ -1268,6 +1276,7 @@ function add_system_lines!(
                 max=component_attr["angle_limits"]["max"],
             )
             line = component_type(;
+                input_basis=PSY.CU,
                 name=rec.name,
                 rating=rec.continuous_rating / get_base_power(portfolio.base_system),
                 arc=arc_dict[arc],
@@ -1293,6 +1302,7 @@ function add_system_lines!(
 
         elseif component_type == PSY.TwoWindingTransformer
             circuit = PSY.TransformerCircuit(;
+                input_basis=PSY.CU,
                 arc=arc_dict[arc],
                 rating=rec.continuous_rating / get_base_power(portfolio.base_system),
                 base_power=component_attr["base_power"],
@@ -1314,6 +1324,7 @@ function add_system_lines!(
             )
 
             line = component_type(;
+                input_basis=PSY.CU,
                 name=rec.name,
                 circuit=circuit,
                 magnetizing_shunt=transform_natural_impedance_to_component_base(

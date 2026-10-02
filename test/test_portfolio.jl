@@ -209,14 +209,16 @@ end
 @testset "Test region and requirement APIs" begin
     port = Portfolio()
 
-    zone = PSY.Area(; name="zone_test", base_power=100.0)
+    zone = PSY.Area(; input_basis=PSY.CU, name="zone_test", base_power=100.0)
     load_zone = PSY.LoadZone(;
+        input_basis=PSY.CU,
         name="zone_test_lz",
         peak_active_power=0.0,
         peak_reactive_power=0.0,
         base_power=100.0,
     )
     node = PSY.ACBus(;
+        input_basis=PSY.CU,
         number=910,
         name="node_test",
         available=true,
@@ -279,7 +281,8 @@ end
     attrs_on_port = PSIP.get_supplemental_attributes(RetirementPotential, port)
     @test length(attrs_on_port) > 0
 
-    @test PSIP.get_supplemental_attribute(port, IS.get_id(first(attrs_on_port))) === first(attrs_on_port)
+    @test PSIP.get_supplemental_attribute(port, IS.get_id(first(attrs_on_port))) ===
+          first(attrs_on_port)
 
     t_th_exp = PSIP.get_technology(SupplyTechnology, port, "expensive_thermal")
     attr = first(PSIP.get_supplemental_attributes(RetirementPotential, t_th_exp))
@@ -290,4 +293,28 @@ end
     # attr = first(get_supplemental_attributes(RetirementPotential, port))
     # PSIP.remove_supplemental_attribute!(port, t_th_exp, attr)
     # @test length(PSIP.get_supplemental_attributes(RetirementPotential, t_th_exp)) == 1
+end
+
+@testset "PowerSystems topology types are re-exported" begin
+    # Every `PSY.Topology` type — abstract and concrete — so a user building a portfolio
+    # never needs the `PSY.` prefix. Walked from the type tree rather than listed, so a
+    # topology type PowerSystems adds later fails here until it is re-exported too.
+    topology_types(T) =
+        vcat([T], [topology_types(S) for S in InteractiveUtils.subtypes(T)]...)
+    for T in unique(topology_types(PSY.Topology))
+        name = nameof(T)
+        @test Base.isexported(PowerSystemsInvestmentsPortfolios, name)
+        # The same binding as PowerSystems', so `using` both packages does not clash.
+        @test getfield(PowerSystemsInvestmentsPortfolios, name) === T
+    end
+end
+
+@testset "topology construction helpers are re-exported" begin
+    # `input_basis` markers and the bus-type enum, so topology builds with no `PSY.` prefix.
+    for name in (:CU, :NU, :ACBusTypes)
+        @test Base.isexported(PowerSystemsInvestmentsPortfolios, name)
+        @test getfield(PowerSystemsInvestmentsPortfolios, name) ===
+              getfield(PowerSystems, name)
+    end
+    @test !Base.isexported(PowerSystemsInvestmentsPortfolios, :SU)
 end

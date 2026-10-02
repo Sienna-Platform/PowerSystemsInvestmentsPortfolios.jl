@@ -369,12 +369,7 @@ function add_technology!(
     skip_validation=false,
     kwargs...,
 ) where {T <: Technology}
-
-    #check_topology(portfolio.data, component)
-    #check_component_addition(portfolio.data, technology; kwargs...)
-
-    # skip_validation = _validate_or_skip!(portfolio, technology, skip_validation)
-    _kwargs = Dict(k => v for (k, v) in kwargs if k !== :static_injector)
+    skip_validation = _validate_or_skip!(portfolio, technology, skip_validation)
 
     IS.add_component!(
         portfolio.data,
@@ -426,7 +421,10 @@ function get_technology(
     return IS.get_component(T, portfolio.data, name)
 end
 
-IS.get_components(::Type{T}, portfolio::Portfolio) where {T <: IS.InfrastructureSystemsComponent} = IS.get_components(T, portfolio.data)
+IS.get_components(
+    ::Type{T},
+    portfolio::Portfolio,
+) where {T <: IS.InfrastructureSystemsComponent} = IS.get_components(T, portfolio.data)
 
 """
 Returns an iterator of technologies. T can be concrete or abstract.
@@ -814,9 +812,10 @@ natural units (MW / MVAr) rather than to the raw `PSY.*` constructor: they are a
 through the units-tagged setters *after* attachment, once the system base power is synced. A
 nonzero power value left on the raw constructor is device-base and triggers a warning.
 
-Throws ArgumentError if the component's name is already stored for its concrete type, any
-PowerSystems rule is violated, or a power keyword is given for a topology type that has no
-such (system-base) field.
+Throws `IS.InvalidValue` if a region with the same id is already attached (unless
+`skip_validation=true`), and `ArgumentError` if the component's name is already stored for its
+concrete type, any PowerSystems rule is violated, or a power keyword is given for a topology
+type that has no such (system-base) field.
 
 # Examples
 
@@ -829,7 +828,7 @@ add_topology!(portfolio, ACBus(; name="bus_1", base_voltage=138.0, ...))
 # Add an Area with its peak power in natural units (MW / MVAr).
 add_topology!(
     portfolio,
-    PSY.Area(; name="west");
+    PSY.Area(; name="west", input_basis=NU);
     peak_active_power=250.0,
     peak_reactive_power=50.0,
 )
@@ -843,10 +842,17 @@ function add_topology!(
     topology::PSY.Topology;
     peak_active_power=nothing,
     peak_reactive_power=nothing,
+    skip_validation=false,
     kwargs...,
 )
     _check_topology_power_units(topology, peak_active_power, peak_reactive_power)
-    PSY.add_component!(portfolio.base_system, topology; kwargs...)
+    skip_validation = _validate_or_skip!(portfolio, topology, skip_validation)
+    PSY.add_component!(
+        portfolio.base_system,
+        topology;
+        skip_validation=skip_validation,
+        kwargs...,
+    )
     # Attachment has synced the system base power, so the units-tagged setters can now
     # convert these natural-units (MW / MVAr) values into the component's device-base storage.
     isnothing(peak_active_power) ||

@@ -129,6 +129,7 @@ function update_or_create_new_generator!(
 
         # Create new renewable generator with specified parameters
         new_gen = T(
+            input_basis=PSY.CU,
             name=unit_name,
             available=true,                           # Generator is available for dispatch
             status=PSY.OperationalStates.ONLINE,      # Generator is on by default
@@ -212,6 +213,7 @@ function update_or_create_new_generator!(
 
         # Create new renewable generator with specified parameters
         new_gen = T(
+            input_basis=PSY.CU,
             name=unit_name,
             available=true,                           # Generator is available for dispatch
             bus=bus_sys,                              # Connected bus

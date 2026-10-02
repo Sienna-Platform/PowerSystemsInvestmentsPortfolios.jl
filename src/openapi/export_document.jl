@@ -1,23 +1,3 @@
-# `IS.serialize` reaches each component through `IS.serialize(::IS.SystemData)`, which hands
-# it no portfolio, but `to_openapi` needs the document's id registry. The registry for one
-# `IS.serialize(::Portfolio)` call therefore lives in task-local storage for its duration:
-# task-scoped so two portfolios serialized on different threads cannot see each other's
-# registry, re-entrant, and unwound on throw without an explicit `finally`.
-const _EXPORT_REFS_KEY = :psip_openapi_export_refs
-
-function _active_export_refs()
-    storage = task_local_storage()
-    if !haskey(storage, _EXPORT_REFS_KEY)
-        error(
-            "no active OpenAPI export registry: a PSIP component resolves its references " *
-            "by document id, which only a Portfolio can supply, so a component cannot be " *
-            "serialized on its own. Serialize the owning portfolio instead — " *
-            "`to_json(portfolio, filename)` or `to_json(portfolio)`.",
-        )
-    end
-    return storage[_EXPORT_REFS_KEY]
-end
-
 function _serialize_schedule(schedule::InvestmentScheduleResults)
     start_dates = Vector{String}()
     end_dates = Vector{String}()
@@ -45,44 +25,6 @@ function _serialize_schedule(schedule::InvestmentScheduleResults)
     )
 end
 """
-Rendering goes through `OpenAPI.to_json` rather than `JSON3.write` because only the former
-unwraps the `oneOf` wrappers and stamps their discriminators.
-"""
-function _serialize_openapi(component)
-    # Rejected on write as well as on read: a type absent from the plans would otherwise
-    # be emitted happily and then refused by `deserialize_components!`, producing a
-    # document that cannot be read back. `Base.typename(...).wrapper` is the plan key for
-    # a parametric type, matching what `_group_by_serialized_type` resolves to.
-    _openapi_wire_type(Base.typename(typeof(component)).wrapper)
-    po = to_openapi(component, _active_export_refs())
-    data = JSON3.read(OpenAPI.to_json(po), Dict{String, Any})
-    add_serialization_metadata!(data, typeof(component))
-    return data
-end
-IS.serialize(value::Technology) = _serialize_openapi(value)
-IS.serialize(value::Requirement) = _serialize_openapi(value)
-
-# PSIP's supplemental attributes subtype `IS.SupplementalAttribute` directly, with no PSIP
-# supertype of their own, so dispatching on the abstract type would pirate every other
-# package's attributes. One method per declared type instead, driven by the same plan the
-# deserialize side reads.
-for (attribute_type, _key) in SUPPLEMENTAL_ATTRIBUTE_PLAN
-    @eval IS.serialize(value::$attribute_type) = _serialize_openapi(value)
-end
-"""
-Add type information to the dictionary that can be used to deserialize the value.
-
-A parametric component's type parameter is not recorded here: it travels in the payload's
-own `power_systems_type` field, which `from_openapi` reads.
-"""
-function add_serialization_metadata!(data::Dict, ::Type{T}) where {T}
-    data[METADATA_KEY] = Dict{String, Any}(
-        TYPE_KEY => string(nameof(T)),
-        MODULE_KEY => string(parentmodule(T)),
-    )
-    return
-end
-"""
 Write a `Type`-valued field, such as `Portfolio.aggregation`, in the `"Module.Type"` form
 [`_deserialize_type_name`](@ref) requires.
 
@@ -92,11 +34,17 @@ JSON3, which stringifies it through `show`, and `show` resolves the name against
 qualified form does not.
 """
 _serialize_type_name(T::Type) = string(parentmodule(T), '.', nameof(T))
+
+"""
+Register every component the document will carry under its own id: the base system's
+topology first, then each [`DOCUMENT_PLAN`](@ref) type's components — masked ones included,
+since [`_plan_components`](@ref) exports them too.
+"""
 function _build_export_refs(portfolio::Portfolio)
     refs = OpenAPIRefs()
     _register_base_system_topology!(refs, portfolio.base_system)
     for (psip_type, _key) in DOCUMENT_PLAN
-        for component in IS.get_components(psip_type, portfolio.data)
+        for component in _plan_components(portfolio, psip_type)
             refs[get_id(component)] = component
         end
     end
@@ -279,10 +227,25 @@ function _export_all_time_series(
               "no OpenAPI converter ($types) — they remain in the sidecar but are not " *
               "described in the document and will not survive a round trip"
     end
-    IS.serialize(
-        portfolio.data.time_series_manager.data_store, String(time_series_storage_path),
-    )
+    # The rows above go into the document either way; `write_catalog` decides only whether
+    # InfraStore's own `.sqlite` is written beside the arrays as well. See `to_file`.
+    _write_time_series_values(portfolio, time_series_storage_path, write_catalog)
     return rows
+end
+
+function _write_time_series_values(
+    portfolio::Portfolio,
+    time_series_storage_path,
+    write_catalog::Bool,
+)
+    store = portfolio.data.time_series_manager.data_store
+    path = String(time_series_storage_path)
+    if write_catalog
+        IS.serialize(store, path)
+    else
+        IS.serialize_arrays(store, path)
+    end
+    return nothing
 end
 
 """
@@ -345,7 +308,7 @@ function _export_requirements_associations!(
         for requirement in get_requirements(technology)
             PD.add_requirement_association!(
                 doc,
-                PO.RequirementAssociation(;
+                PI.RequirementAssociation(;
                     requirement_id=component_id(refs, requirement),
                     entity_id=component_id(refs, technology),
                 ),

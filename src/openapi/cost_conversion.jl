@@ -1,26 +1,76 @@
 # Hand-written (not generated) OpenAPI value converters, mirroring PowerSystems.jl's
 # src/openapi/cost_conversion.jl and export_cost_conversion.jl. Called by the generated
-# `from_openapi`/`to_openapi` methods (Task 4) for the field types codegen cannot express
-# inline: value curves, operational costs, financial data, and the compound
-# MinMax/UpDown/InOut PO constructors.
+# `from_openapi`/`to_openapi` methods for the field types codegen cannot express inline:
+# value curves, operational costs, financial data, and the compound MinMax/UpDown/InOut
+# PO constructors.
 #
-# PSIP carries no per-unit basis of its own (see Design decision 1 in the plan header), so
-# unlike PSY's converters these take no `Val{:COMPONENT_BASE}`/`Val{:NATURAL_UNITS}` argument.
-# The one place a unit marker still appears is `CostCurve`/`FuelCurve`'s own `power_units`
-# type parameter (`NaturalUnit`/`ComponentBaseUnit`/`SystemBaseUnit`) — that is intrinsic to
-# those PSY types themselves, not a PSIP concept, so it is handled exactly as PSY handles it.
+# PSIP carries no per-unit basis of its own, so unlike PSY's converters these take no
+# `Val{:COMPONENT_BASE}`/`Val{:NATURAL_UNITS}` argument. The one place a unit marker still
+# appears is `CostCurve`/`FuelCurve`'s own `power_units` type parameter
+# (`NaturalUnit`/`ComponentBaseUnit`/`SystemBaseUnit`) — that is intrinsic to those PSY types
+# themselves, not a PSIP concept, so it is handled exactly as PSY handles it.
 #
 # PO fields are accessed with dot notation throughout (`po.value_curve`, `po.function_data`),
 # matching the OpenAPI model convention — PO structs are `OpenAPI.jl`-generated kwarg structs,
 # not PSIP component types, so the "getters, not dot access" rule does not apply to them.
 #
-# Two independent recursive families exist, `convert_value_curve`/`convert_value_curve_to_openapi`
-# and `convert_cost`/`convert_cost_to_openapi`, rather than PSY's single `convert_cost` name
-# spanning both — PSIP's generator classifies fields into `PSY.ValueCurve` and
-# `PSY.OperationalCost` categories separately (`SiennaInvestSchema.json`), so the generated
-# code needs one converter entry point per category. `convert_cost` still delegates to
-# `convert_value_curve` for the `ValueCurve` fields nested inside a cost (`CostCurve.value_curve`,
-# `vom_cost`, ...), so there is exactly one implementation of the curve/function-data recursion.
+# Two recursive families exist on the import side, `convert_value_curve` and `convert_cost`,
+# rather than PSY's single `convert_cost` name spanning both — PSIP's generator classifies
+# fields into `PSY.ValueCurve` and `PSY.OperationalCost` categories separately
+# (`SiennaInvestSchema.json`), so the generated code needs one entry point per category.
+# `convert_cost` still delegates to `convert_value_curve` for the `ValueCurve` fields nested
+# inside a cost (`CostCurve.value_curve`, `vom_cost`, ...), so there is exactly one
+# implementation of the curve/function-data recursion. The export side is the single
+# `convert_cost_to_openapi` family in `export_cost_conversion.jl`.
+
+# ── absent wire values ──────────────────────────────────────────────────────────
+#
+# Every optional field of a platform model is `Union{Absent, Nothing, T}` and defaults to
+# `ABSENT`: a field that was never on the wire reads back as `IC.Absent`, a JSON `null` as
+# `nothing`. Both mean "no value", so every optional-field helper dispatches on the pair.
+
+"""
+`Absent` (the field was never on the wire) and an explicit JSON `null`.
+"""
+const _NoWireValue = Union{Nothing, IC.Absent}
+
+"""
+`nothing` for a missing wire value, the value itself otherwise.
+"""
+_optional_from_wire(::_NoWireValue) = nothing
+_optional_from_wire(v) = v
+
+"""
+`default` for a missing wire value, the value itself otherwise. The generated
+`from_openapi` wraps every field whose descriptor declares a `default` in this, so a field
+the producer omitted imports as the same value the keyword constructor would have given it.
+"""
+_or_default(::_NoWireValue, default) = default
+_or_default(v, ::Any) = v
+
+"""
+Enum fields cross the wire as a platform enum model (`PC.PrimeMovers`, whose `string` is
+its value) or a plain `String`; both rebuild through the PSY enum's own string constructor.
+"""
+_enum_from_po(::_NoWireValue, ::Type) = nothing
+_enum_from_po(v, ::Type{T}) where {T} = T(string(v))
+
+_enum_vector_from_po(::_NoWireValue, ::Type) = nothing
+_enum_vector_from_po(v, ::Type{T}) where {T} = T[T(string(x)) for x in v]
+
+_enum_dict_from_po(::_NoWireValue, ::Type, ::Any) = nothing
+_enum_dict_from_po(v, ::Type{T}, f) where {T} =
+    Dict(T(string(k)) => f(x) for (k, x) in _additional_properties(v))
+
+_additional_properties(v::AbstractDict) = v
+_additional_properties(v) = v.additional_properties
+
+_nested_optional(::_NoWireValue) = nothing
+_nested_optional(po) = convert_nested_data(po)
+
+_cost_optional(::_NoWireValue) = nothing
+_cost_optional(po) = convert_cost(po)
+
 # ── compound extraction, called by generated from_openapi ────────────────────
 #
 # The generated OpenAPI models declare every `$ref`ed field as bare `Any`, so reading
@@ -30,20 +80,20 @@
 # member access after it a concrete field load.
 #
 # One name per alias rather than the `_optional` pair the export side needs: absence is
-# dispatch on `::Nothing`, which also absorbs the `if isnothing(...)` guard the generator
+# dispatch on `_NoWireValue`, which also absorbs the `if isnothing(...)` guard the generator
 # used to wrap around every nullable compound.
 
 _minmax_from_po(x::PC.MinMax) = (min=x.min, max=x.max)
-_minmax_from_po(::Nothing) = nothing
+_minmax_from_po(::_NoWireValue) = nothing
 
 _updown_from_po(x::PC.UpDown) = (up=x.up, down=x.down)
-_updown_from_po(::Nothing) = nothing
+_updown_from_po(::_NoWireValue) = nothing
 
 _inout_from_po(x::PC.InOut) = (in=x.in, out=x.out)
-_inout_from_po(::Nothing) = nothing
+_inout_from_po(::_NoWireValue) = nothing
 
 _outagefactors_from_po(x::PC.OutageFactors) = (planned=x.planned, forced=x.forced)
-_outagefactors_from_po(::Nothing) = nothing
+_outagefactors_from_po(::_NoWireValue) = nothing
 
 const _IMPORT_STORE = Base.ScopedValues.ScopedValue{IS.Store}()
 
@@ -94,21 +144,25 @@ convert_value_curve(fd::PC.PiecewiseStepData) = PiecewiseStepData(fd.x_coords, f
 convert_value_curve(w::PC.InputOutputCurveFunctionData) = convert_value_curve(w.value)
 convert_value_curve(w::PC.IncrementalCurveFunctionData) = convert_value_curve(w.value)
 
-convert_value_curve(vc::PC.InputOutputCurve) =
-    InputOutputCurve(convert_value_curve(vc.function_data), vc.input_at_zero)
+convert_value_curve(vc::PC.InputOutputCurve) = InputOutputCurve(
+    convert_value_curve(vc.function_data),
+    _optional_from_wire(vc.input_at_zero),
+)
 convert_value_curve(vc::PC.IncrementalCurve) = IncrementalCurve(
     convert_value_curve(vc.function_data),
-    vc.initial_input,
-    vc.input_at_zero,
+    _optional_from_wire(vc.initial_input),
+    _optional_from_wire(vc.input_at_zero),
 )
 convert_value_curve(vc::PC.AverageRateCurve) = AverageRateCurve(
     convert_value_curve(vc.function_data),
-    vc.initial_input,
-    vc.input_at_zero,
+    _optional_from_wire(vc.initial_input),
+    _optional_from_wire(vc.input_at_zero),
 )
 
-# oneOf ValueCurve wrapper: unwrap to the concrete variant above.
-convert_value_curve(w::PC.ValueCurve) = convert_value_curve(w.value)
+# oneOf wrappers — `PC.ValueCurve` and every field-specific wrapper the platform models
+# generate for a curve-typed field (`PI.RetirementPotentialRetirementCost`, ...): unwrap to
+# the concrete variant above.
+convert_value_curve(w::IC.OneOfAPIModel) = convert_value_curve(w.value)
 
 function convert_value_curve(x)
     return error(
@@ -116,7 +170,7 @@ function convert_value_curve(x)
         "every value curve in the document must be converted, not skipped",
     )
 end
-_value_curve_optional(::Nothing) = nothing
+_value_curve_optional(::_NoWireValue) = nothing
 _value_curve_optional(po) = convert_value_curve(po)
 # ── operational costs ────────────────────────────────────────────────────────
 #
@@ -137,11 +191,12 @@ _value_curve_optional(po) = convert_value_curve(po)
 Required-field guard: dispatches on `Nothing` vs. anything else, per style (no
 `isnothing(x) && ...` guards) — a required PO field read as `nothing` is malformed input.
 """
-_require(::Nothing, context::AbstractString) =
+_require(::_NoWireValue, context::AbstractString) =
     error("convert_cost: $context is required and missing")
 _require(x, ::AbstractString) = x
 
-_power_units_marker(::Nothing) = error("convert_cost: power_units is required and missing")
+_power_units_marker(::_NoWireValue) =
+    error("convert_cost: power_units is required and missing")
 _power_units_marker(u::PC.UnitSystem) = _power_units_marker(u.value)
 function _power_units_marker(s::AbstractString)
     s == "NATURAL_UNITS" && return NaturalUnit()
@@ -160,10 +215,10 @@ _as_linear_curve(curve, context::AbstractString) = error(
     "InputOutputCurve{$(typeof(get_function_data(curve)))}",
 )
 
-_vom_cost(::Nothing) = LinearCurve(0.0)
+_vom_cost(::_NoWireValue) = LinearCurve(0.0)
 _vom_cost(io::PC.InputOutputCurve) = _linear_curve_no_input_at_zero(io, "vom_cost")
 
-_startup_fuel_offtake(::Nothing) = LinearCurve(0.0)
+_startup_fuel_offtake(::_NoWireValue) = LinearCurve(0.0)
 _startup_fuel_offtake(io::PC.InputOutputCurve) =
     _linear_curve_no_input_at_zero(io, "startup_fuel_offtake")
 
@@ -209,7 +264,7 @@ end
 # oneOf ProductionVariableCostCurve wrapper: unwrap to the concrete variant above.
 convert_cost(w::PC.ProductionVariableCostCurve) = convert_cost(w.value)
 
-_optional_cost_curve(::Nothing) = zero(CostCurve)
+_optional_cost_curve(::_NoWireValue) = zero(CostCurve)
 _optional_cost_curve(c::PC.CostCurve) = convert_cost(c)
 
 # ── start_up: a bare number, or a multi-stage / charge-discharge breakdown ────
@@ -230,9 +285,9 @@ function convert_cost(po::PC.ThermalGenerationCost)
                 "ThermalGenerationCost.variable_operation_cost",
             ),
         ),
-        fixed=po.fixed,
+        fixed=_or_default(po.fixed, 0.0),
         start_up=convert_cost(_require(po.start_up, "ThermalGenerationCost.start_up")),
-        shut_down=po.shut_down,
+        shut_down=_or_default(po.shut_down, 0.0),
     )
 end
 
@@ -245,7 +300,7 @@ function convert_cost(po::PC.RenewableGenerationCost)
             ),
         ),
         curtailment_cost=_optional_cost_curve(po.curtailment_cost),
-        fixed=po.fixed,
+        fixed=_or_default(po.fixed, 0.0),
     )
 end
 
@@ -257,7 +312,7 @@ function convert_cost(po::PC.HydroGenerationCost)
                 "HydroGenerationCost.variable_operation_cost",
             ),
         ),
-        fixed=po.fixed,
+        fixed=_or_default(po.fixed, 0.0),
     )
 end
 
@@ -265,17 +320,21 @@ function convert_cost(po::PC.StorageCost)
     return StorageCost(;
         charge_variable_cost=_optional_cost_curve(po.charge_variable_cost),
         discharge_variable_cost=_optional_cost_curve(po.discharge_variable_cost),
-        fixed=po.fixed,
+        fixed=_or_default(po.fixed, 0.0),
         start_up=convert_cost(_require(po.start_up, "StorageCost.start_up")),
-        shut_down=po.shut_down,
-        energy_shortage_cost=po.energy_shortage_cost,
-        energy_surplus_cost=po.energy_surplus_cost,
+        shut_down=_or_default(po.shut_down, 0.0),
+        energy_shortage_cost=_or_default(po.energy_shortage_cost, 0.0),
+        energy_surplus_cost=_or_default(po.energy_surplus_cost, 0.0),
     )
 end
 
 # oneOf GenericOperationCost wrapper: what `OpenAPI.from_json` produces for any
 # `operation_costs` field, discriminated on `cost_type`. Unwrap to the concrete variant.
 convert_cost(w::PC.GenericOperationCost) = convert_cost(w.value)
+
+# Any other oneOf wrapper — the field-specific ones the platform models generate for a
+# cost-typed field (`PI.SupplyTechnologyOperationCosts`, ...) — unwraps the same way.
+convert_cost(w::IC.OneOfAPIModel) = convert_cost(w.value)
 
 function convert_cost(po)
     return error(
@@ -323,7 +382,7 @@ function convert_nested_data(po::PC.CapitalCost)
         capital_cost=convert_value_curve(
             _require(po.capital_cost, "CapitalCost.capital_cost"),
         ),
-        interconnection_cost=something(po.interconnection_cost, 0.0),
+        interconnection_cost=_or_default(po.interconnection_cost, 0.0),
     )
 end
 function convert_nested_data(po::PC.StorageCapitalCost)
@@ -340,7 +399,7 @@ function convert_nested_data(po::PC.StorageCapitalCost)
         energy_capital_cost=convert_value_curve(
             _require(po.energy_capital_cost, "StorageCapitalCost.energy_capital_cost"),
         ),
-        interconnection_cost=something(po.interconnection_cost, 0.0),
+        interconnection_cost=_or_default(po.interconnection_cost, 0.0),
     )
 end
 # ── capacity bounds: a MinMax, or a per-topology map of MinMax ────────────────
@@ -350,7 +409,7 @@ end
 # base-system topology ids, so they resolve to the `PSY.Topology` component through `refs`
 # (seeded from the base system). A nullable bound omitted on the wire imports as the default.
 
-_capacity_bound_from_po(::Nothing, ::OpenAPIRefs) = (min=0.0, max=1e8)
+_capacity_bound_from_po(::_NoWireValue, ::OpenAPIRefs) = (min=0.0, max=1e8)
 _capacity_bound_from_po(po, refs::OpenAPIRefs) = _capacity_bound_value(po.value, refs)
 
 # One `(min, max)` pair, from either the typed wire struct or the `Dict{String,Any}` that

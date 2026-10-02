@@ -5,7 +5,7 @@
         PSY.QuadraticCurve(1.0, 2.0, 3.0),
         PSY.PiecewisePointCurve([(1.0, 10.0), (2.0, 25.0)]),
     )
-        po = PSIP.convert_value_curve_to_openapi(curve)
+        po = PSIP.convert_cost_to_openapi(curve)
         @test PSIP.convert_value_curve(po) == curve
     end
 end
@@ -100,14 +100,16 @@ The reference targets every technology round trip needs, pre-registered.
 """
 function _refs_fixture()
     refs = PSIP.OpenAPIRefs()
-    zone = PSY.Area(; name="zone_a", base_power=100.0)
+    zone = PSY.Area(; input_basis=PSY.CU, name="zone_a", base_power=100.0)
     load_zone = PSY.LoadZone(;
+        input_basis=PSY.CU,
         name="zone_a_lz",
         peak_active_power=0.0,
         peak_reactive_power=0.0,
         base_power=100.0,
     )
     node = PSY.ACBus(;
+        input_basis=PSY.CU,
         number=909,
         name="node_a",
         available=true,
@@ -257,7 +259,7 @@ end
 
 @testset "an unregistered reference errors rather than serializing garbage" begin
     refs = PSIP.OpenAPIRefs()
-    orphan = PSY.Area(; name="orphan", base_power=100.0)
+    orphan = PSY.Area(; input_basis=PSY.CU, name="orphan", base_power=100.0)
     tech = DemandRequirement{PowerLoad}(;
         name="demand",
         power_systems_type="PowerLoad",
@@ -403,18 +405,14 @@ end
             aggregation;
             financial_data=PortfolioFinancialData(2024, 0.07, 0.025, 0.05),
         )
-        PSIP.add_topology!(portfolio, PSY.Area(; name="zone_a", base_power=100.0))
+        PSIP.add_topology!(
+            portfolio,
+            PSY.Area(; input_basis=PSY.CU, name="zone_a", base_power=100.0),
+        )
         path = joinpath(mktempdir(), "portfolio.json")
-        PSIP.to_json(portfolio, path; force=true)
+        PSIP.to_file(portfolio, path; force=true)
 
         raw = JSON3.read(read(path, String), Dict)
         @test raw["aggregation"] == "PowerSystems.$(nameof(aggregation))"
     end
-end
-
-@testset "serializing a lone component emits OpenAPI metadata" begin
-    zone = PSY.Area(; name="orphan", base_power=100.0)
-    raw = JSON3.read(PSIP.to_json(zone), Dict)
-    @test raw["name"] == "orphan"
-    @test raw["__metadata__"] == Dict("module" => "PowerSystems", "type" => "Area")
 end

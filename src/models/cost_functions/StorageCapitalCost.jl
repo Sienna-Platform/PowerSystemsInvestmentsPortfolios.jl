@@ -12,8 +12,18 @@ mutable struct StorageCapitalCost <: InvestmentCost
     interconnection_cost::Float64
 end
 
-function StorageCapitalCost(; charge_capital_cost=LinearCurve(0.0), discharge_capital_cost=LinearCurve(0.0), energy_capital_cost=LinearCurve(0.0), interconnection_cost=0.0)
-    return StorageCapitalCost(charge_capital_cost, discharge_capital_cost, energy_capital_cost, interconnection_cost)
+function StorageCapitalCost(;
+    charge_capital_cost=LinearCurve(0.0),
+    discharge_capital_cost=LinearCurve(0.0),
+    energy_capital_cost=LinearCurve(0.0),
+    interconnection_cost=0.0,
+)
+    return StorageCapitalCost(
+        charge_capital_cost,
+        discharge_capital_cost,
+        energy_capital_cost,
+        interconnection_cost,
+    )
 end
 
 # Sentinel constructor used as the descriptor default (`StorageCapitalCost(nothing)`).

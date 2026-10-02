@@ -25,21 +25,24 @@
         tax_rate=0.21,
     )
 
-    area_a = PSY.Area(; name="area_a", base_power=100.0)
-    area_b = PSY.Area(; name="area_b", base_power=100.0)
+    area_a = PSY.Area(; input_basis=PSY.CU, name="area_a", base_power=100.0)
+    area_b = PSY.Area(; input_basis=PSY.CU, name="area_b", base_power=100.0)
     lz_a = PSY.LoadZone(;
+        input_basis=PSY.CU,
         name="lz_a",
         peak_active_power=0.0,
         peak_reactive_power=0.0,
         base_power=100.0,
     )
     lz_b = PSY.LoadZone(;
+        input_basis=PSY.CU,
         name="lz_b",
         peak_active_power=0.0,
         peak_reactive_power=0.0,
         base_power=100.0,
     )
     bus_a = PSY.ACBus(;
+        input_basis=PSY.CU,
         number=915,
         name="bus_a",
         available=true,
@@ -52,6 +55,7 @@
         load_zone=lz_a,
     )
     bus_b = PSY.ACBus(;
+        input_basis=PSY.CU,
         number=916,
         name="bus_b",
         available=true,
@@ -69,15 +73,14 @@
 
     supply = SupplyTechnology{PSY.ThermalStandard}(
         name="supply",
-        financial_data=fd,
+        financial_data=tech_financial_data,
         power_systems_type="ThermalStandard",
         operation_costs=ThermalGenerationCost(nothing),
         available=true,
         region=[area_a],
     )
     supply_req = Requirement[req_a, req_b]
-    supply_capital = LinearCurve(22.0)
-    supply_co2 = Dict(ThermalFuels.COAL => 0.9, ThermalFuels.OTHER => 0.4)
+    supply_capital = PSIP.CapitalCost(LinearCurve(22.0), 0.0)
     supply_cofire_start = Dict(
         ThermalFuels.COAL => (min=0.2, max=0.6),
         ThermalFuels.OTHER => (min=0.1, max=0.5),
@@ -88,17 +91,16 @@
     )
     supply_internal = IS.InfrastructureSystemsInternal()
     supply_ext = Dict("supply" => "meta")
-    supply_regions = RegionTopology[node_a, zone_b]
+    supply_regions = PSY.Topology[bus_a, area_b]
 
     # SupplyTechnology: all fields
     PSIP.set_requirements!(supply, supply_req)
-    PSIP.set_outage_factor!(supply, 0.93)
+    PSIP.set_outage_factor!(supply, (planned=0.93, forced=0.0))
     PSIP.set_prime_mover_type!(supply, PrimeMovers.OT)
-    PSIP.set_capital_costs!(supply, supply_capital, IS.NU)
+    PSIP.set_capital_costs!(supply, supply_capital)
     PSIP.set_lifetime!(supply, 35, IS.NU)
     PSIP.set_name!(supply, "supply_updated")
     PSIP.set_available!(supply, false)
-    PSIP.set_co2!(supply, supply_co2, tonne / MMBtu)
     PSIP.set_cofire_start_limits!(supply, supply_cofire_start)
     PSIP.set_financial_data!(supply, tech_financial_data)
     PSIP.set_start_fuel_mmbtu_per_mw!(supply, 1.7, IS.NU)
@@ -117,14 +119,13 @@
     PSIP.set_capacity_limits!(supply, (min=5.0, max=600.0), IS.NU)
 
     @test PSIP.get_requirements(supply) === supply_req
-    @test PSIP.get_outage_factor(supply) == 0.93
+    @test PSIP.get_outage_factor(supply) == (planned=0.93, forced=0.0)
     @test PSIP.get_prime_mover_type(supply) == PrimeMovers.OT
-    @test PSIP.get_capital_costs(supply, IS.NU) === supply_capital
+    @test PSIP.get_capital_costs(supply) === supply_capital
     @test PSIP.get_lifetime(supply, IS.NU) == 35
     @test PSIP.get_name(supply) == "supply_updated"
     @test PSIP.get_id(supply) == 110
     @test !PSIP.get_available(supply)
-    @test PSIP.get_co2(supply, tonne / MMBtu) == supply_co2
     @test PSIP.get_cofire_start_limits(supply) === supply_cofire_start
     @test PSIP.get_financial_data(supply) === tech_financial_data
     @test PSIP.get_start_fuel_mmbtu_per_mw(supply, IS.NU) == 1.7
@@ -144,7 +145,7 @@
     storage = StorageTechnology{PSY.EnergyReservoirStorage}(
         name="storage",
         storage_tech=StorageTech.LIB,
-        financial_data=fd,
+        financial_data=tech_financial_data,
         operation_costs=StorageCost(nothing),
         power_systems_type="EnergyReservoirStorage",
         available=true,
@@ -181,7 +182,7 @@
         name="agg",
         start_region=area_a,
         end_region=area_b,
-        financial_data=fd,
+        financial_data=tech_financial_data,
         power_systems_type="ACBranch",
         available=true,
     )
@@ -194,7 +195,7 @@
         name="ac",
         start_node=bus_a,
         end_node=bus_b,
-        financial_data=fd,
+        financial_data=tech_financial_data,
         power_systems_type="ACBranch",
         available=true,
     )
@@ -205,7 +206,7 @@
         name="hvdc",
         start_node=bus_a,
         end_node=bus_b,
-        financial_data=fd,
+        financial_data=tech_financial_data,
         power_systems_type="ACBranch",
         available=true,
     )
@@ -214,7 +215,7 @@
 
     colocated = ColocatedSupplyStorageTechnology{PSY.RenewableDispatch}(
         name="colocated",
-        financial_data=fd,
+        financial_data=tech_financial_data,
         power_systems_type="RenewableDispatch",
         operation_costs_inverter=CostCurve(LinearCurve(0.8)),
         inverter_efficiency=0.96,

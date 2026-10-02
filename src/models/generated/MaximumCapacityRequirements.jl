@@ -80,8 +80,8 @@ function from_openapi(po::PI.MaximumCapacityRequirements, refs::OpenAPIRefs)
     return MaximumCapacityRequirements(;
         name = po.name,
         available = po.available,
-        max_capacity_mw = po.max_capacity_mw,
-        target_year = po.target_year,
+        max_capacity_mw = _or_default(po.max_capacity_mw, 0.0),
+        target_year = _or_default(po.target_year, 2050),
     )
 end
 

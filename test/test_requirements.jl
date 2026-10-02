@@ -1,4 +1,4 @@
-@testset "Test internal values" begin
+@testset "Test requirement internal values" begin
     port = build_portfolio()
 
     technology = first(get_technologies(SupplyTechnology, port))

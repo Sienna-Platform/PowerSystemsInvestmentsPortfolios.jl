@@ -1,6 +1,7 @@
 @testset "Storage validation" begin
     port = Portfolio()
-    attached_region = PSY.Area(; name="attached_region", base_power=100.0)
+    attached_region =
+        PSY.Area(; input_basis=PSY.CU, name="attached_region", base_power=100.0)
     add_topology!(port, attached_region)
 
     financial_data = TechnologyFinancialData(;
@@ -39,7 +40,8 @@
     )
     @test isnothing(get_technology(typeof(invalid_duration), port, "invalid_duration"))
 
-    detached_region = PSY.Area(; name="detached_region", base_power=100.0)
+    detached_region =
+        PSY.Area(; input_basis=PSY.CU, name="detached_region", base_power=100.0)
     invalid_region = StorageTechnology{PSY.EnergyReservoirStorage}(;
         storage_defaults...,
         name="invalid_region",
@@ -113,7 +115,8 @@ end
 
 @testset "Colocated supply-storage validation" begin
     port = Portfolio()
-    attached_region = PSY.Area(; name="colocated_region", base_power=100.0)
+    attached_region =
+        PSY.Area(; input_basis=PSY.CU, name="colocated_region", base_power=100.0)
     add_topology!(port, attached_region)
 
     financial_data = TechnologyFinancialData(;
@@ -185,8 +188,9 @@ end
 
 @testset "Demand region validation" begin
     port = Portfolio()
-    attached_region = PSY.Area(; name="demand_region", base_power=100.0)
-    second_region = PSY.Area(; name="second_demand_region", base_power=100.0)
+    attached_region = PSY.Area(; input_basis=PSY.CU, name="demand_region", base_power=100.0)
+    second_region =
+        PSY.Area(; input_basis=PSY.CU, name="second_demand_region", base_power=100.0)
     add_topology!(port, attached_region)
     add_topology!(port, second_region)
 
@@ -233,17 +237,20 @@ end
 
 @testset "Region ID uniqueness" begin
     port = Portfolio()
-    attached_region = PSY.Area(; name="attached_region", base_power=100.0)
+    attached_region =
+        PSY.Area(; input_basis=PSY.CU, name="attached_region", base_power=100.0)
     IS.set_id!(attached_region, 101)
     add_topology!(port, attached_region)
 
     duplicate_region_load_zone = PSY.LoadZone(;
+        input_basis=PSY.CU,
         name="duplicate_region_load_zone",
         peak_active_power=0.0,
         peak_reactive_power=0.0,
         base_power=100.0,
     )
     duplicate_region_id = PSY.ACBus(;
+        input_basis=PSY.CU,
         number=903,
         name="duplicate_region_id",
         available=true,
@@ -266,21 +273,24 @@ end
 
 @testset "Transport validation" begin
     port = Portfolio()
-    start_zone = PSY.Area(; name="start_zone", base_power=100.0)
-    end_zone = PSY.Area(; name="end_zone", base_power=100.0)
+    start_zone = PSY.Area(; input_basis=PSY.CU, name="start_zone", base_power=100.0)
+    end_zone = PSY.Area(; input_basis=PSY.CU, name="end_zone", base_power=100.0)
     start_lz = PSY.LoadZone(;
+        input_basis=PSY.CU,
         name="start_zone_lz",
         peak_active_power=0.0,
         peak_reactive_power=0.0,
         base_power=100.0,
     )
     end_lz = PSY.LoadZone(;
+        input_basis=PSY.CU,
         name="end_zone_lz",
         peak_active_power=0.0,
         peak_reactive_power=0.0,
         base_power=100.0,
     )
     start_node = PSY.ACBus(;
+        input_basis=PSY.CU,
         number=904,
         name="start_node",
         available=true,
@@ -293,6 +303,7 @@ end
         load_zone=start_lz,
     )
     end_node = PSY.ACBus(;
+        input_basis=PSY.CU,
         number=905,
         name="end_node",
         available=true,
@@ -376,12 +387,14 @@ end
     )
 
     detached_lz = PSY.LoadZone(;
+        input_basis=PSY.CU,
         name="detached_node_lz",
         peak_active_power=0.0,
         peak_reactive_power=0.0,
         base_power=100.0,
     )
     detached_node = PSY.ACBus(;
+        input_basis=PSY.CU,
         number=906,
         name="detached_node",
         available=true,

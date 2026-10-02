@@ -92,9 +92,9 @@ function from_openapi(po::PI.CarbonCaps, refs::OpenAPIRefs)
     return CarbonCaps(;
         name = po.name,
         available = po.available,
-        max_tons_mwh = po.max_tons_mwh,
-        target_year = po.target_year,
-        max_mtons = po.max_mtons,
+        max_tons_mwh = _or_default(po.max_tons_mwh, 1e-6),
+        target_year = _or_default(po.target_year, 2050),
+        max_mtons = _or_default(po.max_mtons, 1e8),
     )
 end
 

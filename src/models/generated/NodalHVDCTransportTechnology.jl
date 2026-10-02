@@ -143,10 +143,10 @@ function from_openapi(po::PI.NodalHVDCTransportTechnology, refs::OpenAPIRefs)
         power_systems_type = po.power_systems_type,
         start_node = resolve_ref(refs, po.start_node, PSY.Bus),
         end_node = resolve_ref(refs, po.end_node, PSY.Bus),
-        capacity_limits = _minmax_from_po(po.capacity_limits),
-        unit_size = po.unit_size,
-        capital_costs = convert_nested_data(po.capital_costs),
-        line_loss = convert_value_curve(po.line_loss),
+        capacity_limits = _or_default(_minmax_from_po(po.capacity_limits), (min=0, max=1e8)),
+        unit_size = _or_default(po.unit_size, 1),
+        capital_costs = _or_default(_nested_optional(po.capital_costs), CapitalCost(nothing)),
+        line_loss = _or_default(_value_curve_optional(po.line_loss), LinearCurve(0.0)),
         financial_data = convert_nested_data(po.financial_data),
     )
 end
@@ -162,7 +162,7 @@ function to_openapi(value::NodalHVDCTransportTechnology{T}, refs::OpenAPIRefs) w
         capacity_limits = _minmax_po(get_capacity_limits(value, IS.NU)),
         unit_size = get_unit_size(value, IS.NU),
         capital_costs = convert_nested_data_to_openapi(get_capital_costs(value)),
-        line_loss = convert_value_curve_to_openapi(get_line_loss(value)),
+        line_loss = _curve_to_openapi(PI.NodalHVDCTransportTechnologyLineLoss, get_line_loss(value)),
         financial_data = convert_nested_data_to_openapi(get_financial_data(value)),
     )
 end

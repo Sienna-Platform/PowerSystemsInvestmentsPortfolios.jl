@@ -80,8 +80,8 @@ function from_openapi(po::PI.MinimumCapacityRequirements, refs::OpenAPIRefs)
     return MinimumCapacityRequirements(;
         name = po.name,
         available = po.available,
-        min_capacity_mw = po.min_capacity_mw,
-        target_year = po.target_year,
+        min_capacity_mw = _or_default(po.min_capacity_mw, 0.0),
+        target_year = _or_default(po.target_year, 2050),
     )
 end
 

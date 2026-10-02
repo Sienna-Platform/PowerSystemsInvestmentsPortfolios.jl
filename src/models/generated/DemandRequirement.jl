@@ -143,15 +143,15 @@ function from_openapi(po::PI.DemandRequirement, refs::OpenAPIRefs)
     parameter = getproperty(PowerSystems, Symbol(po.power_systems_type))
     return DemandRequirement{parameter}(;
         name = po.name,
-        available = po.available,
+        available = _or_default(po.available, true),
         power_systems_type = po.power_systems_type,
-        new_demand_mw = po.new_demand_mw,
-        new_construction_year = po.new_construction_year,
-        growth_rate = po.growth_rate,
-        conformity = PSY.LoadConformity.Value(string(po.conformity)),
-        value_of_lost_load = po.value_of_lost_load,
-        unserved_demand_curve = convert_value_curve(po.unserved_demand_curve),
-        region = resolve_refs(refs, po.region, PSY.Topology),
+        new_demand_mw = _or_default(po.new_demand_mw, 0.0),
+        new_construction_year = _or_default(po.new_construction_year, 2020),
+        growth_rate = _or_default(po.growth_rate, 0.0),
+        conformity = _or_default(_enum_from_po(po.conformity, PSY.LoadConformity.Value), LoadConformity.UNDEFINED),
+        value_of_lost_load = _or_default(po.value_of_lost_load, 1e8),
+        unserved_demand_curve = _or_default(_value_curve_optional(po.unserved_demand_curve), LinearCurve(0.0)),
+        region = _or_default(resolve_refs(refs, po.region, PSY.Topology), Vector()),
     )
 end
 
@@ -164,9 +164,9 @@ function to_openapi(value::DemandRequirement{T}, refs::OpenAPIRefs) where {T <: 
         new_demand_mw = get_new_demand_mw(value, IS.NU),
         new_construction_year = get_new_construction_year(value),
         growth_rate = get_growth_rate(value),
-        conformity = PO.PSY.LoadConformity.Value(string(get_conformity(value))),
+        conformity = string(get_conformity(value)),
         value_of_lost_load = get_value_of_lost_load(value, IS.NU),
-        unserved_demand_curve = convert_value_curve_to_openapi(get_unserved_demand_curve(value, IS.NU)),
+        unserved_demand_curve = _curve_to_openapi(PI.DemandRequirementUnservedDemandCurve, get_unserved_demand_curve(value, IS.NU)),
         region = component_ids(refs, get_region(value)),
     )
 end

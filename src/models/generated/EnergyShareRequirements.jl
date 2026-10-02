@@ -76,8 +76,8 @@ function from_openapi(po::PI.EnergyShareRequirements, refs::OpenAPIRefs)
     return EnergyShareRequirements(;
         name = po.name,
         available = po.available,
-        target_year = po.target_year,
-        generation_fraction_requirement = po.generation_fraction_requirement,
+        target_year = _or_default(po.target_year, 2050),
+        generation_fraction_requirement = _or_default(po.generation_fraction_requirement, 0.0),
     )
 end
 

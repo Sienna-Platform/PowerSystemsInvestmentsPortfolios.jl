@@ -50,8 +50,8 @@ agg_transport() = AggregateTransportTechnology{PSY.ACBranch}(;
     name="agg",
     available=true,
     power_systems_type=string(PSY.ACBranch),
-    start_region=PSY.Area(; name="z1", base_power=100.0),
-    end_region=PSY.Area(; name="z2", base_power=100.0),
+    start_region=PSY.Area(; input_basis=PSY.CU, name="z1", base_power=100.0),
+    end_region=PSY.Area(; input_basis=PSY.CU, name="z2", base_power=100.0),
     financial_data=tech_financials(),
     capacity_limits=(min=0.0, max=800.0),
     unit_size=40.0,
@@ -63,6 +63,7 @@ acline() = NodalACTransportTechnology{PSY.ACBranch}(;
     available=true,
     power_systems_type=string(PSY.ACBranch),
     start_node=PSY.ACBus(;
+        input_basis=PSY.CU,
         number=911,
         name="n1",
         available=true,
@@ -71,8 +72,9 @@ acline() = NodalACTransportTechnology{PSY.ACBranch}(;
         magnitude=1.0,
         voltage_limits=(min=0.9, max=1.1),
         base_voltage=138.0,
-        area=PSY.Area(; name="n1_area", base_power=100.0),
+        area=PSY.Area(; input_basis=PSY.CU, name="n1_area", base_power=100.0),
         load_zone=PSY.LoadZone(;
+            input_basis=PSY.CU,
             name="n1_lz",
             peak_active_power=0.0,
             peak_reactive_power=0.0,
@@ -80,6 +82,7 @@ acline() = NodalACTransportTechnology{PSY.ACBranch}(;
         ),
     ),
     end_node=PSY.ACBus(;
+        input_basis=PSY.CU,
         number=912,
         name="n2",
         available=true,
@@ -88,8 +91,9 @@ acline() = NodalACTransportTechnology{PSY.ACBranch}(;
         magnitude=1.0,
         voltage_limits=(min=0.9, max=1.1),
         base_voltage=138.0,
-        area=PSY.Area(; name="n2_area", base_power=100.0),
+        area=PSY.Area(; input_basis=PSY.CU, name="n2_area", base_power=100.0),
         load_zone=PSY.LoadZone(;
+            input_basis=PSY.CU,
             name="n2_lz",
             peak_active_power=0.0,
             peak_reactive_power=0.0,
@@ -110,6 +114,7 @@ hvdc() = NodalHVDCTransportTechnology{PSY.ACBranch}(;
     available=true,
     power_systems_type=string(PSY.ACBranch),
     start_node=PSY.ACBus(;
+        input_basis=PSY.CU,
         number=913,
         name="n3",
         available=true,
@@ -118,8 +123,9 @@ hvdc() = NodalHVDCTransportTechnology{PSY.ACBranch}(;
         magnitude=1.0,
         voltage_limits=(min=0.9, max=1.1),
         base_voltage=138.0,
-        area=PSY.Area(; name="n3_area", base_power=100.0),
+        area=PSY.Area(; input_basis=PSY.CU, name="n3_area", base_power=100.0),
         load_zone=PSY.LoadZone(;
+            input_basis=PSY.CU,
             name="n3_lz",
             peak_active_power=0.0,
             peak_reactive_power=0.0,
@@ -127,6 +133,7 @@ hvdc() = NodalHVDCTransportTechnology{PSY.ACBranch}(;
         ),
     ),
     end_node=PSY.ACBus(;
+        input_basis=PSY.CU,
         number=914,
         name="n4",
         available=true,
@@ -135,8 +142,9 @@ hvdc() = NodalHVDCTransportTechnology{PSY.ACBranch}(;
         magnitude=1.0,
         voltage_limits=(min=0.9, max=1.1),
         base_voltage=138.0,
-        area=PSY.Area(; name="n4_area", base_power=100.0),
+        area=PSY.Area(; input_basis=PSY.CU, name="n4_area", base_power=100.0),
         load_zone=PSY.LoadZone(;
+            input_basis=PSY.CU,
             name="n4_lz",
             peak_active_power=0.0,
             peak_reactive_power=0.0,
@@ -510,15 +518,9 @@ end
         down=1200.0,
         ratio=1 / 60,
     )
-    # capital_costs (usd_per_mw, ValueCurve)
-    check_valuecurve(
-        u -> PSIP.get_capital_costs(t, u),
-        (v, u) -> PSIP.set_capital_costs!(t, v, u),
-        conversion_unit(u"MW", USD),
-        conversion_unit(u"kW", USD);
-        prop=10000.0,
-        ratio=1e-3,
-    )
+    # capital_costs is a `CapitalCost` struct with no unit-aware accessor; its nested
+    # accessors are covered below.
+    @test PSIP.get_capital_cost(PSIP.get_capital_costs(t)) == LinearCurve(10000.0)
 
     PSIP.set_outage_factor!(t, (planned=0.08, forced=0.0))
     @test PSIP.get_outage_factor(t) == (planned=0.08, forced=0.0)

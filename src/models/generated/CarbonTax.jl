@@ -80,8 +80,8 @@ function from_openapi(po::PI.CarbonTax, refs::OpenAPIRefs)
     return CarbonTax(;
         name = po.name,
         available = po.available,
-        target_year = po.target_year,
-        tax_dollars_per_ton = po.tax_dollars_per_ton,
+        target_year = _or_default(po.target_year, 2050),
+        tax_dollars_per_ton = _or_default(po.tax_dollars_per_ton, 0.0),
     )
 end
 

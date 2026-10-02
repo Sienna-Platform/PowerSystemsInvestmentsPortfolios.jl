@@ -185,10 +185,10 @@ const OPENAPI_COMPOUND_CTORS = Dict(
 )
 
 """
-Import-direction extraction helper per compound alias (`src/openapi/converters.jl`).
+Import-direction extraction helper per compound alias (`src/openapi/cost_conversion.jl`).
 
 One name each, unlike [`OPENAPI_COMPOUND_CTORS`](@ref)'s required/optional pair: absence is
-dispatch on `::Nothing` in the helper, so nullability no longer changes the emitted
+dispatch on `_NoWireValue` in the helper, so nullability no longer changes the emitted
 expression.
 """
 const OPENAPI_COMPOUND_EXTRACTORS = Dict(
@@ -203,7 +203,7 @@ const OPENAPI_COMPOUND_EXTRACTORS = Dict(
 # component) and with PowerSystems topology types (`PSY.Topology`, `PSY.Bus`,
 # `PSY.AggregationTopology`) that live in the base system, so the set is declared instead.
 # Topology references resolve through the same `OpenAPIRefs` registry, which is seeded with
-# the base system's topology components alongside the portfolio's own (see document.jl).
+# the base system's topology components alongside the portfolio's own (see import_document.jl).
 # `SupplyTechnology`/`StorageTechnology` are concrete portfolio components a
 # `ColocatedSupplyStorageTechnology` co-locates by reference: the struct holds the resolved
 # component in memory, but the wire model carries only its integer id (see
@@ -218,8 +218,34 @@ const OPENAPI_REFERENCE_TYPES = Set([
     "StorageTechnology",
 ])
 
-const OPENAPI_ENUM_TYPES =
-    Set(["PrimeMovers.Value", "ThermalFuels.Value", "StorageTech.Value", "ACBusTypes.Value", "PSY.LoadConformity.Value"])
+const OPENAPI_ENUM_TYPES = Set([
+    "PrimeMovers.Value",
+    "ThermalFuels.Value",
+    "StorageTech.Value",
+    "ACBusTypes.Value",
+    "PSY.LoadConformity.Value",
+])
+
+"""
+The platform enum model each PSY enum crosses the wire as, constructed from the enum's string
+name. An enum absent from this table is a plain `String` on the wire (`conformity` is). Both
+shapes `string` to the enum's name, so the import side needs no table: it rebuilds through the
+PSY enum's own string constructor.
+"""
+const OPENAPI_ENUM_WIRE_TYPES = Dict(
+    "PrimeMovers.Value" => "PC.PrimeMovers",
+    "ThermalFuels.Value" => "PC.ThermalFuels",
+    "StorageTech.Value" => "PC.StorageTech",
+)
+
+"""
+The export expression for one enum value `value_expr` of PSY enum type `bare`.
+"""
+function openapi_enum_export_expr(bare, value_expr)
+    wire = get(OPENAPI_ENUM_WIRE_TYPES, bare, nothing)
+    isnothing(wire) && return "string($value_expr)"
+    return "$wire(string($value_expr))"
+end
 
 const OPENAPI_CURVE_TYPES =
     Set(["PSY.ValueCurve", "Union{IS.LinearCurve, IS.PiecewiseIncrementalCurve}"])
@@ -241,14 +267,21 @@ const OPENAPI_COST_TYPES = Set([
 const OPENAPI_NESTED_TYPES =
     Set(["TechnologyFinancialData", "CapitalCost", "StorageCapitalCost"])
 
-"""Whether a `:cost`-kind field's declared PSY type carries its own OpenAPI `oneOf` wrapper —
-true for the abstract `"OperationalCost"` or a `Union` of concrete cost types, false when the
-field is already one concrete cost struct."""
-openapi_cost_needs_wrapper(bare) = bare == "PSY.OperationalCost" || startswith(bare, "Union{")
+"""
+Whether a `:cost`-kind field's declared PSY type carries its own OpenAPI `oneOf` wrapper —
+true for an abstract cost type (`PSY.OperationalCost`, `IS.ProductionVariableCostCurve`) or a
+`Union` of concrete cost types, false when the field is already one concrete cost struct.
+"""
+openapi_cost_needs_wrapper(bare) =
+    bare in ("PSY.OperationalCost", "IS.ProductionVariableCostCurve") ||
+    startswith(bare, "Union{")
 
-"""The OpenAPI `oneOf` wrapper type name for a `:cost`-kind field that needs one:
-`<StructName><PascalCase(field_name)>`, e.g. `operation_cost` -> `OperationCost`."""
-function openapi_cost_po_type(struct_name, field_name)
+"""
+The platform model's field-specific wrapper type name, `<StructName><PascalCase(field)>`
+(`operation_costs` -> `SupplyTechnologyOperationCosts`). Every `oneOf`/`anyOf`-typed field —
+abstract costs, value curves, capacity bounds — is wrapped under this name.
+"""
+function openapi_field_wrapper_type(struct_name, field_name)
     return struct_name * join(uppercasefirst.(split(field_name, "_")))
 end
 
@@ -343,10 +376,6 @@ const OPENAPI_NULLABLE_UNSUPPORTED_KINDS = Set([
     :nested,
 ])
 
-function openapi_enum_po_type(field, bare)
-    return get(field, "openapi_enum", bare)
-end
-
 """
 Raise when a field is nullable and its kind has no nullable emission rule, naming the
 driver that would otherwise emit `nothing`-indexing code.
@@ -357,7 +386,7 @@ function openapi_check_nullable(struct_name, name, kind, nullable, driver)
             DataFormatError(
                 "$struct_name field=$name kind=$kind is nullable, and $driver has no " *
                 "nullable emission for that kind; add the nullable helper to " *
-                "src/openapi/converters.jl and teach the driver to call it before " *
+                "src/openapi/cost_conversion.jl (import) or export_cost_conversion.jl (export) and teach the driver to call it before " *
                 "making this field nullable in the descriptor",
             ),
         )
@@ -393,6 +422,10 @@ function compute_openapi_converter!(item)
         kind == :skip && continue
         name = String(field["name"])
         expr = openapi_import_expr(struct_name, name, kind, bare, nullable)
+        default = openapi_field_default(field)
+        if !isnothing(default)
+            expr = openapi_default_wrap(name, expr, default, kind, bare)
+        end
         push!(kwargs, Dict("name" => name, "expr" => expr))
     end
 
@@ -400,13 +433,44 @@ function compute_openapi_converter!(item)
     return item
 end
 
+"""
+The field's descriptor `default` as Julia source, or `nothing` when it declares none.
+
+Every optional field of a platform model reads back as `IC.Absent` when the producer omitted
+it, so a field with a descriptor default must fall back to that default on import rather than
+hand the sentinel to the constructor — the same contract PSY's generated converters keep.
+"""
+function openapi_field_default(field)
+    default = get(field, "default", nothing)
+    isnothing(default) && return nothing
+    return string(default)
+end
+
+"""
+Wrap an import expression so a missing wire value takes the descriptor default.
+
+Most helpers the import expressions call already map a missing value to `nothing`, so the
+wrap is just `_or_default`. The required-path converters of three kinds error on a missing
+value instead, so a defaulted field of those kinds swaps to the `_optional` helper first:
+`:curve` (`convert_value_curve`), `:nested` (`convert_nested_data`), and `:cost`
+(`convert_cost`), whose type assertion must also check the defaulted value rather than the
+bare call.
+"""
+function openapi_default_wrap(name, expr, default, kind, bare)
+    kind == :cost && return "_or_default(_cost_optional(po.$name), $default)::$bare"
+    kind == :curve && return "_or_default(_value_curve_optional(po.$name), $default)"
+    kind == :nested && return "_or_default(_nested_optional(po.$name), $default)"
+    return "_or_default($expr, $default)"
+end
+
 function openapi_import_expr(struct_name, name, kind, bare, nullable)
     openapi_check_nullable(struct_name, name, kind, nullable, "openapi_import_expr")
     if kind == :scalar
+        nullable && return "_optional_from_wire(po.$name)"
         return "po.$name"
     end
     if kind == :compound
-        # No nullable branch: the extractor's ::Nothing method is the guard.
+        # No nullable branch: the extractor's `_NoWireValue` method is the guard.
         return "$(OPENAPI_COMPOUND_EXTRACTORS[bare])(po.$name)"
     end
     if kind == :reference
@@ -416,19 +480,19 @@ function openapi_import_expr(struct_name, name, kind, bare, nullable)
         return "resolve_refs(refs, po.$name, $bare)"
     end
     if kind == :enum
-        return "$bare(string(po.$name))"
+        return "_enum_from_po(po.$name, $bare)"
     end
     if kind == :enum_vector
-        return "[$bare(string(v)) for v in po.$name]"
+        return "_enum_vector_from_po(po.$name, $bare)"
     end
     if kind == :enum_dict
-        return "Dict($bare(k) => v for (k, v) in po.$name)"
+        return "_enum_dict_from_po(po.$name, $bare, identity)"
     end
     if kind == :enum_compound_dict
         key, value = bare
         extractor = OPENAPI_COMPOUND_EXTRACTORS[value]
         # The wire type is a `<Value>ByKey` object; its map lives in `additional_properties`.
-        return "Dict($key(k) => $extractor(v) for (k, v) in po.$name.additional_properties)"
+        return "_enum_dict_from_po(po.$name, $key, $extractor)"
     end
     if kind == :curve
         if nullable
@@ -438,11 +502,12 @@ function openapi_import_expr(struct_name, name, kind, bare, nullable)
     end
     if kind == :cost
         # `convert_cost` returns one of many cost types and reads an `Any`-typed oneOf
-        # wrapper, so the call infers as `Any`. The descriptor states the field's type.
-        po_cost = openapi_cost_needs_wrapper(bare) ? "po.$name.value" : "po.$name"
-        return "convert_cost($po_cost)::$bare"
+        # wrapper (unwrapped by its `IC.OneOfAPIModel` method), so the call infers as `Any`.
+        # The descriptor states the field's type.
+        return "convert_cost(po.$name)::$bare"
     end
     if kind == :nested
+        nullable && return "_nested_optional(po.$name)"
         return "convert_nested_data(po.$name)"
     end
     if kind == :union_bound
@@ -509,7 +574,7 @@ function openapi_export_expr(struct_name, field, kind, bare, nullable, parametri
                 DataFormatError(
                     "$struct_name field=$name is a nullable reference, and no " *
                     "`_component_id_optional` helper exists in src/openapi/" *
-                    "converters.jl for the generator to call; add one there before " *
+                    "export_cost_conversion.jl for the generator to call; add one there before " *
                     "making a reference field nullable in the descriptor",
                 ),
             )
@@ -520,16 +585,14 @@ function openapi_export_expr(struct_name, field, kind, bare, nullable, parametri
         return "component_ids(refs, $getter)"
     end
     if kind == :enum
-        po_enum = openapi_enum_po_type(field, bare)
-        return "PO.$po_enum(string($getter))"
+        return openapi_enum_export_expr(bare, getter)
     end
     if kind == :enum_vector
-        po_enum = openapi_enum_po_type(field, bare)
-        return "[PO.$po_enum(string(v)) for v in $getter]"
+        return "[$(openapi_enum_export_expr(bare, "v")) for v in $getter]"
     end
     if kind == :enum_dict
-        po_enum = openapi_enum_po_type(field, bare)
-        return "Dict(PO.$po_enum(string(v)) => v for (k, v) in $getter)"
+        # JSON object keys are strings; the import side rebuilds the enum from the key.
+        return "Dict(string(k) => v for (k, v) in $getter)"
     end
     if kind == :enum_compound_dict
         key, value = bare
@@ -538,28 +601,23 @@ function openapi_export_expr(struct_name, field, kind, bare, nullable, parametri
         return "PC.$(value)ByKey(; additional_properties = Dict(string(k) => $ctor(v) for (k, v) in $getter))"
     end
     if kind == :curve
-        if nullable
-            return "_value_curve_po_optional($getter)"
-        end
-        return "convert_value_curve_to_openapi($getter)"
+        # Every curve-typed field is wrapped in its own field-specific `oneOf` on the wire;
+        # `_curve_to_openapi` passes `nothing` through for a nullable one.
+        wrapper = openapi_field_wrapper_type(struct_name, name)
+        return "_curve_to_openapi(PI.$wrapper, $getter)"
     end
     if kind == :cost
         inner = "convert_cost_to_openapi($getter)"
         # A field typed as one concrete cost struct is already the PO field's declared
         # type; `openapi_cost_needs_wrapper` says when wrapping applies instead.
-        expr = if openapi_cost_needs_wrapper(bare)
-            po_type = openapi_cost_po_type(struct_name, field["name"])
-            return "PO.$po_type($inner)"
-        else
-            return inner
-        end
+        openapi_cost_needs_wrapper(bare) || return inner
+        return "PI.$(openapi_field_wrapper_type(struct_name, name))($inner)"
     end
     if kind == :nested
         return "convert_nested_data_to_openapi($getter)"
     end
     if kind == :union_bound
-        # The platform model names the AnyOf wrapper `<StructName><CamelCasedField>`.
-        union_type = struct_name * join(uppercasefirst.(split(name, "_")))
+        union_type = openapi_field_wrapper_type(struct_name, name)
         return "PI.$union_type(_capacity_bound_po_value($getter, refs))"
     end
     throw(

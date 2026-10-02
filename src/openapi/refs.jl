@@ -98,7 +98,7 @@ Resolve an **optional** component reference from a document.
 absent relationship, not a malformed one. A reference that *is* stated still goes
 through the typed lookup and so still errors when it names an unregistered id.
 """
-resolve_ref(::OpenAPIRefs, ::Nothing) = nothing
+resolve_ref(::OpenAPIRefs, ::Union{Nothing, IC.Absent}) = nothing
 resolve_ref(refs::OpenAPIRefs, id::Integer) = refs[id]
 
 """
@@ -109,7 +109,7 @@ points a `Requirement` field at a topology id (or vice-versa) into a failure her
 the type, rather than something deeper and less legible. The stated type also selects which
 family map (topology vs portfolio component) the id is resolved against.
 """
-resolve_ref(::OpenAPIRefs, ::Nothing, ::Type) = nothing
+resolve_ref(::OpenAPIRefs, ::Union{Nothing, IC.Absent}, ::Type) = nothing
 resolve_ref(refs::OpenAPIRefs, id::Integer, ::Type{T}) where {T} =
     _resolve(refs, id, T <: PSY.Topology)::T
 
@@ -119,7 +119,7 @@ Resolve a list of references whose element type the descriptor states.
 Builds the `Vector{T}` the field already declares, so an omitted list is `T[]` rather than
 an `Any[]` that has to be re-typed on assignment.
 """
-resolve_refs(::OpenAPIRefs, ::Nothing, ::Type{T}) where {T} = T[]
+resolve_refs(::OpenAPIRefs, ::Union{Nothing, IC.Absent}, ::Type{T}) where {T} = T[]
 resolve_refs(refs::OpenAPIRefs, ids, ::Type{T}) where {T} =
     T[_resolve(refs, id, T <: PSY.Topology)::T for id in ids]
 
@@ -158,7 +158,7 @@ defer_ref!(refs::OpenAPIRefs, f) = push!(refs.deferred_refs, f)
 """
 Run every reference resolution queued by [`defer_ref!`](@ref), in the order queued, then clear
 the queue. Called once, after every component in the document has converted and registered —
-see `from_openapi(::Type{System}, doc)` in `import_document.jl`.
+see `from_openapi(::Type{Portfolio}, doc)` in `import_document.jl`.
 """
 function resolve_deferred_refs!(refs::OpenAPIRefs)
     for f in refs.deferred_refs

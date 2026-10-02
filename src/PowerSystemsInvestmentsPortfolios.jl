@@ -147,8 +147,6 @@ export add_supplemental_attribute!
 export remove_supplemental_attribute!
 export get_supplemental_attribute
 export get_supplemental_attributes
-export to_json
-export from_json
 export MinMax
 export InOut
 export UpDown
@@ -183,6 +181,24 @@ export natural_unit, ConversionUnits, FuelCurveUnits
 export ThermalFuels
 export PrimeMovers
 export StorageTech
+
+# Topology lives in the base `PSY.System` and technologies reference it directly, so the
+# PowerSystems topology types are re-exported: building a portfolio needs no `PSY.` prefix.
+# These are the same bindings PowerSystems exports, so `using` both packages does not clash.
+export Topology
+export AggregationTopology
+export Area
+export LoadZone
+export Arc
+export Bus
+export ACBus
+export DCBus
+# What constructing that topology needs: the `input_basis` markers (component base or natural
+# units — PSIP has no system-base representation, so `SU` is deliberately not re-exported)
+# and the bus-type enum.
+export CU
+export NU
+export ACBusTypes
 
 include("definitions.jl")
 

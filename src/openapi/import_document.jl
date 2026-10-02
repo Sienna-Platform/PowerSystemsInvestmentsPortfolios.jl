@@ -1,17 +1,3 @@
-# These will get encoded into each dictionary when a struct is serialized.
-const METADATA_KEY = "__metadata__"
-const TYPE_KEY = "type"
-const MODULE_KEY = "module"
-const PORTFOLIO_KWARGS = Set((
-    :internal,
-    :runchecks,
-    :time_series_directory,
-    :time_series_in_memory,
-    :time_series_read_only,
-    :timeseries_metadata_file,
-    :name,
-    :description,
-))
 # The type ordering both conversion directions share. References resolve by id, and
 # `OpenAPIRefs` errors on an unregistered one, so a type must appear after everything it
 # points at: requirements have no references, technologies point at the base system's
@@ -131,7 +117,7 @@ function _openapi_wire_type(psip_type)
         error(
             "$psip_type has no OpenAPI wire type — every serialized PSIP type must " *
             "be declared in DOCUMENT_PLAN or SUPPLEMENTAL_ATTRIBUTE_PLAN " *
-            "(src/openapi/document.jl)",
+            "(src/openapi/import_document.jl)",
         )
     end
     return _OPENAPI_WIRE_TYPES[psip_type]
@@ -322,9 +308,7 @@ function from_openapi(
     _apply_document_metadata!(portfolio, doc, keys(portfolio_kwargs))
 
     system_path = _resolve_base_system(doc, dirname(document_path))
-    system =
-        isnothing(system_path) ? DEFAULT_SYSTEM() : PSY.from_file(PSY.System, system_path)
-    set_base_system!(portfolio, system)
+    set_base_system!(portfolio, _read_base_system(system_path; portfolio_kwargs...))
 
     schedule = _resolve_investment_schedule(doc)
     isnothing(schedule) || set_investment_schedule!(portfolio, schedule)
@@ -371,8 +355,25 @@ function _resolve_investment_schedule(doc::PD.PortfolioDocument)
     return isnothing(results) ? nothing : _deserialize_schedule(results)
 end
 
+"""
+The base `PSY.System` at `path`, read with PSY's own `from_file` (which picks the form from the
+extension), or a default system when the document names none.
+
+Only the keywords that govern how a bundle is *read* — `time_series_read_only` and
+`time_series_directory` — are forwarded; the rest are `Portfolio` keywords.
+"""
+_read_base_system(::Nothing; _...) = DEFAULT_SYSTEM()
+
+function _read_base_system(path::AbstractString; portfolio_kwargs...)
+    system_kwargs = (
+        k => v for (k, v) in portfolio_kwargs if
+        k in (:time_series_read_only, :time_series_directory)
+    )
+    return PSY.from_file(path; system_kwargs...)
+end
+
 function _resolve_base_system(doc::PD.PortfolioDocument, dir::AbstractString)
-    named = PD.get_base_system_file(doc)          # accessor confirmed
+    named = PD.get_base_system_file(doc)
     named === nothing && return nothing
     path = joinpath(dir, named)
     ispath(path) || throw(
@@ -409,7 +410,12 @@ function _load_time_series_associations!(
     if _catalog_is_authoritative(store)
         return _validate_time_series_associations!(portfolio, doc)
     end
-    IS.import_time_series_association_rows!(store, JSON.json(doc.time_series_associations))
+    # `IC.encode`, not bare `JSON.json`: each row is a oneOf wrapper, and JSON would write
+    # its `value` field rather than the member the store's importer expects.
+    IS.import_time_series_association_rows!(
+        store,
+        JSON.json(IC.encode(doc.time_series_associations)),
+    )
     return nothing
 end
 
@@ -575,9 +581,11 @@ _ts_row_identity(row) = (
     features=_ts_feature_values(row.features),
 )
 
-_ts_feature_values(::Nothing) = nothing
+_ts_feature_values(::Union{Nothing, IC.Absent}) = nothing
 _ts_feature_values(features::AbstractDict) =
     Dict{String, Any}(String(k) => _ts_feature_value(v) for (k, v) in features)
+_ts_feature_values(features::PTS.TimeSeriesFeatures) =
+    _ts_feature_values(features.additional_properties)
 _ts_feature_value(v::InfrastructureTimeSeriesOpenAPIModels.TimeSeriesFeatureValue) = v.value
 _ts_feature_value(v) = v
 

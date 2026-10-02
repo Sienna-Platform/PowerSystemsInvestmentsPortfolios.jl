@@ -34,9 +34,7 @@ URIs = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [extras]
-# Present only so the `[sources]
-# LOCAL PATH CO-DEV PINS (temporary): the power_units/cost-rename regen of PowerOpenAPIModels
-# exists only on local disk, not on `main` yet. Revert to the git pins once pushed/merged.` pin below is legal: Pkg requires a sourced package to
+# Present only so the `[sources]` pin below is legal: Pkg requires a sourced package to
 # appear in `deps` or `extras`.
 InfraStore = "6aee0376-896a-4a59-96ff-12f221c99746"
 

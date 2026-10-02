@@ -79,8 +79,8 @@ set_internal!(value::RetirementPotential, val) = value.internal = val
 function from_openapi(po::PI.RetirementPotential, refs::OpenAPIRefs)
     return RetirementPotential(;
         eligible_generators = po.eligible_generators,
-        planned_retirement_year = po.planned_retirement_year,
-        build_year = po.build_year,
+        planned_retirement_year = _or_default(po.planned_retirement_year, Dict{String, Int64}()),
+        build_year = _or_default(po.build_year, Dict{String, Int64}()),
         retirement_cost = convert_value_curve(po.retirement_cost),
     )
 end
@@ -91,6 +91,6 @@ function to_openapi(value::RetirementPotential, refs::OpenAPIRefs)
         eligible_generators = get_eligible_generators(value),
         planned_retirement_year = get_planned_retirement_year(value),
         build_year = get_build_year(value),
-        retirement_cost = convert_value_curve_to_openapi(get_retirement_cost(value, IS.NU)),
+        retirement_cost = _curve_to_openapi(PI.RetirementPotentialRetirementCost, get_retirement_cost(value, IS.NU)),
     )
 end

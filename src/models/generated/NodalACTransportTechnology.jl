@@ -171,12 +171,12 @@ function from_openapi(po::PI.NodalACTransportTechnology, refs::OpenAPIRefs)
         power_systems_type = po.power_systems_type,
         start_node = resolve_ref(refs, po.start_node, PSY.Bus),
         end_node = resolve_ref(refs, po.end_node, PSY.Bus),
-        capacity_limits = _minmax_from_po(po.capacity_limits),
-        unit_size = po.unit_size,
-        capital_costs = convert_nested_data(po.capital_costs),
-        resistance = po.resistance,
-        voltage = po.voltage,
-        reactance = po.reactance,
+        capacity_limits = _or_default(_minmax_from_po(po.capacity_limits), (min=0, max=1e8)),
+        unit_size = _or_default(po.unit_size, 1.0),
+        capital_costs = _or_default(_nested_optional(po.capital_costs), CapitalCost(nothing)),
+        resistance = _or_default(po.resistance, 1.0),
+        voltage = _or_default(po.voltage, 230.0),
+        reactance = _or_default(po.reactance, 1.0),
         financial_data = convert_nested_data(po.financial_data),
     )
 end

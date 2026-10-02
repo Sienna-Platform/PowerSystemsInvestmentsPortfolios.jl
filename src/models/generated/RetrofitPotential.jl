@@ -71,7 +71,7 @@ set_internal!(value::RetrofitPotential, val) = value.internal = val
 function from_openapi(po::PI.RetrofitPotential, refs::OpenAPIRefs)
     return RetrofitPotential(;
         eligible_generators = po.eligible_generators,
-        retrofit_fraction = po.retrofit_fraction,
+        retrofit_fraction = _or_default(po.retrofit_fraction, 1.0),
         retrofit_cost = convert_value_curve(po.retrofit_cost),
     )
 end
@@ -81,6 +81,6 @@ function to_openapi(value::RetrofitPotential, refs::OpenAPIRefs)
         id = get_id(value),
         eligible_generators = get_eligible_generators(value),
         retrofit_fraction = get_retrofit_fraction(value),
-        retrofit_cost = convert_value_curve_to_openapi(get_retrofit_cost(value, IS.NU)),
+        retrofit_cost = _curve_to_openapi(PI.RetrofitPotentialRetrofitCost, get_retrofit_cost(value, IS.NU)),
     )
 end
