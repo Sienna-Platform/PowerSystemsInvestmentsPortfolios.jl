@@ -151,7 +151,7 @@ Write `portfolio` to `path`. The extension of `path` chooses the form:
     `base_system/` subdirectory, creating the directory if it is absent.
   - **`.json`** — `path` is the document itself; writes it plus a `.h5` sidecar on the same
     stem (`case.json` → `case.h5`) beside it, so several portfolios can share one directory.
-  - **`$(IS.SIENNA_ARCHIVE_EXTENSION)`** — the directory form plus InfraStore's own `.sqlite`
+  - **`.sns`** — the directory form plus InfraStore's own `.sqlite`
     catalog, `Tar` + gzip'd into one file. Lossless; the document forms are not.
 
 Any other extension is refused rather than guessed at.
@@ -170,7 +170,7 @@ function to_file(
     # `Val`-style dispatch reached first would turn a typo'd extension into a `MethodError` on
     # an internal helper instead of this message.
     ext = lowercase(splitext(path)[2])
-    if ext == IS.SIENNA_ARCHIVE_EXTENSION
+    if ext == ".sns"
         _to_file_sienna(portfolio, path; force=force, pretty=pretty)
     elseif ext == ".json"
         _to_file_document(
@@ -191,7 +191,7 @@ function to_file(
     else
         error(
             "to_file: cannot tell from \"$path\" which form to write. Give a directory " *
-            "(no extension), a .json document, or a $(IS.SIENNA_ARCHIVE_EXTENSION) archive.",
+            "(no extension), a .json document, or a .sns archive.",
         )
     end
 
@@ -345,7 +345,7 @@ $(TYPEDSIGNATURES)
 
 Read a `System` written by [`to_file`](@ref). The form is inferred from `path`: a directory
 reads the directory form, a `.json` file reads the document form, and a
-`$(IS.SIENNA_ARCHIVE_EXTENSION)` file reads the archive. Anything else is refused.
+`.sns` file reads the archive. Anything else is refused.
 
 The sidecar is located by the document's own `time_series_storage_file`, resolved relative to
 the directory the document sits in — so a bundle stays readable after being moved or renamed. A

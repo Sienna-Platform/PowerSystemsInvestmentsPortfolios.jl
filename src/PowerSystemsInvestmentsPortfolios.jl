@@ -52,13 +52,12 @@ import DataStructures: OrderedDict, SortedDict
 import OpenAPI
 import PowerCoreOpenAPIModels
 import PowerInvestmentsOpenAPIModels
-const PC = PowerCoreOpenAPIModels
-const PI = PowerInvestmentsOpenAPIModels
 import PowerOpenAPIModels
 import InfrastructureCoreOpenAPIModels
 import InfrastructureTimeSeriesOpenAPIModels
+const PC = PowerCoreOpenAPIModels
+const PI = PowerInvestmentsOpenAPIModels
 const PD = PowerOpenAPIModels
-const PO = PowerOpenAPIModels
 const IC = InfrastructureCoreOpenAPIModels
 const PTS = InfrastructureTimeSeriesOpenAPIModels
 import StringEncodings

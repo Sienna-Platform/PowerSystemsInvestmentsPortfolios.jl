@@ -604,7 +604,7 @@ function add_buses!(
             name=rec.name,
             number=rec.id,
             available=component_attr["available"],
-            bustype=PSY.get_enum_value(PSY.ACBusTypes, component_attr["bustype"]),
+            bustype=PSY.get_enum_value(PSY.ACBusTypes.Value, component_attr["bustype"]),
             angle=component_attr["angle"],
             magnitude=component_attr["magnitude"],
             area=get_component(Area, portfolio.base_system, area_name),
@@ -791,7 +791,7 @@ function add_generation_units!(
                 status=component_attr["status"] ? PSY.OperationalStates.ONLINE :
                        PSY.OperationalStates.OFFLINE,
                 bus=PSY.get_component(PSY.ACBus, portfolio.base_system, bus_name),
-                prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers, rec.prime_mover),
+                prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers.Value, rec.prime_mover),
                 active_power_limits=active_limits,
                 active_power=get(component_attr, "active_power", rec.rating) /
                              rec.base_power,
@@ -816,7 +816,7 @@ function add_generation_units!(
                 base_power=rec.base_power,
                 available=component_attr["available"],
                 bus=PSY.get_component(PSY.ACBus, portfolio.base_system, bus_name),
-                prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers, rec.prime_mover),
+                prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers.Value, rec.prime_mover),
                 active_power=get(component_attr, "active_power", rec.rating) /
                              rec.base_power,
                 reactive_power=get(component_attr, "reactive_power", rec.rating) /
@@ -834,7 +834,7 @@ function add_generation_units!(
                 base_power=rec.base_power,
                 available=component_attr["available"],
                 bus=PSY.get_component(PSY.ACBus, portfolio.base_system, bus_name),
-                prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers, rec.prime_mover),
+                prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers.Value, rec.prime_mover),
                 active_power=get(component_attr, "active_power", rec.rating) /
                              rec.base_power,
                 reactive_power=get(component_attr, "reactive_power", rec.rating) /
@@ -864,7 +864,7 @@ function add_generation_units!(
                 base_power=rec.base_power,
                 available=component_attr["available"],
                 bus=PSY.get_component(PSY.ACBus, portfolio.base_system, bus_name),
-                prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers, rec.prime_mover),
+                prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers.Value, rec.prime_mover),
                 active_power=get(component_attr, "active_power", rec.rating) /
                              rec.base_power,
                 reactive_power=get(component_attr, "reactive_power", rec.rating) /
@@ -910,7 +910,7 @@ function add_generation_units!(
                 outflow_limits=nothing,
                 powerhouse_elevation=component_attr["powerhouse_elevation"],
                 turbine_type=PSY.get_enum_value(
-                    PSY.HydroTurbineType,
+                    PSY.HydroTurbineType.Value,
                     component_attr["turbine_type"],
                 ),
                 conversion_factor=component_attr["conversion_factor"],
@@ -948,7 +948,7 @@ function add_generation_units!(
                 head_to_volume_factor=head_to_volume_factor.function_data,
                 operation_cost=parse_operational_cost(reservoir_attr["operation_cost"]),
                 level_data_type=PSY.get_enum_value(
-                    PSY.ReservoirDataType,
+                    PSY.ReservoirDataType.Value,
                     reservoir_attr["level_data_type"],
                 ),
             )
@@ -995,7 +995,7 @@ function add_generation_units!(
             technology = SupplyTechnology{component_type}(;
                 name=rec.name,
                 capital_costs=LinearCurve(0.0),
-                prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers, rec.prime_mover),
+                prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers.Value, rec.prime_mover),
                 fuel=[fuel],
                 region=regions,
                 financial_data=DEFAULT_FINANCIAL_DATA,
@@ -1067,8 +1067,8 @@ function add_storage_units!(
             base_power=rec.base_power,
             available=component_attr["available"],
             bus=PSY.get_component(PSY.ACBus, portfolio.base_system, bus_name),
-            prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers, rec.prime_mover),
-            storage_technology_type=PSY.StorageTech(
+            prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers.Value, rec.prime_mover),
+            storage_technology_type=PSY.StorageTech.Value(
                 component_attr["storage_technology_type"],
             ),
             conversion_factor=component_attr["conversion_factor"],
@@ -1107,8 +1107,8 @@ function add_storage_units!(
             name=rec.name,
             capital_costs_discharge=LinearCurve(0.0),
             capital_costs_energy=LinearCurve(0.0),
-            prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers, rec.prime_mover),
-            storage_tech=PSY.StorageTech(component_attr["storage_technology_type"]),
+            prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers.Value, rec.prime_mover),
+            storage_tech=PSY.StorageTech.Value(component_attr["storage_technology_type"]),
             region=regions,
             financial_data=DEFAULT_FINANCIAL_DATA,
             available=true,

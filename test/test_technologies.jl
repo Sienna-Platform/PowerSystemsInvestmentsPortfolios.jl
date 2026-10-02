@@ -75,14 +75,71 @@
         available=true,
         region=[area_a],
     )
-    PSIP.set_requirements!(supply, Requirement[req_a, req_b])
-    PSIP.set_outage_factor!(supply, (planned=0.1, forced=0.02))
-    PSIP.set_capital_costs!(supply, PSIP.CapitalCost(LinearCurve(22.0), 3.0))
-    PSIP.set_region!(supply, PSY.Topology[bus_a, area_b])
-    @test PSIP.get_outage_factor(supply) == (planned=0.1, forced=0.02)
-    @test PSIP.get_capital_cost(PSIP.get_capital_costs(supply)) == LinearCurve(22.0)
-    @test PSIP.get_interconnection_cost(PSIP.get_capital_costs(supply)) == 3.0
-    @test PSIP.get_region(supply) == PSY.Topology[bus_a, area_b]
+    supply_req = Requirement[req_a, req_b]
+    supply_capital = LinearCurve(22.0)
+    supply_co2 = Dict(ThermalFuels.COAL => 0.9, ThermalFuels.OTHER => 0.4)
+    supply_cofire_start = Dict(
+        ThermalFuels.COAL => (min=0.2, max=0.6),
+        ThermalFuels.OTHER => (min=0.1, max=0.5),
+    )
+    supply_cofire_level = Dict(
+        ThermalFuels.COAL => (min=0.3, max=0.7),
+        ThermalFuels.OTHER => (min=0.2, max=0.6),
+    )
+    supply_internal = IS.InfrastructureSystemsInternal()
+    supply_ext = Dict("supply" => "meta")
+    supply_regions = RegionTopology[node_a, zone_b]
+
+    # SupplyTechnology: all fields
+    PSIP.set_requirements!(supply, supply_req)
+    PSIP.set_outage_factor!(supply, 0.93)
+    PSIP.set_prime_mover_type!(supply, PrimeMovers.OT)
+    PSIP.set_capital_costs!(supply, supply_capital, IS.NU)
+    PSIP.set_lifetime!(supply, 35, IS.NU)
+    PSIP.set_name!(supply, "supply_updated")
+    PSIP.set_available!(supply, false)
+    PSIP.set_co2!(supply, supply_co2, tonne / MMBtu)
+    PSIP.set_cofire_start_limits!(supply, supply_cofire_start)
+    PSIP.set_financial_data!(supply, tech_financial_data)
+    PSIP.set_start_fuel_mmbtu_per_mw!(supply, 1.7, IS.NU)
+    PSIP.set_operation_costs!(supply, thermal_cost, IS.NU)
+    PSIP.set_fuel!(supply, [ThermalFuels.COAL, ThermalFuels.OTHER])
+    PSIP.set_power_systems_type!(supply, "ThermalStandardUpdated")
+    PSIP.set_cofire_level_limits!(supply, supply_cofire_level)
+    PSIP.set_internal!(supply, supply_internal)
+    PSIP.set_id!(supply, 110)
+    PSIP.set_ext!(supply, supply_ext)
+    PSIP.set_region!(supply, supply_regions)
+    PSIP.set_min_generation_fraction!(supply, 0.15)
+    PSIP.set_time_limits!(supply, (up=4.0, down=2.0), IS.NU)
+    PSIP.set_unit_size!(supply, 12.0, IS.NU)
+    PSIP.set_ramp_limits!(supply, (up=0.3, down=0.25), IS.NU)
+    PSIP.set_capacity_limits!(supply, (min=5.0, max=600.0), IS.NU)
+
+    @test PSIP.get_requirements(supply) === supply_req
+    @test PSIP.get_outage_factor(supply) == 0.93
+    @test PSIP.get_prime_mover_type(supply) == PrimeMovers.OT
+    @test PSIP.get_capital_costs(supply, IS.NU) === supply_capital
+    @test PSIP.get_lifetime(supply, IS.NU) == 35
+    @test PSIP.get_name(supply) == "supply_updated"
+    @test PSIP.get_id(supply) == 110
+    @test !PSIP.get_available(supply)
+    @test PSIP.get_co2(supply, tonne / MMBtu) == supply_co2
+    @test PSIP.get_cofire_start_limits(supply) === supply_cofire_start
+    @test PSIP.get_financial_data(supply) === tech_financial_data
+    @test PSIP.get_start_fuel_mmbtu_per_mw(supply, IS.NU) == 1.7
+    @test IS.compare_values(PSIP.get_operation_costs(supply, IS.NU), thermal_cost)
+    @test PSIP.get_fuel(supply) == [ThermalFuels.COAL, ThermalFuels.OTHER]
+    @test PSIP.get_power_systems_type(supply) == "ThermalStandardUpdated"
+    @test PSIP.get_cofire_level_limits(supply) === supply_cofire_level
+    @test PSIP.get_internal(supply) === supply_internal
+    @test PSIP.get_ext(supply) === supply_ext
+    @test PSIP.get_region(supply) === supply_regions
+    @test PSIP.get_min_generation_fraction(supply) == 0.15
+    @test PSIP.get_time_limits(supply, IS.NU) == (up=4.0, down=2.0)
+    @test PSIP.get_unit_size(supply, IS.NU) == 12.0
+    @test PSIP.get_ramp_limits(supply, IS.NU) == (up=0.3, down=0.25)
+    @test PSIP.get_capacity_limits(supply, IS.NU) == (min=5.0, max=600.0)
 
     storage = StorageTechnology{PSY.EnergyReservoirStorage}(
         name="storage",

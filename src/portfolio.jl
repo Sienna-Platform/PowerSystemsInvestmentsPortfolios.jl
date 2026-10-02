@@ -48,7 +48,7 @@ mutable struct PortfolioFinancialData <: IS.InfrastructureSystemsType
     interest_rate::Float64
 end
 
-mutable struct Portfolio <: IS.InfrastructureSystemsType
+mutable struct Portfolio <: IS.ComponentContainer
     aggregation::Type{<:Union{PSY.ACBus, PSY.AggregationTopology}}
     data::IS.SystemData # Inputs to the model
     base_system::PSY.System #Base system storing existing data
@@ -425,6 +425,8 @@ function get_technology(
 ) where {T <: Technology}
     return IS.get_component(T, portfolio.data, name)
 end
+
+IS.get_components(::Type{T}, portfolio::Portfolio) where {T <: IS.InfrastructureSystemsComponent} = IS.get_components(T, portfolio.data)
 
 """
 Returns an iterator of technologies. T can be concrete or abstract.

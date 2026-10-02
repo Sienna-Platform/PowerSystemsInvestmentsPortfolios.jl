@@ -40,25 +40,25 @@
         },
         {
           "name": "prime_mover_type",
-          "type": "PrimeMovers",
+          "type": "PrimeMovers.Value",
           "default": "PrimeMovers.OT",
           "description": "Prime mover technology according to EIA 923."
         },
         {
           "name": "fuel",
-          "type": "Vector{ThermalFuels}",
+          "type": "Vector{ThermalFuels.Value}",
           "default": "[ThermalFuels.OTHER]",
           "description": "Prime mover fuel according to EIA 923."
         },
         {
           "name": "cofire_start_limits",
-          "type": "Dict{ThermalFuels, MinMax}",
+          "type": "Dict{ThermalFuels.Value, MinMax}",
           "description": "Minimum and maximum blending level (%) of each fuel during start-up process for multi-fuel generator",
           "default": "Dict()"
         },
         {
           "name": "cofire_level_limits",
-          "type": "Dict{ThermalFuels, MinMax}",
+          "type": "Dict{ThermalFuels.Value, MinMax}",
           "description": "Minimum and maximum blending level (%) of each fuel during normal generation process for multi-fuel generator",
           "default": "Dict()"
         },
@@ -315,7 +315,7 @@
         },
         {
           "name": "prime_mover_type",
-          "type": "PrimeMovers",
+          "type": "PrimeMovers.Value",
           "enum": [
             "PrimeMovers.BT",
             "PrimeMovers.CA",
@@ -340,8 +340,9 @@
         },
         {
           "name": "storage_tech",
-          "type": "StorageTech",
-          "description": "Storage Technology Complementary to EIA 923."
+          "type": "StorageTech.Value",
+          "description": "Storage Technology Complementary to EIA 923.",
+          "default": "StorageTech.OTHER_CHEM"
         },
         {
           "name": "capital_costs",
@@ -936,7 +937,7 @@
         },
         {
           "name": "conformity",
-          "type": "LoadConformity",
+          "type": "PSY.LoadConformity.Value",
           "description": "Indicator of how the demand requirement should conform to the load profile of existing technologies in the system. Should only be used for new demand requirements.",
           "default": "LoadConformity.UNDEFINED"
         },

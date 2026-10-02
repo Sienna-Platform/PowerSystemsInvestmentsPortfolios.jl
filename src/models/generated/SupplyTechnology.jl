@@ -10,10 +10,10 @@ This file is auto-generated. Do not edit.
         power_systems_type::String
         region::Vector{PSY.Topology}
         available::Bool
-        prime_mover_type::PrimeMovers
-        fuel::Vector{ThermalFuels}
-        cofire_start_limits::Dict{ThermalFuels, MinMax}
-        cofire_level_limits::Dict{ThermalFuels, MinMax}
+        prime_mover_type::PrimeMovers.Value
+        fuel::Vector{ThermalFuels.Value}
+        cofire_start_limits::Dict{ThermalFuels.Value, MinMax}
+        cofire_level_limits::Dict{ThermalFuels.Value, MinMax}
         capital_costs::CapitalCost
         operation_costs::PSY.OperationalCost
         unit_size::Float64
@@ -37,10 +37,10 @@ Candidate generation technology for a region. Can represent either a thermal or 
 - `power_systems_type::String`: Corresponding type in PowerSystems.jl to be used in PCM modeling
 - `region::Vector{PSY.Topology}`: (default: `Vector()`) Location where technology operates. Can be a zone or node.
 - `available::Bool`: (default: `true`) Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)
-- `prime_mover_type::PrimeMovers`: (default: `PrimeMovers.OT`) Prime mover technology according to EIA 923.
-- `fuel::Vector{ThermalFuels}`: (default: `[ThermalFuels.OTHER]`) Prime mover fuel according to EIA 923.
-- `cofire_start_limits::Dict{ThermalFuels, MinMax}`: (default: `Dict()`) Minimum and maximum blending level (%) of each fuel during start-up process for multi-fuel generator
-- `cofire_level_limits::Dict{ThermalFuels, MinMax}`: (default: `Dict()`) Minimum and maximum blending level (%) of each fuel during normal generation process for multi-fuel generator
+- `prime_mover_type::PrimeMovers.Value`: (default: `PrimeMovers.OT`) Prime mover technology according to EIA 923.
+- `fuel::Vector{ThermalFuels.Value}`: (default: `[ThermalFuels.OTHER]`) Prime mover fuel according to EIA 923.
+- `cofire_start_limits::Dict{ThermalFuels.Value, MinMax}`: (default: `Dict()`) Minimum and maximum blending level (%) of each fuel during start-up process for multi-fuel generator
+- `cofire_level_limits::Dict{ThermalFuels.Value, MinMax}`: (default: `Dict()`) Minimum and maximum blending level (%) of each fuel during normal generation process for multi-fuel generator
 - `capital_costs::CapitalCost`: (default: `CapitalCost(nothing)`) Capital costs for investing in a technology. (USD/MW)
 - `operation_costs::PSY.OperationalCost`: (default: `ThermalGenerationCost(nothing)`) Fixed and variable O&M costs for a technology
 - `unit_size::Float64`: (default: `0.0`) Used for discrete investment decisions. Size of each unit being built (MW)
@@ -66,13 +66,13 @@ mutable struct SupplyTechnology{T <: PSY.Generator} <: ResourceTechnology
     "Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)"
     available::Bool
     "Prime mover technology according to EIA 923."
-    prime_mover_type::PrimeMovers
+    prime_mover_type::PrimeMovers.Value
     "Prime mover fuel according to EIA 923."
-    fuel::Vector{ThermalFuels}
+    fuel::Vector{ThermalFuels.Value}
     "Minimum and maximum blending level (%) of each fuel during start-up process for multi-fuel generator"
-    cofire_start_limits::Dict{ThermalFuels, MinMax}
+    cofire_start_limits::Dict{ThermalFuels.Value, MinMax}
     "Minimum and maximum blending level (%) of each fuel during normal generation process for multi-fuel generator"
-    cofire_level_limits::Dict{ThermalFuels, MinMax}
+    cofire_level_limits::Dict{ThermalFuels.Value, MinMax}
     "Capital costs for investing in a technology. (USD/MW)"
     capital_costs::CapitalCost
     "Fixed and variable O&M costs for a technology"
@@ -234,10 +234,10 @@ function from_openapi(po::PI.SupplyTechnology, refs::OpenAPIRefs)
         power_systems_type = po.power_systems_type,
         region = resolve_refs(refs, po.region, PSY.Topology),
         available = po.available,
-        prime_mover_type = PrimeMovers(string(po.prime_mover_type)),
-        fuel = [ThermalFuels(string(v)) for v in po.fuel],
-        cofire_start_limits = Dict(ThermalFuels(k) => _minmax_from_po(v) for (k, v) in po.cofire_start_limits.additional_properties),
-        cofire_level_limits = Dict(ThermalFuels(k) => _minmax_from_po(v) for (k, v) in po.cofire_level_limits.additional_properties),
+        prime_mover_type = PrimeMovers.Value(string(po.prime_mover_type)),
+        fuel = [ThermalFuels.Value(string(v)) for v in po.fuel],
+        cofire_start_limits = Dict(ThermalFuels.Value(k) => _minmax_from_po(v) for (k, v) in po.cofire_start_limits.additional_properties),
+        cofire_level_limits = Dict(ThermalFuels.Value(k) => _minmax_from_po(v) for (k, v) in po.cofire_level_limits.additional_properties),
         capital_costs = convert_nested_data(po.capital_costs),
         operation_costs = convert_cost(po.operation_costs.value)::PSY.OperationalCost,
         unit_size = po.unit_size,
@@ -259,8 +259,8 @@ function to_openapi(value::SupplyTechnology{T}, refs::OpenAPIRefs) where {T <: P
         power_systems_type = string(nameof(T)),
         region = component_ids(refs, get_region(value)),
         available = get_available(value),
-        prime_mover_type = PO.PrimeMovers(string(get_prime_mover_type(value))),
-        fuel = [PO.ThermalFuels(string(v)) for v in get_fuel(value)],
+        prime_mover_type = PO.PrimeMovers.Value(string(get_prime_mover_type(value))),
+        fuel = [PO.ThermalFuels.Value(string(v)) for v in get_fuel(value)],
         cofire_start_limits = PC.MinMaxByKey(; additional_properties = Dict(string(k) => _minmax_po(v) for (k, v) in get_cofire_start_limits(value))),
         cofire_level_limits = PC.MinMaxByKey(; additional_properties = Dict(string(k) => _minmax_po(v) for (k, v) in get_cofire_level_limits(value))),
         capital_costs = convert_nested_data_to_openapi(get_capital_costs(value)),

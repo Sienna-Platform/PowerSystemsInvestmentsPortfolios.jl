@@ -10,8 +10,8 @@ This file is auto-generated. Do not edit.
         region::Vector{PSY.Topology}
         available::Bool
         power_systems_type::String
-        prime_mover_type::PrimeMovers
-        storage_tech::StorageTech
+        prime_mover_type::PrimeMovers.Value
+        storage_tech::StorageTech.Value
         capital_costs::StorageCapitalCost
         operation_costs::PSY.StorageCost
         min_discharge_fraction::Float64
@@ -38,8 +38,8 @@ Candidate storage technology in a region.
 - `region::Vector{PSY.Topology}`: (default: `Vector()`) Location where technology is operated
 - `available::Bool`: Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)
 - `power_systems_type::String`: Corresponding type in PowerSystems.jl to be used in PCM modeling
-- `prime_mover_type::PrimeMovers`: (default: `PrimeMovers.OT`) Prime mover technology according to EIA 923.
-- `storage_tech::StorageTech`: Storage Technology Complementary to EIA 923.
+- `prime_mover_type::PrimeMovers.Value`: (default: `PrimeMovers.OT`) Prime mover technology according to EIA 923.
+- `storage_tech::StorageTech.Value`: (default: `StorageTech.OTHER_CHEM`) Storage Technology Complementary to EIA 923.
 - `capital_costs::StorageCapitalCost`: (default: `StorageCapitalCost(nothing)`) Capital costs for investing in a storage technology's charge, discharge, and energy capacity.
 - `operation_costs::PSY.StorageCost`: (default: `StorageCost(nothing)`) Fixed and variable O&M costs for a technology
 - `min_discharge_fraction::Float64`: (default: `0.0`) Minimum discharge as a fraction of total discharge capacity
@@ -68,9 +68,9 @@ mutable struct StorageTechnology{T <: PSY.Storage} <: ResourceTechnology
     "Corresponding type in PowerSystems.jl to be used in PCM modeling"
     power_systems_type::String
     "Prime mover technology according to EIA 923."
-    prime_mover_type::PrimeMovers
+    prime_mover_type::PrimeMovers.Value
     "Storage Technology Complementary to EIA 923."
-    storage_tech::StorageTech
+    storage_tech::StorageTech.Value
     "Capital costs for investing in a storage technology's charge, discharge, and energy capacity."
     capital_costs::StorageCapitalCost
     "Fixed and variable O&M costs for a technology"
@@ -108,7 +108,7 @@ mutable struct StorageTechnology{T <: PSY.Storage} <: ResourceTechnology
 end
 
 
-function StorageTechnology{T}(; name, region=Vector(), available, power_systems_type, prime_mover_type=PrimeMovers.OT, storage_tech, capital_costs=StorageCapitalCost(nothing), operation_costs=StorageCost(nothing), min_discharge_fraction=0.0, unit_size_charge=nothing, unit_size_discharge=0.0, unit_size_energy=0.0, capacity_limits_charge=(min = 0.0, max = 1e8), capacity_limits_discharge=(min = 0.0, max = 1e8), capacity_limits_energy=(min = 0.0, max = 1e8), duration_limits=(min=0,max=60000.0), efficiency=(in=1, out=1), losses=0.0, lifetime=100, requirements=Vector(), financial_data, ext=Dict(), internal=InfrastructureSystemsInternal(), ) where T <: PSY.Storage
+function StorageTechnology{T}(; name, region=Vector(), available, power_systems_type, prime_mover_type=PrimeMovers.OT, storage_tech=StorageTech.OTHER_CHEM, capital_costs=StorageCapitalCost(nothing), operation_costs=StorageCost(nothing), min_discharge_fraction=0.0, unit_size_charge=nothing, unit_size_discharge=0.0, unit_size_energy=0.0, capacity_limits_charge=(min = 0.0, max = 1e8), capacity_limits_discharge=(min = 0.0, max = 1e8), capacity_limits_energy=(min = 0.0, max = 1e8), duration_limits=(min=0,max=60000.0), efficiency=(in=1, out=1), losses=0.0, lifetime=100, requirements=Vector(), financial_data, ext=Dict(), internal=InfrastructureSystemsInternal(), ) where T <: PSY.Storage
     StorageTechnology{T}(name, region, available, power_systems_type, prime_mover_type, storage_tech, capital_costs, operation_costs, min_discharge_fraction, unit_size_charge, unit_size_discharge, unit_size_energy, capacity_limits_charge, capacity_limits_discharge, capacity_limits_energy, duration_limits, efficiency, losses, lifetime, requirements, financial_data, ext, internal, )
 end
 
@@ -250,8 +250,8 @@ function from_openapi(po::PI.StorageTechnology, refs::OpenAPIRefs)
         region = resolve_refs(refs, po.region, PSY.Topology),
         available = po.available,
         power_systems_type = po.power_systems_type,
-        prime_mover_type = PrimeMovers(string(po.prime_mover_type)),
-        storage_tech = StorageTech(string(po.storage_tech)),
+        prime_mover_type = PrimeMovers.Value(string(po.prime_mover_type)),
+        storage_tech = StorageTech.Value(string(po.storage_tech)),
         capital_costs = convert_nested_data(po.capital_costs),
         operation_costs = convert_cost(po.operation_costs)::PSY.StorageCost,
         min_discharge_fraction = po.min_discharge_fraction,
@@ -276,8 +276,8 @@ function to_openapi(value::StorageTechnology{T}, refs::OpenAPIRefs) where {T <: 
         region = component_ids(refs, get_region(value)),
         available = get_available(value),
         power_systems_type = string(nameof(T)),
-        prime_mover_type = PO.PrimeMovers(string(get_prime_mover_type(value))),
-        storage_tech = PO.StorageTech(string(get_storage_tech(value))),
+        prime_mover_type = PO.PrimeMovers.Value(string(get_prime_mover_type(value))),
+        storage_tech = PO.StorageTech.Value(string(get_storage_tech(value))),
         capital_costs = convert_nested_data_to_openapi(get_capital_costs(value)),
         operation_costs = convert_cost_to_openapi(get_operation_costs(value, IS.NU)),
         min_discharge_fraction = get_min_discharge_fraction(value),
