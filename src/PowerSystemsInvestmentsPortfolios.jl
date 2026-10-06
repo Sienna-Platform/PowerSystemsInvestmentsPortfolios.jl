@@ -23,13 +23,24 @@ import InfrastructureSystems:
     LinearCurve,
     InfrastructureSystemsComponent,
     InfrastructureSystemsType,
-    get_available
+    get_available,
+    TimeSeriesInputOutputCurve,
+    TimeSeriesIncrementalCurve,
+    TimeSeriesAverageRateCurve,
+    TimeSeriesFunctionData,
+    StaticFunctionData,
+    TimeSeriesLinearCurve,
+    TimeSeriesQuadraticCurve,
+    TimeSeriesPiecewisePointCurve,
+    TimeSeriesPiecewiseIncrementalCurve,
+    TimeSeriesPiecewiseAverageCurve
 
 # Using PowerSystems in order to support deserializing with PSY parametric typing
 using PowerSystems
-import PowerSystems: ThermalFuels, PrimeMovers, StorageTech, ACBusTypes
+import PowerSystems: ThermalFuels, PrimeMovers, StorageTech, ACBusTypes, LoadConformity
 
 import JSONSchema
+import JSON
 import JSON3
 import PrettyTables
 import SQLite
@@ -41,12 +52,17 @@ import DataStructures: OrderedDict, SortedDict
 import OpenAPI
 import PowerCoreOpenAPIModels
 import PowerInvestmentsOpenAPIModels
+import InfrastructureCoreOpenAPIModels
+import InfrastructureTimeSeriesOpenAPIModels
 const PC = PowerCoreOpenAPIModels
 const PI = PowerInvestmentsOpenAPIModels
+const IC = InfrastructureCoreOpenAPIModels
+const PTS = InfrastructureTimeSeriesOpenAPIModels
 import StringEncodings
 import Tables
 import Unitful
 using Unitful: @dimension, @u_str, @refunit, @unit, Quantity, Units, uconvert, ustrip, unit
+using DocStringExtensions
 
 export Portfolio
 export Requirement
@@ -55,7 +71,6 @@ export ResourceTechnology
 export DemandTechnology
 export TransmissionTechnology
 export FinancialData
-export RegionTopology
 export SupplyTechnology
 export ColocatedSupplyStorageTechnology
 export NodalACTransportTechnology
@@ -67,7 +82,6 @@ export DemandSideTechnology
 export RetirementPotential
 export RetrofitPotential
 export ExistingDevices
-export TopologyMapping
 export CarbonCaps
 export CapacityReserveMargin
 export CarbonTax
@@ -75,19 +89,20 @@ export HourlyMatching
 export EnergyShareRequirements
 export MinimumCapacityRequirements
 export MaximumCapacityRequirements
-export RegionTopology
-export Zone
-export Node
 export PortfolioFinancialData
 export InvestmentScheduleResults
 export TechnologyFinancialData
 export TimeMapping
 export InvestmentIntervals
 export OperationalPeriods
+export CapitalCost
+export StorageCapitalCost
 
 export get_name
 export get_description
 export get_regions
+export get_topologies
+export get_topology
 export get_technologies
 export get_technology
 export get_available_technology
@@ -120,7 +135,12 @@ export validate_technology
 export check_technology
 export check_technologies
 export remove_technology!
+export get_subcomponents
+export get_masked_technologies
+export is_masked
 export add_region!
+export add_topology!
+export remove_topology!
 export add_requirement!
 export add_time_series!
 export clear_time_series!
@@ -128,8 +148,6 @@ export add_supplemental_attribute!
 export remove_supplemental_attribute!
 export get_supplemental_attribute
 export get_supplemental_attributes
-export to_json
-export from_json
 export MinMax
 export InOut
 export UpDown
@@ -165,6 +183,27 @@ export ThermalFuels
 export PrimeMovers
 export StorageTech
 
+# Topology lives in the base `PSY.System` and technologies reference it directly, so the
+# PowerSystems topology types are re-exported: building a portfolio needs no `PSY.` prefix.
+# These are the same bindings PowerSystems exports, so `using` both packages does not clash.
+export Topology
+export AggregationTopology
+export Area
+export LoadZone
+export Arc
+export Bus
+export ACBus
+export DCBus
+# What constructing that topology needs. `input_basis` is a Unitful unit — `u"CU"` (component
+# base) or `u"NU"` (natural units) — and `@u_str` only finds those when the `PerUnit` unit
+# module is bound by name in the calling module, so it is re-exported next to `@u_str`.
+export PerUnit
+export ACBusTypes
+# The unit-system markers `to_file`'s `base_system_units` takes. PSIP has no system-base
+# representation, so `SU` is deliberately not re-exported.
+export CU
+export NU
+
 include("definitions.jl")
 
 include("models/requirements.jl")
@@ -172,8 +211,10 @@ include("models/technologies.jl")
 include("models/regions.jl")
 include("models/financial_data/financial_data.jl")
 include("models/financial_data/TechnologyFinancialData.jl")
+include("models/cost_functions/investment_cost.jl")
+include("models/cost_functions/CapitalCost.jl")
+include("models/cost_functions/StorageCapitalCost.jl")
 include("openapi/refs.jl")
-include("openapi/converters.jl")
 include("models/generated/includes.jl")
 include("investment_schedule.jl")
 
@@ -182,10 +223,14 @@ include("units/conversions.jl")
 include("units/function_conversions.jl")
 
 include("portfolio.jl")
-include("openapi/document.jl")
+include("openapi/cost_conversion.jl")
+include("openapi/export_cost_conversion.jl")
+include("openapi/sqlite_load.jl")
+include("openapi/import_document.jl")
 include("validation.jl")
 include("time_mapping.jl")
-include("serialization.jl")
+include("openapi/export_document.jl")
+include("openapi/file_io.jl")
 include("utils/getters.jl")
 include("db_parser.jl")
 include("utils/generate_structs.jl")
@@ -196,8 +241,6 @@ else
     include("utils/print_pt_v3.jl")
 end
 include("update_system.jl")
-
-using DocStringExtensions
 
 const localunits = Unitful.basefactors
 const localpromotion = copy(Unitful.promotion)

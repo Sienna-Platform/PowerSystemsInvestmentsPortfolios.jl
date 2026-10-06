@@ -37,6 +37,23 @@ function _validate_nonnegative_limits(technology, limits, field_name)
     return is_valid
 end
 
+"""
+A per-topology capacity bound (`Dict{PSY.Topology, MinMax}`) is valid when every topology's
+bound is; each is checked — not short-circuited — so every bad entry is logged, named by its
+topology.
+"""
+function _validate_nonnegative_limits(technology, limits::AbstractDict, field_name)
+    is_valid = true
+    for (topology, bound) in limits
+        is_valid &= _validate_nonnegative_limits(
+            technology,
+            bound,
+            "$field_name[$(PSY.get_name(topology))]",
+        )
+    end
+    return is_valid
+end
+
 function _validate_nonnegative_value(technology, value, field_name)
     if !isfinite(value) || value < 0.0
         @error(
@@ -181,55 +198,14 @@ function validate_technology(technology::StorageTechnology)
     return is_valid
 end
 
-function _validate_colocated_supply_storage_fields(
-    technology::ColocatedSupplyStorageTechnology,
-)
+function validate_technology(technology::ColocatedSupplyStorageTechnology)
+    # The supply and storage portions are separate portfolio components referenced by this
+    # composite; validate the shared inverter that couples them to the grid here, and reuse
+    # each referenced technology's own rules for its portion.
     is_valid = _validate_nonnegative_limits(
         technology,
-        get_capacity_limits_wind(technology, IS.NU),
-        "Colocated wind capacity limits",
-    )
-    is_valid &= _validate_nonnegative_limits(
-        technology,
-        get_capacity_limits_solar(technology, IS.NU),
-        "Colocated solar capacity limits",
-    )
-    is_valid &= _validate_nonnegative_limits(
-        technology,
-        get_capacity_power_limits(technology, IS.NU),
-        "Colocated storage power capacity limits",
-    )
-    is_valid &= _validate_nonnegative_limits(
-        technology,
-        get_capacity_energy_limits(technology, IS.NU),
-        "Colocated storage energy capacity limits",
-    )
-    is_valid &= _validate_nonnegative_limits(
-        technology,
-        get_duration_limits(technology, IS.NU),
-        "Colocated storage duration limits",
-    )
-    is_valid &= _validate_nonnegative_limits(
-        technology,
-        (
-            min=get_min_inverter_capacity(technology, IS.NU),
-            max=get_max_inverter_capacity(technology, IS.NU),
-        ),
+        get_inverter_capacity_limits(technology, IS.NU),
         "Colocated inverter capacity limits",
-    )
-
-    efficiency = get_efficiency_storage(technology)
-    is_valid &= _validate_fraction(
-        technology,
-        efficiency.in,
-        "Colocated storage charging efficiency";
-        strictly_positive=true,
-    )
-    is_valid &= _validate_fraction(
-        technology,
-        efficiency.out,
-        "Colocated storage discharging efficiency";
-        strictly_positive=true,
     )
     is_valid &= _validate_fraction(
         technology,
@@ -237,31 +213,13 @@ function _validate_colocated_supply_storage_fields(
         "Colocated inverter efficiency";
         strictly_positive=true,
     )
-    is_valid &= _validate_fraction(
-        technology,
-        get_losses_storage(technology),
-        "Colocated storage losses",
-    )
-    return is_valid
-end
-
-function validate_technology(technology::ColocatedSupplyStorageTechnology)
-    is_valid = _validate_positive_value(
-        technology,
-        get_lifetime_storage(technology, IS.NU),
-        "Colocated storage lifetime",
-    )
     is_valid &= _validate_positive_value(
         technology,
-        get_lifetime_wind(technology, IS.NU),
-        "Colocated wind lifetime",
+        get_inverter_supply_ratio(technology),
+        "Colocated inverter supply ratio",
     )
-    is_valid &= _validate_positive_value(
-        technology,
-        get_lifetime_solar(technology, IS.NU),
-        "Colocated solar lifetime",
-    )
-    is_valid &= _validate_colocated_supply_storage_fields(technology)
+    is_valid &= validate_technology(get_supply_technology(technology))
+    is_valid &= validate_technology(get_storage_technology(technology))
     return is_valid
 end
 
@@ -304,9 +262,9 @@ Return `true` if the technology is valid.
 """
 validate_technology_with_portfolio(::Technology, ::Portfolio) = true
 
-function _validate_unique_region_id(region::RegionTopology, portfolio::Portfolio)
+function _validate_unique_region_id(region::PSY.Topology, portfolio::Portfolio)
     region_id = get_id(region)
-    for stored_region in get_regions(RegionTopology, portfolio)
+    for stored_region in get_regions(PSY.Topology, portfolio)
         if get_id(stored_region) == region_id
             @error(
                 "Region ID is already attached to the portfolio",
@@ -343,7 +301,11 @@ function _validate_attached_references(
 )
     is_valid = true
     for reference in references
-        if !IS.has_component(portfolio.data, reference)
+        if !PSY.has_component(
+            typeof(reference),
+            portfolio.base_system,
+            PSY.get_name(reference),
+        )
             @error(
                 "Technology references a $reference_type that is not attached to the portfolio",
                 technology = get_name(technology),
@@ -389,7 +351,11 @@ function _validate_transport_endpoints(
     start_endpoint, end_endpoint = _get_transport_endpoints(technology)
     is_valid = true
     for (endpoint_name, endpoint) in (("start", start_endpoint), ("end", end_endpoint))
-        if !IS.has_component(portfolio.data, endpoint)
+        if PSY.get_component(
+            typeof(endpoint),
+            portfolio.base_system,
+            PSY.get_name(endpoint),
+        ) !== endpoint
             @error(
                 "Transport endpoint is not attached to the portfolio",
                 technology = get_name(technology),
@@ -414,6 +380,57 @@ function validate_technology_with_portfolio(
     return _validate_region_references(technology, portfolio)
 end
 
+"""
+Check the supply and storage technologies a colocated technology owns.
+
+Each must be one of: attached to the portfolio (it is masked when the colocated technology is
+added), already masked (this colocated technology being re-checked), or not attached at all
+(it is added masked — so it is validated against the portfolio here, before anything is
+attached). What is rejected is a *different* technology of the same type and name already held
+by the portfolio: compared by identity, since such a reference could not be resolved by id
+when the portfolio is serialized.
+"""
+function _validate_colocated_components(
+    technology::ColocatedSupplyStorageTechnology,
+    portfolio::Portfolio,
+)
+    is_valid = true
+    for (role, component) in (
+        ("supply", get_supply_technology(technology)),
+        ("storage", get_storage_technology(technology)),
+    )
+        T = typeof(component)
+        name = get_name(component)
+        stored = something(
+            get_technology(T, portfolio, name),
+            IS.get_masked_component(T, portfolio.data, name),
+            Some(nothing),
+        )
+        if isnothing(stored)
+            is_valid &= validate_technology_with_portfolio(component, portfolio)
+        elseif stored !== component
+            @error(
+                "Colocated $role technology does not match the technology of the same " *
+                "type and name attached to the portfolio",
+                technology = get_name(technology),
+                reference = summary(component),
+            )
+            is_valid = false
+        end
+    end
+    return is_valid
+end
+
+function validate_technology_with_portfolio(
+    technology::ColocatedSupplyStorageTechnology,
+    portfolio::Portfolio,
+)
+    # Both checks run — not short-circuited — so every problem is logged.
+    is_valid = _validate_region_references(technology, portfolio)
+    is_valid &= _validate_colocated_components(technology, portfolio)
+    return is_valid
+end
+
 function _validate_or_skip!(
     portfolio::Portfolio,
     technology::Technology,
@@ -427,7 +444,7 @@ end
 
 function _validate_or_skip!(
     portfolio::Portfolio,
-    region::RegionTopology,
+    region::PSY.Topology,
     skip_validation::Bool,
 )
     if !skip_validation && !_validate_unique_region_id(region, portfolio)

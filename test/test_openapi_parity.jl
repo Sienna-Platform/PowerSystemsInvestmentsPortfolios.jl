@@ -1,89 +1,123 @@
-# Descriptor <-> platform OpenAPI model field parity. The descriptor drives PSIP's
-# Julia structs and the platform package drives the wire format; a field present in
-# one and absent from the other is a silent data-loss bug, so it fails here instead.
+# Descriptor <-> platform OpenAPI model parity. The descriptor drives PSIP's Julia structs and
+# the platform package drives the wire format; a field present in one and absent from the
+# other, or carried as a different type, is a silent data-loss bug — so it fails here instead.
+#
+# Two layers, each catching what the one before cannot:
+#   1. field names — every descriptor field exists on the platform model;
+#   2. field types — every field's wire type is what the generator emits for its kind, with
+#      the expectation derived from the generator's own tables so the two cannot drift.
+#
+# A name and a type can both match while the emitted converter still cannot build or read the
+# wire struct, so the third layer — every document type, with its value variants, surviving a
+# real `to_file`/`from_file` round trip — lives with the other serialization tests in
+# `test_serialization.jl`.
+
+const _PARITY_DESCRIPTOR_FILE =
+    joinpath(BASE_DIR, "src", "descriptors", "SiennaInvestSchema.json")
+const _PARITY_SKIPPED_FIELDS = Set(["ext", "internal", "requirements"])
+
 @testset "descriptor and PowerInvestmentsOpenAPIModels agree on fields" begin
-    descriptor =
-        JSON3.read(joinpath(BASE_DIR, "src", "descriptors", "SiennaInvestSchema.json"))
-    skipped = Set(["ext", "internal"])
+    descriptor = JSON3.read(_PARITY_DESCRIPTOR_FILE)
     for component in descriptor["components"]
-        # `openapi: false` (Zone, Node): no platform OpenAPI model to compare against.
-        get(component, "openapi", true) || continue
         name = String(component["name"])
         po_type = getproperty(PSIP.PI, Symbol(name))
         po_fields = Set(String(f) for f in fieldnames(po_type))
         descriptor_fields = Set(
-            String(p["name"]) for
-            p in component["properties"] if !(String(p["name"]) in skipped)
+            String(p["name"]) for p in component["properties"] if
+            !(String(p["name"]) in _PARITY_SKIPPED_FIELDS)
         )
         missing_on_po = setdiff(descriptor_fields, po_fields)
-        # SupplyTechnology.co2, StorageTechnology.capital_costs_* and
-        # ColocatedSupplyStorageTechnology's ~20 inlined fields are known, documented
-        # parity drifts (see the parity-drift table in the PR body) — expected red,
-        # not fixed here. Every other component must still agree exactly.
-        if name in
-           ("SupplyTechnology", "StorageTechnology", "ColocatedSupplyStorageTechnology")
-            @test_broken isempty(missing_on_po)
-        else
-            @test isempty(missing_on_po)
-            if !isempty(missing_on_po)
-                @error "descriptor fields absent from the OpenAPI model" name missing_on_po
-            end
+
+        @test isempty(missing_on_po)
+        if !isempty(missing_on_po)
+            @error "descriptor fields absent from the OpenAPI model" name missing_on_po
         end
     end
 end
 
-# Matching names are not enough. The OpenAPI read path does no discriminator validation:
-# `OpenAPI.from_json(PC.RenewableGenerationCost, thermal_json)` succeeds, and the value
-# comes back as a *different* cost type with fields dropped and nothing raised. So a
-# descriptor field whose declared Julia type is wider than the PO's is silent data loss,
-# and a `:cost` field pointed at a PO type outside the family `src/openapi/converters.jl`
-# emits cannot be read back at all. Both are type drift, and this is where they fail.
-const OPENAPI_PARITY_COST_PO_TYPES = Dict(
-    # `GenericOperationCost` is the oneOf spanning the whole cost family, so and only so
-    # may the descriptor stay at the abstract `PSY.OperationalCost`.
-    "PSY.OperationalCost" => "GenericOperationCost",
-    "PSY.ThermalGenerationCost" => "ThermalGenerationCost",
-    "PSY.RenewableGenerationCost" => "RenewableGenerationCost",
-    "PSY.StorageCost" => "StorageCost",
-    "IS.ProductionVariableCostCurve" => "ProductionVariableCostCurve",
-)
-
-const OPENAPI_PARITY_REFERENCE_PO_TYPE = "Int64"
+"""
+The value type a platform-model field carries once its optionality is removed: every optional
+field is `Union{Nothing, Absent, T}`, and only `T` describes the wire shape. Errors on a union
+that leaves more than one member, which no generated model declares.
+"""
+function _parity_wire_type(T)
+    members =
+        filter(t -> t !== Nothing && t !== PSIP.IC.Absent, collect(Base.uniontypes(T)))
+    length(members) == 1 ||
+        error("test bug: $T has $(length(members)) non-optional members")
+    return only(members)
+end
 
 """
-The OpenAPI model type a descriptor field of this classification must carry. Driven by the
-generator's own `openapi_classify_field` so the guard and the emitted converters cannot
-disagree about what a field is.
+Module-free spelling of a type, so `PowerCoreOpenAPIModels.MinMax` compares as `MinMax`.
 """
-function openapi_parity_expected_po_type(kind, bare, stripped_type)
-    if kind === :scalar
-        # The descriptor writes `Int`; the OpenAPI generator writes `Int64`.
-        stripped_type == "Int" && return "Int64"
-        return stripped_type
-    end
+_parity_type_name(T) = replace(string(T), r"\b[A-Za-z_][A-Za-z0-9_]*\." => "")
+_parity_type_name(name::AbstractString) = replace(name, r"\b[A-Za-z_][A-Za-z0-9_]*\." => "")
+
+"""
+The module-free wire type name a descriptor field of this classification must carry, derived
+from the generator's own tables (`OPENAPI_ENUM_WIRE_TYPES`, `openapi_field_wrapper_type`,
+`openapi_cost_needs_wrapper`) so the guard and the emitted converters cannot disagree.
+"""
+function _parity_expected_type(generation, struct_name, field, kind, bare, stripped_type)
+    enum_wire(enum) =
+        _parity_type_name(get(generation.OPENAPI_ENUM_WIRE_TYPES, enum, "String"))
+    wrapper = generation.openapi_field_wrapper_type(struct_name, field)
+    kind === :scalar && return stripped_type == "Int" ? "Int64" : stripped_type
     kind === :compound && return stripped_type
-    kind === :reference && return OPENAPI_PARITY_REFERENCE_PO_TYPE
-    kind === :reference_vector && return "Vector{$OPENAPI_PARITY_REFERENCE_PO_TYPE}"
-    # Enums cross the wire as strings, in scalar, vector and dict-key position alike.
-    kind === :enum && return "String"
-    kind === :enum_vector && return replace(stripped_type, bare => "String")
-    kind === :enum_dict && return replace(stripped_type, bare => "String")
-    kind === :enum_compound_dict && return replace(stripped_type, bare[1] => "String")
-    kind === :curve && return "ValueCurve"
-    kind === :cost && return OPENAPI_PARITY_COST_PO_TYPES[bare]
-    kind === :nested && return "TechnologyFinancialData"
-    return error(
-        "test bug: no expected OpenAPI type for classification kind=$kind bare=$bare",
-    )
+    kind === :reference && return "Int64"
+    kind === :reference_vector && return "Vector{Int64}"
+    kind === :enum && return enum_wire(bare)
+    kind === :enum_vector && return "Vector{$(enum_wire(bare))}"
+    kind === :enum_dict && return "Dict{String, $(split(stripped_type, ", ")[2])"
+    kind === :enum_compound_dict && return "$(bare[2])ByKey"
+    kind === :nested && return bare
+    kind in (:keyed_map, :curve, :union_bound) && return wrapper
+    if kind === :cost
+        generation.openapi_cost_needs_wrapper(bare) && return wrapper
+        return _parity_type_name(bare)
+    end
+    return error("test bug: no expected OpenAPI type for kind=$kind bare=$bare")
+end
+
+"""
+The shape the wrapper kinds must have beyond their name: a `oneOf` for curves, abstract costs and
+capacity bounds (unwrapped by `convert_value_curve`/`convert_cost`/`_capacity_bound_from_po`),
+and an `additional_properties` map of the descriptor's value type for a `:keyed_map`.
+"""
+function _parity_wrapper_shape_ok(generation, kind, bare, wire_type)
+    kind in (:curve, :union_bound) && return wire_type <: PSIP.IC.OneOfAPIModel
+    if kind === :cost && generation.openapi_cost_needs_wrapper(bare)
+        return wire_type <: PSIP.IC.OneOfAPIModel
+    end
+    if kind === :keyed_map
+        hasfield(wire_type, :additional_properties) || return false
+        return _parity_type_name(fieldtype(wire_type, :additional_properties)) == bare
+    end
+    return true
 end
 
 @testset "descriptor and PowerInvestmentsOpenAPIModels agree on field types" begin
-    # `_property_types_<Name>` (a side dict of field-name => type-string, from the old
-    # OpenAPI.jl 0.2 codegen where generated fields were typed `Any`) is not emitted by
-    # the current native OpenAPI.jl 1.x generator for any component — generated fields
-    # carry their real Julia type directly, so there is nothing to look this dict up on.
-    # This whole check needs redesigning around `fieldtype(po_type, field)` (unwrapping
-    # `Union{Absent, T, Nothing}` per `kind`) rather than being ported field-by-field;
-    # left as a documented gap rather than attempted here.
-    @test_broken isdefined(PSIP.PI, :_property_types_SupplyTechnology)
+    descriptor = JSON3.read(_PARITY_DESCRIPTOR_FILE)
+    generation = PSIP.StructGeneration
+    for component in descriptor["components"]
+        name = String(component["name"])
+        po_type = getproperty(PSIP.PI, Symbol(name))
+        for property in component["properties"]
+            field = String(property["name"])
+            kind, bare, _ = generation.openapi_classify_field(name, property)
+            kind === :skip && continue
+            wire_type = _parity_wire_type(fieldtype(po_type, Symbol(field)))
+            stripped, _ = generation.openapi_strip_nullable(String(property["type"]))
+            expected = _parity_expected_type(generation, name, field, kind, bare, stripped)
+            actual = _parity_type_name(wire_type)
+            shape_ok = _parity_wrapper_shape_ok(generation, kind, bare, wire_type)
+            @test actual == expected
+            @test shape_ok
+            if actual != expected || !shape_ok
+                @error "descriptor and OpenAPI model disagree on a field type" name field kind descriptor_type =
+                    String(property["type"]) expected actual shape_ok
+            end
+        end
+    end
 end

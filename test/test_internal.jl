@@ -34,7 +34,7 @@ validate_ids(objs::AbstractDict) = validate_ids(collect(values(objs)))
     port = build_portfolio()
 
     technologies = collect(get_technologies(PSIP.Technology, port))
-    regions = collect(PSIP.get_regions(PSIP.RegionTopology, port))
+    regions = collect(PSIP.get_regions(PSY.Topology, port))
     @test !isempty(technologies)
     @test !isempty(regions)
     @test validate_ids(technologies)

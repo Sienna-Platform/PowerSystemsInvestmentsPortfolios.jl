@@ -76,8 +76,8 @@ function from_openapi(po::PI.CapacityReserveMargin, refs::OpenAPIRefs)
     return CapacityReserveMargin(;
         name = po.name,
         available = po.available,
-        target_year = po.target_year,
-        capacity_reserve_fraction = po.capacity_reserve_fraction,
+        target_year = _or_default(po.target_year, 2050),
+        capacity_reserve_fraction = _or_default(po.capacity_reserve_fraction, 0.0),
     )
 end
 

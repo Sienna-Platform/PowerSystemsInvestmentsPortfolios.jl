@@ -208,6 +208,20 @@ function Portfolio(
 end
 
 """
+Construct an empty `Portfolio` specifying aggregation and data. Useful for building a Portfolio from scratch and used in the database parser.
+"""
+function Portfolio(data, aggregation; kwargs...)
+    return Portfolio(
+        aggregation,
+        data,
+        DEFAULT_SYSTEM(),
+        nothing,
+        InfrastructureSystemsInternal();
+        kwargs...,
+    )
+end
+
+"""
 Return the internal of the portfolio
 """
 IS.get_internal(val::Portfolio) = val.internal
@@ -284,6 +298,12 @@ set_description!(val::Portfolio, description::AbstractString) =
     val.metadata.description = description
 
 """
+Set the financial data of the portfolio.
+"""
+set_financial_data!(val::Portfolio, financial_data::PortfolioFinancialData) =
+    val.financial_data = financial_data
+
+"""
 Set the base year of the portfolio.
 """
 set_base_year!(val::Portfolio, base_year::Int64) = val.financial_data.base_year = base_year
@@ -337,34 +357,154 @@ add_technology!(portfolio, bus)
 foreach(x -> add_technology!(portfolio, x), Iterators.flatten((buses, generators)))
 ```
 """
+# Holdover from the pre-document serialization path (mirrors PowerSystems' own definition in
+# base.jl). The document-based import never sets this flag, so it defaults to `false`; it stays
+# as the defensive default `add_technology!` reads for `allow_existing_time_series`.
+_is_deserialization_in_progress(portfolio::Portfolio) =
+    get(get_ext(portfolio), "deserialization_in_progress", false)
+
 function add_technology!(
     portfolio::Portfolio,
     technology::T;
     skip_validation=false,
     kwargs...,
 ) where {T <: Technology}
+    _add_technology!(portfolio, technology; skip_validation=skip_validation, kwargs...)
+    handle_technology_addition!(portfolio, technology; skip_validation=skip_validation)
+    return
+end
 
-    #check_topology(portfolio.data, component)
-    #check_component_addition(portfolio.data, technology; kwargs...)
-
-    deserialization_in_progress = _is_deserialization_in_progress(portfolio)
-    # TODO: Attach requirements to technologies or other structs
-    #if !deserialization_in_progress
-    # Services are attached to devices at deserialization time.
-    #    check_for_services_on_addition(portfolio, technology)
-    #end
-
+# Attach `technology` without running its addition hook. `add_technology!` is this plus
+# `handle_technology_addition!`; the document import calls this directly so it can attach
+# supplemental attributes before any technology is masked (see `mask_owned_technologies!`).
+function _add_technology!(
+    portfolio::Portfolio,
+    technology::Technology;
+    skip_validation=false,
+    kwargs...,
+)
     skip_validation = _validate_or_skip!(portfolio, technology, skip_validation)
-    _kwargs = Dict(k => v for (k, v) in kwargs if k !== :static_injector)
-
+    check_technology_addition(portfolio, technology)
     IS.add_component!(
         portfolio.data,
         technology;
-        allow_existing_time_series=deserialization_in_progress,
+        allow_existing_time_series=_is_deserialization_in_progress(portfolio),
         skip_validation=skip_validation,
         kwargs...,
     )
+    return
+end
 
+"""
+Throws ArgumentError if a portfolio rule blocks adding `technology`.
+"""
+check_technology_addition(::Portfolio, ::Technology) = nothing
+
+# A technology can be owned by one colocated technology only: ownership is what masks it, and
+# the document re-derives masking from these references alone.
+function check_technology_addition(
+    portfolio::Portfolio,
+    technology::ColocatedSupplyStorageTechnology,
+)
+    for subcomponent in get_subcomponents(technology)
+        if is_masked(subcomponent, portfolio)
+            throw(
+                ArgumentError(
+                    "$(summary(subcomponent)) is already owned by another colocated " *
+                    "technology and cannot be assigned to $(summary(technology))",
+                ),
+            )
+        end
+    end
+    return
+end
+
+"""
+Portfolio bookkeeping that follows attaching `technology`. A no-op for every type but
+[`ColocatedSupplyStorageTechnology`](@ref), which takes ownership of its subcomponents.
+"""
+handle_technology_addition!(::Portfolio, ::Technology; kwargs...) = nothing
+
+function handle_technology_addition!(
+    portfolio::Portfolio,
+    technology::ColocatedSupplyStorageTechnology;
+    skip_validation=false,
+)
+    mask_owned_technologies!(portfolio, technology; skip_validation=skip_validation)
+    return
+end
+
+"""
+The supply and storage technologies a [`ColocatedSupplyStorageTechnology`](@ref) owns.
+
+Owned technologies are attached to the portfolio as **masked** components — the analogue of a
+PowerSystems `HybridSystem`'s subcomponents. They stay reachable from their owner (and through
+[`get_masked_technologies`](@ref)) but drop out of [`get_technologies`](@ref), so a model built
+from the portfolio sees the colocated project once rather than its parts as well.
+"""
+get_subcomponents(technology::ColocatedSupplyStorageTechnology) =
+    (get_supply_technology(technology), get_storage_technology(technology))
+
+"""
+Return the masked technologies of type `T`: those owned by a
+[`ColocatedSupplyStorageTechnology`](@ref) and so excluded from [`get_technologies`](@ref).
+"""
+get_masked_technologies(::Type{T}, portfolio::Portfolio) where {T <: Technology} =
+    IS.get_masked_components(T, portfolio.data)
+
+"""
+Return true if `technology` is attached to the portfolio as a masked technology.
+"""
+is_masked(technology::T, portfolio::Portfolio) where {T <: Technology} =
+    IS.get_masked_component(T, portfolio.data, get_name(technology)) === technology
+
+"""
+Mask the technologies `technology` owns, so they leave the portfolio's own enumeration.
+
+A subcomponent that is already attached is moved to the masked container, keeping its time
+series and supplemental attributes; one that is not attached yet is added straight to it. Masking is **derived, never recorded**: the document writes owned technologies
+as ordinary rows, and reading it back re-masks them from the colocated technology's own
+references — the same contract PowerSystems keeps for `HybridSystem`.
+
+Supplemental attributes cannot be added to a masked technology (an InfrastructureSystems
+restriction), so attach them before adding the colocated technology that owns it.
+"""
+function mask_owned_technologies!(
+    portfolio::Portfolio,
+    technology::ColocatedSupplyStorageTechnology;
+    skip_validation=false,
+)
+    for subcomponent in get_subcomponents(technology)
+        if is_masked(subcomponent, portfolio)
+            throw(
+                ArgumentError(
+                    "$(summary(subcomponent)) is already owned by another colocated " *
+                    "technology and cannot be assigned to $(summary(technology))",
+                ),
+            )
+        elseif is_attached(subcomponent, portfolio)
+            IS.mask_component!(portfolio.data, subcomponent)
+        else
+            # Already checked against the portfolio by the colocated technology's own
+            # validation, before anything was attached.
+            IS.add_masked_component!(
+                portfolio.data,
+                subcomponent;
+                skip_validation=skip_validation,
+            )
+        end
+    end
+    return
+end
+
+"""
+Mask the technologies owned by every colocated technology in the portfolio. Used by the
+document import, which attaches every technology live first.
+"""
+function mask_owned_technologies!(portfolio::Portfolio)
+    for technology in collect(get_technologies(ColocatedSupplyStorageTechnology, portfolio))
+        mask_owned_technologies!(portfolio, technology)
+    end
     return
 end
 
@@ -407,7 +547,10 @@ function get_technology(
     return IS.get_component(T, portfolio.data, name)
 end
 
-IS.get_components(::Type{T}, portfolio::Portfolio) where {T <: IS.InfrastructureSystemsComponent} = IS.get_components(T, portfolio.data)
+IS.get_components(
+    ::Type{T},
+    portfolio::Portfolio,
+) where {T <: IS.InfrastructureSystemsComponent} = IS.get_components(T, portfolio.data)
 
 """
 Returns an iterator of technologies. T can be concrete or abstract.
@@ -590,8 +733,23 @@ end
 
 handle_technology_removal!(::Portfolio, technology::Technology) = nothing
 
+# A colocated technology owns its subcomponents, so they leave the portfolio with it — the
+# same rule PowerSystems applies to a `HybridSystem`.
+function handle_technology_removal!(
+    portfolio::Portfolio,
+    technology::ColocatedSupplyStorageTechnology,
+)
+    for subcomponent in get_subcomponents(technology)
+        if is_masked(subcomponent, portfolio)
+            IS.remove_masked_component!(portfolio.data, subcomponent)
+        end
+    end
+    return
+end
+
 function handle_component_removal!(portfolio::Portfolio, technology::Technology)
     _handle_technology_removal_common!(technology)
+    handle_technology_removal!(portfolio, technology)
     # This may have to be refactored if handle_component_removal! needs to be implemented
     # for a subtype.
     # TODO: Check if clear_services makes sense for technologies
@@ -784,74 +942,154 @@ end
 ###########################
 
 """
-Add a RegionTopology to the portfolio.
+Attach a PowerSystems topology component (`Area`, `LoadZone`, bus, arc, ...) to the
+portfolio. The component is stored in the portfolio's base system; callers never need to
+reach into `base_system` directly.
 
-Throws ArgumentError if the region's name is already stored for its concrete type.
-Throws ArgumentError if any region-specific rule is violated.
-Throws InvalidValue if any of the region's field values are outside of defined valid
-range.
+The portfolio's convention is natural units, but `Area`/`LoadZone` (and other system-base
+topology) store `peak_active_power`/`peak_reactive_power` internally in device base. To keep
+the natural-units contract, pass those fields as `add_topology!` keyword arguments in
+natural units (MW / MVAr) rather than to the raw `PSY.*` constructor: they are applied
+through the units-tagged setters *after* attachment, once the system base power is synced. A
+nonzero power value left on the raw constructor is device-base and triggers a warning.
+
+Throws `IS.InvalidValue` if a region with the same id is already attached (unless
+`skip_validation=true`), and `ArgumentError` if the component's name is already stored for its
+concrete type, any PowerSystems rule is violated, or a power keyword is given for a topology
+type that has no such (system-base) field.
 
 # Examples
 
 ```julia
 portfolio = Portfolio(...)
 
-# Add a single technology.
-add_region!(portfolio, zone)
+# Add a bus (no power fields; base_voltage is natural kV).
+add_topology!(portfolio, ACBus(; name="bus_1", base_voltage=138.0, ...))
+
+# Add an Area with its peak power in natural units (MW / MVAr).
+add_topology!(
+    portfolio,
+    PSY.Area(; name="west", input_basis=u"NU");
+    peak_active_power=250.0,
+    peak_reactive_power=50.0,
+)
 
 # Add many at once.
-foreach(x -> add_region!(portfolio, x), Iterators.flatten((buses, generators)))
+foreach(x -> add_topology!(portfolio, x), buses)
 ```
 """
-function add_region!(
+function add_topology!(
     portfolio::Portfolio,
-    zone::T;
+    topology::PSY.Topology;
+    peak_active_power=nothing,
+    peak_reactive_power=nothing,
     skip_validation=false,
     kwargs...,
-) where {T <: RegionTopology}
-    deserialization_in_progress = _is_deserialization_in_progress(portfolio)
-    skip_validation = _validate_or_skip!(portfolio, zone, skip_validation)
-    IS.add_component!(
-        portfolio.data,
-        zone;
-        allow_existing_time_series=deserialization_in_progress,
+)
+    _check_topology_power_units(topology, peak_active_power, peak_reactive_power)
+    skip_validation = _validate_or_skip!(portfolio, topology, skip_validation)
+    PSY.add_component!(
+        portfolio.base_system,
+        topology;
         skip_validation=skip_validation,
         kwargs...,
     )
-
+    # Attachment has synced the system base power, so the units-tagged setters can now
+    # convert these natural-units (MW / MVAr) values into the component's device-base storage.
+    isnothing(peak_active_power) ||
+        PSY.set_peak_active_power!(topology, peak_active_power * PSY.MW)
+    isnothing(peak_reactive_power) ||
+        PSY.set_peak_reactive_power!(topology, peak_reactive_power * PSY.MVAr)
     return
 end
 
+# Guard the natural-units power keywords of `add_topology!`. They only apply to system-base
+# topology (`Area`, `LoadZone`, ...) whose power fields per-unitize against the system base;
+# for anything else they are meaningless and rejected. When the keyword is omitted but the
+# raw constructor already stored a nonzero (device-base) power, warn: that value is not in
+# the natural units the portfolio otherwise uses.
+function _check_topology_power_units(topology, peak_active_power, peak_reactive_power)
+    is_system_base = PSY.base_power_kind(topology) isa PSY.SystemBasePower
+    if !is_system_base
+        if !isnothing(peak_active_power) || !isnothing(peak_reactive_power)
+            throw(
+                ArgumentError(
+                    "peak_active_power / peak_reactive_power keywords are only valid for " *
+                    "system-base topology (e.g. Area, LoadZone); got $(typeof(topology)).",
+                ),
+            )
+        end
+        return
+    end
+    for (field, provided) in (
+        (:peak_active_power, peak_active_power),
+        (:peak_reactive_power, peak_reactive_power),
+    )
+        isnothing(provided) || continue
+        hasproperty(topology, field) || continue
+        getproperty(topology, field) == 0 && continue
+        @warn(
+            "add_topology!: $(summary(topology)) was constructed with a nonzero $field " *
+            "that is stored in device base, not the natural units the portfolio uses. " *
+            "Pass $field in natural units (MW / MVAr) as an add_topology! keyword instead.",
+            maxlog = 1,
+        )
+    end
+    return
+end
+
+# Backwards-compatible alias for the older "region" naming.
+add_region!(portfolio::Portfolio, topology::PSY.Topology; kwargs...) =
+    add_topology!(portfolio, topology; kwargs...)
+
 """
-Returns an iterator of regions. T can be concrete or abstract.
-Call collect on the result if an array is desired.
+Returns an iterator of the portfolio's topology components of type `T` (concrete or
+abstract). Call `collect` on the result if an array is desired.
 
 # Examples
 
 ```julia
-iter = Portfolio.get_regions(RegionTopology, portfolio)
-regions = collect(Portfolio.get_regions(RegionTopology, portfolio))
+iter = Portfolio.get_topologies(PSY.Topology, portfolio)
+areas = collect(Portfolio.get_topologies(PSY.Area, portfolio))
 ```
-
 """
-
-function get_regions(::Type{T}, portfolio::Portfolio;) where {T <: RegionTopology}
-    return IS.get_components(T, portfolio.data)
+function get_topologies(::Type{T}, portfolio::Portfolio) where {T <: PSY.Topology}
+    return PSY.get_components(T, portfolio.base_system)
 end
 
-"""
-Get the region of type T with name. Returns nothing if no region matches. If T is an abstract
-type then the names of regions across all subtypes of T must be unique.
+# Backwards-compatible alias for the older "region" naming.
+get_regions(::Type{T}, portfolio::Portfolio) where {T <: PSY.Topology} =
+    get_topologies(T, portfolio)
 
-Throws ArgumentError if T is not a concrete type and there is more than one region with
-requested name
 """
-function get_region(
+Get the topology component of type `T` with `name`. Returns `nothing` if none matches. If
+`T` is abstract then names across all subtypes of `T` must be unique.
+
+Throws ArgumentError if `T` is not concrete and more than one component has the requested
+name.
+"""
+function get_topology(
     ::Type{T},
     portfolio::Portfolio,
     name::AbstractString,
-) where {T <: RegionTopology}
-    return IS.get_component(T, portfolio.data, name)
+) where {T <: PSY.Topology}
+    return PSY.get_component(T, portfolio.base_system, name)
+end
+
+# Backwards-compatible alias for the older "region" naming. Adds a method to the existing
+# `get_region` generic (whose other methods are per-technology accessors).
+get_region(
+    ::Type{T},
+    portfolio::Portfolio,
+    name::AbstractString,
+) where {T <: PSY.Topology} = get_topology(T, portfolio, name)
+
+"""
+Remove a topology component from the portfolio's base system.
+"""
+function remove_topology!(portfolio::Portfolio, topology::PSY.Topology)
+    PSY.remove_component!(portfolio.base_system, topology)
+    return
 end
 
 ################################
