@@ -37,8 +37,7 @@ _serialize_type_name(T::Type) = string(parentmodule(T), '.', nameof(T))
 
 """
 Register every component the document will carry under its own id: the base system's
-topology first, then each [`DOCUMENT_PLAN`](@ref) type's components — masked ones included,
-since [`_plan_components`](@ref) exports them too.
+topology first, then each [`DOCUMENT_PLAN`](@ref) type's components ([`_plan_components`](@ref)).
 """
 function _build_export_refs(portfolio::Portfolio)
     refs = OpenAPIRefs()
@@ -69,7 +68,7 @@ this warning automatically once its converter joins [`DOCUMENT_PLAN`](@ref).
 """
 function warn_unexportable_components(portfolio::Portfolio)
     counts = Dict{Symbol, Int}()
-    for technology in get_technologies(Technology, portfolio)
+    for technology in _all_technologies(Technology, portfolio)
         if !is_document_exportable(technology)
             name = nameof(typeof(technology))
             counts[name] = get(counts, name, 0) + 1
@@ -144,8 +143,10 @@ document can describe was registered into `refs` by `_export_supplemental_attrib
 this runs.
 """
 function _absent_owner_is_tolerated(row)
-    row.owner_category == "Component" && return true
-    row.owner_category == "SupplementalAttribute" && return false
+    # `owner_category` is a platform enum model, not a `String`; compare its wire value.
+    category = string(row.owner_category)
+    category == "Component" && return true
+    category == "SupplementalAttribute" && return false
     error(
         "to_openapi: time series \"$(row.name)\" (owner id $(row.owner_id)) has " *
         "unrecognized owner_category $(row.owner_category)",
@@ -223,9 +224,10 @@ function _export_all_time_series(
     if !isempty(skipped_counts)
         total = sum(values(skipped_counts))
         types = join(sort(collect(keys(skipped_counts))), ", ")
-        @warn "to_openapi: omitting $total time series row(s) whose owning component has " *
-              "no OpenAPI converter ($types) — they remain in the sidecar but are not " *
-              "described in the document and will not survive a round trip"
+        @warn "to_openapi: omitting $total time series row(s) whose owning component is " *
+              "not in the document — it has no OpenAPI converter ($types). " *
+              "They remain in the sidecar but are not described in the document and will " *
+              "not survive a round trip"
     end
     # The rows above go into the document either way; `write_catalog` decides only whether
     # InfraStore's own `.sqlite` is written beside the arrays as well. See `to_file`.
@@ -249,15 +251,26 @@ function _write_time_series_values(
 end
 
 """
-Enumerate the live instances of a `DOCUMENT_PLAN` type. Technology types walk the masked
-container alongside the live one so components masked out of the portfolio's own enumeration are
-still exported by id; requirement types (which have no masked container) enumerate directly.
+Every technology of type `T` the portfolio holds: the live ones and the masked ones a
+[`ColocatedSupplyStorageTechnology`](@ref) owns.
 """
-_plan_components(portfolio::Portfolio, ::Type{T}) where {T <: Technology} =
+_all_technologies(::Type{T}, portfolio::Portfolio) where {T <: Technology} =
     Iterators.flatten((
         get_technologies(T, portfolio),
-        IS.get_masked_components(T, portfolio.data),
+        get_masked_technologies(T, portfolio),
     ))
+
+"""
+Enumerate the instances of a `DOCUMENT_PLAN` type the document carries.
+
+Masked technologies — the supply and storage a colocated technology owns — are written as
+ordinary rows of their own type. The document does not record that they are masked: importing
+it adds the colocated technology after them and
+[`mask_owned_technologies!`](@ref) re-masks them from its references, so mask state has one
+writer. This is the contract PowerSystems keeps for a `HybridSystem`'s subcomponents.
+"""
+_plan_components(portfolio::Portfolio, ::Type{T}) where {T <: Technology} =
+    _all_technologies(T, portfolio)
 _plan_components(portfolio::Portfolio, ::Type{T}) where {T <: Requirement} =
     get_requirements(T, portfolio)
 
@@ -303,7 +316,8 @@ function _export_requirements_associations!(
     refs::OpenAPIRefs,
     portfolio::Portfolio,
 )
-    for technology in get_technologies(Technology, portfolio)
+    # Masked technologies keep their memberships too.
+    for technology in _all_technologies(Technology, portfolio)
         supports_requirements(technology) || continue
         for requirement in get_requirements(technology)
             PD.add_requirement_association!(

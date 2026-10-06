@@ -137,6 +137,9 @@ export validate_technology
 export check_technology
 export check_technologies
 export remove_technology!
+export get_subcomponents
+export get_masked_technologies
+export is_masked
 export add_region!
 export add_topology!
 export remove_topology!

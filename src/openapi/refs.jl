@@ -34,7 +34,8 @@ Populated in dependency order as components are converted (topology seeded up fr
 requirements before the technologies that reference them, etc.) An id or a component that
 has not been registered yet is malformed input, not an absence to tolerate: the typed
 [`resolve_ref`](@ref) and [`component_id`](@ref) error loudly naming what was missing rather
-than returning `nothing`. Use [`has_ref`](@ref) / [`has_component_id`](@ref) first when
+than returning `nothing`. Use [`has_component_ref`](@ref) / [`has_topology_ref`](@ref) /
+[`has_component_id`](@ref) first when
 absence is itself a valid outcome to branch on.
 """
 struct OpenAPIRefs
@@ -88,17 +89,17 @@ function Base.getindex(refs::OpenAPIRefs, ::Integer)
     )
 end
 
-has_ref(refs::OpenAPIRefs, id::Integer) =
-    haskey(refs.by_topology_id, Int(id)) || haskey(refs.by_component_id, Int(id))
-
 """
 Whether `id` names a registered **portfolio** component (technology, requirement, or
 supplemental attribute) — the family every document association row and time-series owner
-refers to. Use this, not [`has_ref`](@ref), for those checks: topology ids come from the base
-system's own counter and overlap portfolio ids, so `has_ref` answers `true` for a portfolio id
-that is unregistered whenever a bus or arc happens to share it.
+refers to.
 """
 has_component_ref(refs::OpenAPIRefs, id::Integer) = haskey(refs.by_component_id, Int(id))
+
+"""
+Whether `id` names a registered base-system **topology** component (bus, area, load zone, arc).
+"""
+has_topology_ref(refs::OpenAPIRefs, id::Integer) = haskey(refs.by_topology_id, Int(id))
 
 """
 Resolve an **optional** component reference from a document.

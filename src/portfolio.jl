@@ -369,8 +369,22 @@ function add_technology!(
     skip_validation=false,
     kwargs...,
 ) where {T <: Technology}
-    skip_validation = _validate_or_skip!(portfolio, technology, skip_validation)
+    _add_technology!(portfolio, technology; skip_validation=skip_validation, kwargs...)
+    handle_technology_addition!(portfolio, technology; skip_validation=skip_validation)
+    return
+end
 
+# Attach `technology` without running its addition hook. `add_technology!` is this plus
+# `handle_technology_addition!`; the document import calls this directly so it can attach
+# supplemental attributes before any technology is masked (see `mask_owned_technologies!`).
+function _add_technology!(
+    portfolio::Portfolio,
+    technology::Technology;
+    skip_validation=false,
+    kwargs...,
+)
+    skip_validation = _validate_or_skip!(portfolio, technology, skip_validation)
+    check_technology_addition(portfolio, technology)
     IS.add_component!(
         portfolio.data,
         technology;
@@ -378,7 +392,119 @@ function add_technology!(
         skip_validation=skip_validation,
         kwargs...,
     )
+    return
+end
 
+"""
+Throws ArgumentError if a portfolio rule blocks adding `technology`.
+"""
+check_technology_addition(::Portfolio, ::Technology) = nothing
+
+# A technology can be owned by one colocated technology only: ownership is what masks it, and
+# the document re-derives masking from these references alone.
+function check_technology_addition(
+    portfolio::Portfolio,
+    technology::ColocatedSupplyStorageTechnology,
+)
+    for subcomponent in get_subcomponents(technology)
+        if is_masked(subcomponent, portfolio)
+            throw(
+                ArgumentError(
+                    "$(summary(subcomponent)) is already owned by another colocated " *
+                    "technology and cannot be assigned to $(summary(technology))",
+                ),
+            )
+        end
+    end
+    return
+end
+
+"""
+Portfolio bookkeeping that follows attaching `technology`. A no-op for every type but
+[`ColocatedSupplyStorageTechnology`](@ref), which takes ownership of its subcomponents.
+"""
+handle_technology_addition!(::Portfolio, ::Technology; kwargs...) = nothing
+
+function handle_technology_addition!(
+    portfolio::Portfolio,
+    technology::ColocatedSupplyStorageTechnology;
+    skip_validation=false,
+)
+    mask_owned_technologies!(portfolio, technology; skip_validation=skip_validation)
+    return
+end
+
+"""
+The supply and storage technologies a [`ColocatedSupplyStorageTechnology`](@ref) owns.
+
+Owned technologies are attached to the portfolio as **masked** components — the analogue of a
+PowerSystems `HybridSystem`'s subcomponents. They stay reachable from their owner (and through
+[`get_masked_technologies`](@ref)) but drop out of [`get_technologies`](@ref), so a model built
+from the portfolio sees the colocated project once rather than its parts as well.
+"""
+get_subcomponents(technology::ColocatedSupplyStorageTechnology) =
+    (get_supply_technology(technology), get_storage_technology(technology))
+
+"""
+Return the masked technologies of type `T`: those owned by a
+[`ColocatedSupplyStorageTechnology`](@ref) and so excluded from [`get_technologies`](@ref).
+"""
+get_masked_technologies(::Type{T}, portfolio::Portfolio) where {T <: Technology} =
+    IS.get_masked_components(T, portfolio.data)
+
+"""
+Return true if `technology` is attached to the portfolio as a masked technology.
+"""
+is_masked(technology::T, portfolio::Portfolio) where {T <: Technology} =
+    IS.get_masked_component(T, portfolio.data, get_name(technology)) === technology
+
+"""
+Mask the technologies `technology` owns, so they leave the portfolio's own enumeration.
+
+A subcomponent that is already attached is moved to the masked container, keeping its time
+series and supplemental attributes; one that is not attached yet is added straight to it. Masking is **derived, never recorded**: the document writes owned technologies
+as ordinary rows, and reading it back re-masks them from the colocated technology's own
+references — the same contract PowerSystems keeps for `HybridSystem`.
+
+Supplemental attributes cannot be added to a masked technology (an InfrastructureSystems
+restriction), so attach them before adding the colocated technology that owns it.
+"""
+function mask_owned_technologies!(
+    portfolio::Portfolio,
+    technology::ColocatedSupplyStorageTechnology;
+    skip_validation=false,
+)
+    for subcomponent in get_subcomponents(technology)
+        if is_masked(subcomponent, portfolio)
+            throw(
+                ArgumentError(
+                    "$(summary(subcomponent)) is already owned by another colocated " *
+                    "technology and cannot be assigned to $(summary(technology))",
+                ),
+            )
+        elseif is_attached(subcomponent, portfolio)
+            IS.mask_component!(portfolio.data, subcomponent)
+        else
+            # Already checked against the portfolio by the colocated technology's own
+            # validation, before anything was attached.
+            IS.add_masked_component!(
+                portfolio.data,
+                subcomponent;
+                skip_validation=skip_validation,
+            )
+        end
+    end
+    return
+end
+
+"""
+Mask the technologies owned by every colocated technology in the portfolio. Used by the
+document import, which attaches every technology live first.
+"""
+function mask_owned_technologies!(portfolio::Portfolio)
+    for technology in collect(get_technologies(ColocatedSupplyStorageTechnology, portfolio))
+        mask_owned_technologies!(portfolio, technology)
+    end
     return
 end
 
@@ -607,8 +733,23 @@ end
 
 handle_technology_removal!(::Portfolio, technology::Technology) = nothing
 
+# A colocated technology owns its subcomponents, so they leave the portfolio with it — the
+# same rule PowerSystems applies to a `HybridSystem`.
+function handle_technology_removal!(
+    portfolio::Portfolio,
+    technology::ColocatedSupplyStorageTechnology,
+)
+    for subcomponent in get_subcomponents(technology)
+        if is_masked(subcomponent, portfolio)
+            IS.remove_masked_component!(portfolio.data, subcomponent)
+        end
+    end
+    return
+end
+
 function handle_component_removal!(portfolio::Portfolio, technology::Technology)
     _handle_technology_removal_common!(technology)
+    handle_technology_removal!(portfolio, technology)
     # This may have to be refactored if handle_component_removal! needs to be implemented
     # for a subtype.
     # TODO: Check if clear_services makes sense for technologies

@@ -184,6 +184,100 @@ end
         min_level = Logging.Error,
         @test(!validate_technology(colocated)),
     )
+
+    # ── ownership: a colocated technology masks the supply and storage it owns ──
+    # Adding `valid_colocated` above already masked both attached references.
+    @test PSIP.is_masked(supply_ref, port) && PSIP.is_masked(storage_ref, port)
+    @test isnothing(get_technology(typeof(supply_ref), port, "colocated_supply_ref"))
+    @test collect(PSIP.get_subcomponents(colocated)) == [supply_ref, storage_ref]
+    @test Set(PSIP.get_masked_technologies(Technology, port)) ==
+          Set([supply_ref, storage_ref])
+    # Re-checking an attached colocated technology accepts its already-masked subcomponents.
+    set_inverter_supply_ratio!(colocated, 1.0)
+    @test PSIP.validate_technology_with_portfolio(colocated, port)
+
+    colocated_with(name, supply, storage) =
+        ColocatedSupplyStorageTechnology{PSY.RenewableDispatch}(;
+            name=name,
+            operation_costs_inverter=CostCurve(LinearCurve(0.0)),
+            financial_data,
+            inverter_efficiency=0.96,
+            power_systems_type="RenewableDispatch",
+            inverter_supply_ratio=1.0,
+            capital_costs_inverter=PSIP.CapitalCost(LinearCurve(0.0), 0.0),
+            available=true,
+            region=PSY.Topology[attached_region],
+            supply_technology=supply,
+            storage_technology=storage,
+        )
+    new_supply(name; region=PSY.Topology[attached_region]) =
+        SupplyTechnology{PSY.RenewableDispatch}(;
+            name=name,
+            available=true,
+            power_systems_type="RenewableDispatch",
+            financial_data=financial_data,
+            region=region,
+        )
+    new_storage(name) = StorageTechnology{PSY.EnergyReservoirStorage}(;
+        name=name,
+        available=true,
+        power_systems_type="EnergyReservoirStorage",
+        storage_tech=StorageTech.OTHER_CHEM,
+        financial_data=financial_data,
+        region=PSY.Topology[attached_region],
+    )
+
+    # Subcomponents that are not attached yet are added straight to the masked container.
+    fresh_supply = new_supply("fresh_supply")
+    fresh_storage = new_storage("fresh_storage")
+    fresh = colocated_with("fresh_colocated", fresh_supply, fresh_storage)
+    add_technology!(port, fresh)
+    @test PSIP.is_masked(fresh_supply, port) && PSIP.is_masked(fresh_storage, port)
+    @test isnothing(get_technology(typeof(fresh_supply), port, "fresh_supply"))
+
+    # A technology can be owned by one colocated technology only.
+    @test_throws ArgumentError add_technology!(
+        port,
+        colocated_with("double_owner", fresh_supply, new_storage("another_storage")),
+    )
+    @test isnothing(get_technology(typeof(fresh), port, "double_owner"))
+
+    # Same name and type as a technology the portfolio holds, but a different object —
+    # whether the held one is live or masked.
+    live_supply = new_supply("live_supply")
+    add_technology!(port, live_supply)
+    for (name, impostor) in (
+        ("impostor_of_live", new_supply("live_supply")),
+        ("impostor_of_masked", new_supply("colocated_supply_ref")),
+    )
+        invalid = colocated_with(name, impostor, new_storage("storage_for_$name"))
+        @test_logs(
+            (:error, r"Colocated supply technology does not match the technology"),
+            min_level = Logging.Error,
+            @test_throws(IS.InvalidValue, add_technology!(port, invalid)),
+        )
+        @test isnothing(get_technology(typeof(invalid), port, name))
+    end
+
+    # An unattached subcomponent is validated against the portfolio before anything is
+    # attached, so a bad one leaves nothing behind.
+    detached_region =
+        PSY.Area(; input_basis=PSY.CU, name="detached_colocated_region", base_power=100.0)
+    bad_supply = new_supply("bad_supply"; region=PSY.Topology[detached_region])
+    bad = colocated_with("bad_part_colocated", bad_supply, new_storage("unused_storage"))
+    @test_logs(
+        (:error, r"region that is not attached to the portfolio"),
+        min_level = Logging.Error,
+        @test_throws(IS.InvalidValue, add_technology!(port, bad)),
+    )
+    @test isnothing(get_technology(typeof(bad), port, "bad_part_colocated"))
+    @test !PSIP.is_masked(bad_supply, port)
+
+    # Removing a colocated technology removes the subcomponents it owns.
+    PSIP.remove_technology!(port, fresh)
+    @test !PSIP.is_masked(fresh_supply, port) && !PSIP.is_masked(fresh_storage, port)
+    @test Set(PSIP.get_masked_technologies(Technology, port)) ==
+          Set([supply_ref, storage_ref])
 end
 
 @testset "Demand region validation" begin

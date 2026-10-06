@@ -308,7 +308,10 @@ function from_openapi(
     _apply_document_metadata!(portfolio, doc, keys(portfolio_kwargs))
 
     system_path = _resolve_base_system(doc, dirname(document_path))
-    set_base_system!(portfolio, _read_base_system(system_path; portfolio_kwargs...))
+    set_base_system!(
+        portfolio,
+        _read_base_system(system_path; base_power=base_power, portfolio_kwargs...),
+    )
 
     schedule = _resolve_investment_schedule(doc)
     isnothing(schedule) || set_investment_schedule!(portfolio, schedule)
@@ -316,11 +319,16 @@ function from_openapi(
     isnothing(doc.financial_data) ||
         set_financial_data!(portfolio, convert_nested_data(doc.financial_data))
 
-    store = if isnothing(time_series_storage_path)
-        nothing
-    else
-        portfolio.data.time_series_manager.data_store
+    if isnothing(time_series_storage_path) && !isempty(doc.time_series_associations)
+        throw(
+            IS.DataFormatError(
+                "from_openapi: the document declares time series but no time_series_storage_path was supplied",
+            ),
+        )
     end
+    store =
+        isnothing(time_series_storage_path) ? nothing :
+        portfolio.data.time_series_manager.data_store
     _load_time_series_associations!(portfolio, doc, store)
     refs = OpenAPIRefs()
     # Seed the base system's topology (buses/areas) into refs so technologies can resolve their
@@ -342,11 +350,17 @@ function from_openapi(
     end
     load_supplemental_attribute_associations!(portfolio, refs, doc)
     load_requirements_associations!(portfolio, refs, doc)
+    # Masking comes last. The document carries no mask state — it is re-derived from each
+    # colocated technology's own references — and it has to wait until the attributes are
+    # attached, because InfrastructureSystems cannot attach one to a masked component.
+    mask_owned_technologies!(portfolio)
     return portfolio
 end
 
+# `_add_technology!`, not `add_technology!`: every technology is attached live here and the
+# owned ones are masked together at the end of the import (see `from_openapi`).
 add_component!(portfolio::Portfolio, component::Technology) =
-    add_technology!(portfolio, component)
+    _add_technology!(portfolio, component)
 add_component!(portfolio::Portfolio, component::Requirement) =
     add_requirement!(portfolio, component)
 
@@ -362,7 +376,7 @@ extension), or a default system when the document names none.
 Only the keywords that govern how a bundle is *read* — `time_series_read_only` and
 `time_series_directory` — are forwarded; the rest are `Portfolio` keywords.
 """
-_read_base_system(::Nothing; _...) = DEFAULT_SYSTEM()
+_read_base_system(::Nothing; base_power=100.0, _...) = System(base_power)
 
 function _read_base_system(path::AbstractString; portfolio_kwargs...)
     system_kwargs = (

@@ -26,8 +26,12 @@
 
     @test PSIP.resolve_ref(refs, 1, PSY.Area) === zone
     @test PSIP.component_id(refs, node) == 2
-    @test PSIP.has_ref(refs, 1)
-    @test !PSIP.has_ref(refs, 99)
+    @test PSIP.has_topology_ref(refs, 1)
+    @test !PSIP.has_topology_ref(refs, 99)
+    # Topology and portfolio ids overlap, so a registered topology id says nothing about the
+    # portfolio family: id 1 is a registered Area and still an unregistered component.
+    @test !PSIP.has_component_ref(refs, 1)
+    @test !isdefined(PSIP, :has_ref)
     @test PSIP.has_component_id(refs, zone)
 
     # `nothing` in, `nothing` out: an omitted optional reference is an absent

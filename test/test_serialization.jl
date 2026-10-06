@@ -161,6 +161,65 @@ end
     end
 end
 
+@testset "colocated subcomponents are masked, and re-masked on read" begin
+    port = _build_roundtrip_portfolio()
+    zone = PSY.get_component(PSY.Area, PSIP.get_base_system(port), "zone1")
+    gen = PSIP.get_technology(SupplyTechnology{ThermalStandard}, port, "gen1")
+    financial_data = PSIP.get_financial_data(gen)
+    # Not attached to the portfolio: adding the colocated technology adds it masked.
+    battery = StorageTechnology{PSY.EnergyReservoirStorage}(;
+        name="battery",
+        region=[zone],
+        available=true,
+        power_systems_type="EnergyReservoirStorage",
+        financial_data=financial_data,
+    )
+    colocated = ColocatedSupplyStorageTechnology{PSY.ThermalStandard}(;
+        name="colocated",
+        financial_data=financial_data,
+        power_systems_type="ThermalStandard",
+        operation_costs_inverter=CostCurve(LinearCurve(0.8)),
+        inverter_efficiency=0.96,
+        inverter_supply_ratio=1.0,
+        capital_costs_inverter=PSIP.CapitalCost(LinearCurve(70.0), 0.0),
+        region=[zone],
+        supply_technology=gen,
+        storage_technology=battery,
+    )
+    PSIP.add_technology!(port, colocated)
+
+    function check_masked(p)
+        owner = PSIP.get_technology(
+            ColocatedSupplyStorageTechnology{ThermalStandard},
+            p,
+            "colocated",
+        )
+        supply, storage = PSIP.get_subcomponents(owner)
+        @test PSIP.get_name(supply) == "gen1" && PSIP.get_name(storage) == "battery"
+        @test PSIP.is_masked(supply, p) && PSIP.is_masked(storage, p)
+        # Out of the portfolio's own enumeration ...
+        @test isnothing(PSIP.get_technology(SupplyTechnology{ThermalStandard}, p, "gen1"))
+        @test collect(PSIP.get_technologies(Technology, p)) == [owner]
+        # ... but still holding everything that was attached to them.
+        @test length(collect(IS.get_supplemental_attributes(ExistingDevices, supply))) == 1
+        @test length(collect(IS.get_time_series_multiple(supply))) == 1
+        @test PSIP.get_name.(PSIP.get_requirements(supply)) == ["max_cap"]
+        return
+    end
+    check_masked(port)
+
+    mktempdir() do dir
+        for path in joinpath.(dir, ("owned", "owned.json", "owned.snp"))
+            PSIP.to_file(port, path; force=true)
+            check_masked(PSIP.from_file(path))
+        end
+        # The document writes owned technologies as ordinary rows and records no mask state.
+        raw = read(joinpath(dir, "owned.json"), String)
+        @test !occursin("mask", lowercase(raw))
+        @test length(JSON3.read(raw, Dict)["components"]["SupplyTechnology"]) == 1
+    end
+end
+
 # ── every struct, with its value variants ──────────────────────────────────────
 #
 # The facet test above proves the plumbing; this one proves the converters. A type that is
@@ -316,23 +375,8 @@ function _build_wide_roundtrip_portfolio()
         ),
     )
 
-    # The two document types the 5-bus portfolio does not hold at all.
-    PSIP.add_technology!(
-        portfolio,
-        ColocatedSupplyStorageTechnology{PSY.RenewableDispatch}(;
-            name="rt_colocated",
-            financial_data=financial_data,
-            power_systems_type="RenewableDispatch",
-            operation_costs_inverter=CostCurve(LinearCurve(0.8)),
-            inverter_efficiency=0.96,
-            inverter_supply_ratio=1.0,
-            capital_costs_inverter=PSIP.CapitalCost(LinearCurve(70.0), 0.0),
-            available=true,
-            region=region,
-            supply_technology=renewable,
-            storage_technology=storage_set,
-        ),
-    )
+    # One of the two document types the 5-bus portfolio does not hold at all; the other, the
+    # colocated technology, is added last (below).
     PSIP.add_technology!(
         portfolio,
         NodalHVDCTransportTechnology{PSY.ACBranch}(;
@@ -375,6 +419,7 @@ function _build_wide_roundtrip_portfolio()
     PSIP.set_requirements!(thermal, [tax, cap])
     PSIP.set_requirements!(multifuel, [tax, crm])
     PSIP.set_requirements!(storage, [crm])
+    PSIP.set_requirements!(storage_set, [crm])
 
     # Time series on more owner types than the fixture's supply technologies.
     timestamps =
@@ -402,6 +447,27 @@ function _build_wide_roundtrip_portfolio()
             ),
         ),
     )
+
+    # The colocated technology goes last: adding it masks the supply and storage it owns, and
+    # those two carry a supplemental attribute, time series and a requirement membership that
+    # must survive both the masking and the round trip. (Attributes cannot be added to a
+    # technology once it is masked, so they are attached above, before this.)
+    PSIP.add_technology!(
+        portfolio,
+        ColocatedSupplyStorageTechnology{PSY.RenewableDispatch}(;
+            name="rt_colocated",
+            financial_data=financial_data,
+            power_systems_type="RenewableDispatch",
+            operation_costs_inverter=CostCurve(LinearCurve(0.8)),
+            inverter_efficiency=0.96,
+            inverter_supply_ratio=1.0,
+            capital_costs_inverter=PSIP.CapitalCost(LinearCurve(70.0), 0.0),
+            available=true,
+            region=region,
+            supply_technology=renewable,
+            storage_technology=storage_set,
+        ),
+    )
     return portfolio
 end
 
@@ -423,11 +489,20 @@ function _roundtrip_payloads(portfolio, ::Type{T}) where {T}
 end
 
 """
-Each technology's requirement memberships, by technology id, as requirement names.
+Ids of the technologies visible in the portfolio's own enumeration, and of the masked ones.
+"""
+_roundtrip_live_ids(portfolio) =
+    Set(IS.get_id(t) for t in PSIP.get_technologies(Technology, portfolio))
+_roundtrip_masked_ids(portfolio) =
+    Set(IS.get_id(t) for t in PSIP.get_masked_technologies(Technology, portfolio))
+
+"""
+Each technology's requirement memberships, by technology id, as requirement names — masked
+technologies included.
 """
 _roundtrip_memberships(portfolio) = Dict(
     IS.get_id(t) => Set(PSIP.get_name.(PSIP.get_requirements(t))) for
-    t in PSIP.get_technologies(Technology, portfolio) if PSIP.supports_requirements(t)
+    t in PSIP._all_technologies(Technology, portfolio) if PSIP.supports_requirements(t)
 )
 
 """
@@ -437,7 +512,7 @@ same-name series attached under different features stay distinct by their values
 _roundtrip_time_series(portfolio) = sort!(
     [
         (IS.get_id(t), IS.get_name(ts), TimeSeries.values(IS.get_data(ts))) for
-        t in PSIP.get_technologies(Technology, portfolio) for
+        t in PSIP._all_technologies(Technology, portfolio) for
         ts in IS.get_time_series_multiple(t)
     ];
     by=string,
@@ -458,6 +533,11 @@ function _check_wide_roundtrip(before, after, form)
                 @error "$key id=$id changed across the $form round trip" payload payload2
         end
     end
+    # Mask state is not in the document; it is re-derived from the colocated technology's
+    # references, and must come back exactly.
+    @test !isempty(_roundtrip_masked_ids(before))
+    @test _roundtrip_masked_ids(after) == _roundtrip_masked_ids(before)
+    @test _roundtrip_live_ids(after) == _roundtrip_live_ids(before)
     @test _roundtrip_memberships(after) == _roundtrip_memberships(before)
     @test _roundtrip_time_series(after) == _roundtrip_time_series(before)
     @test PSIP.get_investment_schedule(after).results ==

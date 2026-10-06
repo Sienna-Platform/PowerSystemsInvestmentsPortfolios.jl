@@ -110,6 +110,10 @@ Write `portfolio` to `path`. The extension of `path` chooses the form:
 
 Any other extension is refused rather than guessed at.
 
+The supply and storage technologies a colocated technology owns are masked in the portfolio
+but written as ordinary rows; reading the file re-masks them from the colocated technology's
+references, so mask state is never recorded.
+
 `base_system_units` (`CU` default, or `NU`) is forwarded to the base system's `PSY.to_file` as
 its `units` and selects the basis its values are written on; it does not affect the portfolio
 document, whose values are always natural units. An `.snp` archive writes its base system on

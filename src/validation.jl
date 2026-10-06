@@ -351,11 +351,11 @@ function _validate_transport_endpoints(
     start_endpoint, end_endpoint = _get_transport_endpoints(technology)
     is_valid = true
     for (endpoint_name, endpoint) in (("start", start_endpoint), ("end", end_endpoint))
-        if !PSY.has_component(
+        if PSY.get_component(
             typeof(endpoint),
             portfolio.base_system,
             PSY.get_name(endpoint),
-        )
+        ) !== endpoint
             @error(
                 "Transport endpoint is not attached to the portfolio",
                 technology = get_name(technology),
@@ -378,6 +378,57 @@ function validate_technology_with_portfolio(
     portfolio::Portfolio,
 )
     return _validate_region_references(technology, portfolio)
+end
+
+"""
+Check the supply and storage technologies a colocated technology owns.
+
+Each must be one of: attached to the portfolio (it is masked when the colocated technology is
+added), already masked (this colocated technology being re-checked), or not attached at all
+(it is added masked — so it is validated against the portfolio here, before anything is
+attached). What is rejected is a *different* technology of the same type and name already held
+by the portfolio: compared by identity, since such a reference could not be resolved by id
+when the portfolio is serialized.
+"""
+function _validate_colocated_components(
+    technology::ColocatedSupplyStorageTechnology,
+    portfolio::Portfolio,
+)
+    is_valid = true
+    for (role, component) in (
+        ("supply", get_supply_technology(technology)),
+        ("storage", get_storage_technology(technology)),
+    )
+        T = typeof(component)
+        name = get_name(component)
+        stored = something(
+            get_technology(T, portfolio, name),
+            IS.get_masked_component(T, portfolio.data, name),
+            Some(nothing),
+        )
+        if isnothing(stored)
+            is_valid &= validate_technology_with_portfolio(component, portfolio)
+        elseif stored !== component
+            @error(
+                "Colocated $role technology does not match the technology of the same " *
+                "type and name attached to the portfolio",
+                technology = get_name(technology),
+                reference = summary(component),
+            )
+            is_valid = false
+        end
+    end
+    return is_valid
+end
+
+function validate_technology_with_portfolio(
+    technology::ColocatedSupplyStorageTechnology,
+    portfolio::Portfolio,
+)
+    # Both checks run — not short-circuited — so every problem is logged.
+    is_valid = _validate_region_references(technology, portfolio)
+    is_valid &= _validate_colocated_components(technology, portfolio)
+    return is_valid
 end
 
 function _validate_or_skip!(
