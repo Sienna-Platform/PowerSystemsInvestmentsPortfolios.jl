@@ -209,16 +209,16 @@ end
 @testset "Test region and requirement APIs" begin
     port = Portfolio()
 
-    zone = PSY.Area(; input_basis=PSY.CU, name="zone_test", base_power=100.0)
+    zone = PSY.Area(; input_basis=u"CU", name="zone_test", base_power=100.0)
     load_zone = PSY.LoadZone(;
-        input_basis=PSY.CU,
+        input_basis=u"CU",
         name="zone_test_lz",
         peak_active_power=0.0,
         peak_reactive_power=0.0,
         base_power=100.0,
     )
     node = PSY.ACBus(;
-        input_basis=PSY.CU,
+        input_basis=u"CU",
         number=910,
         name="node_test",
         available=true,
@@ -310,11 +310,18 @@ end
 end
 
 @testset "topology construction helpers are re-exported" begin
-    # `input_basis` markers and the bus-type enum, so topology builds with no `PSY.` prefix.
-    for name in (:CU, :NU, :ACBusTypes)
+    # The `PerUnit` unit module (so `input_basis=u"CU"` / `u"NU"` resolve with only PSIP
+    # loaded), the bus-type enum, and the `CU`/`NU` markers `to_file` takes.
+    for name in (:PerUnit, :CU, :NU, :ACBusTypes)
         @test Base.isexported(PowerSystemsInvestmentsPortfolios, name)
         @test getfield(PowerSystemsInvestmentsPortfolios, name) ===
               getfield(PowerSystems, name)
     end
     @test !Base.isexported(PowerSystemsInvestmentsPortfolios, :SU)
+    # `@u_str` only searches unit modules bound by name in the calling module: a module that
+    # loads nothing but PSIP must still be able to write `u"CU"`.
+    only_psip = Module()
+    Core.eval(only_psip, :(using PowerSystemsInvestmentsPortfolios))
+    @test Core.eval(only_psip, :(u"CU")) === PowerSystems.PerUnit.CU
+    @test Core.eval(only_psip, :(u"NU")) === PowerSystems.PerUnit.NU
 end

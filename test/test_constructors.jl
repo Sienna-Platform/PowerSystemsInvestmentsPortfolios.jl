@@ -8,24 +8,24 @@
         tax_rate=0.21,
     )
 
-    zone_a = PSY.Area(; input_basis=PSY.CU, name="zone_a", base_power=100.0)
-    zone_b = PSY.Area(; input_basis=PSY.CU, name="zone_b", base_power=100.0)
+    zone_a = PSY.Area(; input_basis=u"CU", name="zone_a", base_power=100.0)
+    zone_b = PSY.Area(; input_basis=u"CU", name="zone_b", base_power=100.0)
     load_zone_a = PSY.LoadZone(;
-        input_basis=PSY.CU,
+        input_basis=u"CU",
         name="lz_a",
         peak_active_power=0.0,
         peak_reactive_power=0.0,
         base_power=100.0,
     )
     load_zone_b = PSY.LoadZone(;
-        input_basis=PSY.CU,
+        input_basis=u"CU",
         name="lz_b",
         peak_active_power=0.0,
         peak_reactive_power=0.0,
         base_power=100.0,
     )
     node_a = PSY.ACBus(;
-        input_basis=PSY.CU,
+        input_basis=u"CU",
         number=901,
         name="node_a",
         available=true,
@@ -38,7 +38,7 @@
         load_zone=load_zone_a,
     )
     node_b = PSY.ACBus(;
-        input_basis=PSY.CU,
+        input_basis=u"CU",
         number=902,
         name="node_b",
         available=true,

@@ -168,7 +168,7 @@ document does not contain -- so this errors rather than dropping the reference. 
 would change the model on the way out, and quietly.
 """
 function _check_costs_reference_declared_series!(
-    doc::PD.PortfolioDocument,
+    doc::PI.PortfolioDocument,
     emitted::Set{Int},
 )
     isempty(emitted) && return nothing
@@ -279,7 +279,7 @@ Store a component's `ext` dict into `doc.ext` under its id, the inverse of the i
 [`_merge_doc_ext!`](@ref). Skips components with an empty `ext` so the document carries a row
 only when there is something to carry.
 """
-function _export_ext!(doc::PD.PortfolioDocument, id::Integer, component)
+function _export_ext!(doc::PI.PortfolioDocument, id::Integer, component)
     ext = get_ext(component)
     isempty(ext) || (doc.ext[Int(id)] = Dict{String, Any}(ext))
     return nothing
@@ -294,13 +294,13 @@ Convert every component in [`DOCUMENT_PLAN`](@ref) order and add it to `doc`.
 the document's `components` map needs no key bookkeeping here.
 """
 function _export_components!(
-    doc::PD.PortfolioDocument,
+    doc::PI.PortfolioDocument,
     refs::OpenAPIRefs,
     portfolio::Portfolio,
 )
     for (psip_type, key) in DOCUMENT_PLAN
         for c in _plan_components(portfolio, psip_type)
-            PD.add_component!(doc, to_openapi(c, refs))
+            PI.add_component!(doc, to_openapi(c, refs))
             _export_ext!(doc, component_id(refs, c), c)
         end
     end
@@ -312,7 +312,7 @@ end
 # components, so no `attribute_type` discriminator is needed.
 
 function _export_requirements_associations!(
-    doc::PD.PortfolioDocument,
+    doc::PI.PortfolioDocument,
     refs::OpenAPIRefs,
     portfolio::Portfolio,
 )
@@ -320,7 +320,7 @@ function _export_requirements_associations!(
     for technology in _all_technologies(Technology, portfolio)
         supports_requirements(technology) || continue
         for requirement in get_requirements(technology)
-            PD.add_requirement_association!(
+            PI.add_requirement_association!(
                 doc,
                 PI.RequirementAssociation(;
                     requirement_id=component_id(refs, requirement),
@@ -339,7 +339,7 @@ $(TYPEDSIGNATURES)
 
 Build a `PortfolioDocument` from `portfolio`, the reverse of `from_openapi`.
 
-Returns the typed container, not JSON: writing it to disk belongs to `PD.write_document`,
+Returns the typed container, not JSON: writing it to disk belongs to `PI.write_document`,
 which [`to_file`](@ref) drives. Every id — components and supplemental attributes alike — comes
 from the document's single counter, since consumers key a row by id without its type.
 Components are walked in [`DOCUMENT_PLAN`](@ref) order.
@@ -361,7 +361,7 @@ function to_openapi(
     warn_unexportable_components(portfolio)
     refs = _build_export_refs(portfolio)
 
-    doc = PD.PortfolioDocument(
+    doc = PI.PortfolioDocument(
         _serialize_type_name(get_aggregation(portfolio));
         name=get_name(portfolio),
         description=get_description(portfolio),
@@ -395,7 +395,7 @@ function to_openapi(
     end
 
     _check_costs_reference_declared_series!(doc, emitted)
-    PD.validate_document(doc)
+    PI.validate_document(doc)
     return doc
 end
 
@@ -412,10 +412,10 @@ Reserve `doc`'s own id counter above every id already assigned, so it cannot rei
 that collides. Components and supplemental attributes share one id stream, and `refs`
 registers both kinds by the time this runs.
 """
-function _reserve_ids!(doc::PD.PortfolioDocument, refs::OpenAPIRefs)
+function _reserve_ids!(doc::PI.PortfolioDocument, refs::OpenAPIRefs)
     if isempty(refs.by_component_id)
         return nothing
     end
-    PD.reserve_ids!(doc, maximum(keys(refs.by_component_id)))
+    PI.reserve_ids!(doc, maximum(keys(refs.by_component_id)))
     return nothing
 end

@@ -52,12 +52,10 @@ import DataStructures: OrderedDict, SortedDict
 import OpenAPI
 import PowerCoreOpenAPIModels
 import PowerInvestmentsOpenAPIModels
-import PowerOpenAPIModels
 import InfrastructureCoreOpenAPIModels
 import InfrastructureTimeSeriesOpenAPIModels
 const PC = PowerCoreOpenAPIModels
 const PI = PowerInvestmentsOpenAPIModels
-const PD = PowerOpenAPIModels
 const IC = InfrastructureCoreOpenAPIModels
 const PTS = InfrastructureTimeSeriesOpenAPIModels
 import StringEncodings
@@ -196,12 +194,15 @@ export Arc
 export Bus
 export ACBus
 export DCBus
-# What constructing that topology needs: the `input_basis` markers (component base or natural
-# units — PSIP has no system-base representation, so `SU` is deliberately not re-exported)
-# and the bus-type enum.
+# What constructing that topology needs. `input_basis` is a Unitful unit — `u"CU"` (component
+# base) or `u"NU"` (natural units) — and `@u_str` only finds those when the `PerUnit` unit
+# module is bound by name in the calling module, so it is re-exported next to `@u_str`.
+export PerUnit
+export ACBusTypes
+# The unit-system markers `to_file`'s `base_system_units` takes. PSIP has no system-base
+# representation, so `SU` is deliberately not re-exported.
 export CU
 export NU
-export ACBusTypes
 
 include("definitions.jl")
 

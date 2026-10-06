@@ -969,7 +969,7 @@ add_topology!(portfolio, ACBus(; name="bus_1", base_voltage=138.0, ...))
 # Add an Area with its peak power in natural units (MW / MVAr).
 add_topology!(
     portfolio,
-    PSY.Area(; name="west", input_basis=NU);
+    PSY.Area(; name="west", input_basis=u"NU");
     peak_active_power=250.0,
     peak_reactive_power=50.0,
 )

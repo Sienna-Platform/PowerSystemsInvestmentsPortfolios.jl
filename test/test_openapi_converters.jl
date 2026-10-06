@@ -101,16 +101,16 @@ The reference targets every technology round trip needs, pre-registered.
 """
 function _refs_fixture()
     refs = PSIP.OpenAPIRefs()
-    zone = PSY.Area(; input_basis=PSY.CU, name="zone_a", base_power=100.0)
+    zone = PSY.Area(; input_basis=u"CU", name="zone_a", base_power=100.0)
     load_zone = PSY.LoadZone(;
-        input_basis=PSY.CU,
+        input_basis=u"CU",
         name="zone_a_lz",
         peak_active_power=0.0,
         peak_reactive_power=0.0,
         base_power=100.0,
     )
     node = PSY.ACBus(;
-        input_basis=PSY.CU,
+        input_basis=u"CU",
         number=909,
         name="node_a",
         available=true,
@@ -260,7 +260,7 @@ end
 
 @testset "an unregistered reference errors rather than serializing garbage" begin
     refs = PSIP.OpenAPIRefs()
-    orphan = PSY.Area(; input_basis=PSY.CU, name="orphan", base_power=100.0)
+    orphan = PSY.Area(; input_basis=u"CU", name="orphan", base_power=100.0)
     tech = DemandRequirement{PowerLoad}(;
         name="demand",
         power_systems_type="PowerLoad",
@@ -409,7 +409,7 @@ end
         )
         PSIP.add_topology!(
             portfolio,
-            PSY.Area(; input_basis=PSY.CU, name="zone_a", base_power=100.0),
+            PSY.Area(; input_basis=u"CU", name="zone_a", base_power=100.0),
         )
         path = joinpath(mktempdir(), "portfolio.json")
         PSIP.to_file(portfolio, path; force=true)

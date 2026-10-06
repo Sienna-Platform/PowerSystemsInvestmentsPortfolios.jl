@@ -1,8 +1,8 @@
 @testset "OpenAPIRefs registration and resolution" begin
     refs = PSIP.OpenAPIRefs()
-    zone = PSY.Area(; input_basis=PSY.CU, name="z1", base_power=100.0)
+    zone = PSY.Area(; input_basis=u"CU", name="z1", base_power=100.0)
     node = PSY.ACBus(;
-        input_basis=PSY.CU,
+        input_basis=u"CU",
         number=907,
         name="n1",
         available=true,
@@ -13,7 +13,7 @@
         base_voltage=138.0,
         area=zone,
         load_zone=PSY.LoadZone(;
-            input_basis=PSY.CU,
+            input_basis=u"CU",
             name="z1_lz",
             peak_active_power=0.0,
             peak_reactive_power=0.0,
@@ -46,17 +46,17 @@ end
 
 @testset "OpenAPIRefs errors loudly on malformed input" begin
     refs = PSIP.OpenAPIRefs()
-    zone = PSY.Area(; input_basis=PSY.CU, name="z1", base_power=100.0)
+    zone = PSY.Area(; input_basis=u"CU", name="z1", base_power=100.0)
     refs[1] = zone
 
     @test_throws ErrorException refs[1] =
-        PSY.Area(; input_basis=PSY.CU, name="other", base_power=100.0)
+        PSY.Area(; input_basis=u"CU", name="other", base_power=100.0)
     @test_throws ErrorException refs[7]
     @test_throws ErrorException PSIP.resolve_ref(refs, 7, PSY.Area)
     @test_throws ErrorException PSIP.component_id(
         refs,
         PSY.ACBus(;
-            input_basis=PSY.CU,
+            input_basis=u"CU",
             number=908,
             name="n",
             available=true,
@@ -67,7 +67,7 @@ end
             base_voltage=138.0,
             area=zone,
             load_zone=PSY.LoadZone(;
-                input_basis=PSY.CU,
+                input_basis=u"CU",
                 name="n_lz",
                 peak_active_power=0.0,
                 peak_reactive_power=0.0,

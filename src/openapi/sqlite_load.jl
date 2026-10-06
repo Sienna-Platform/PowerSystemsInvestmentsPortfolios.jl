@@ -14,7 +14,7 @@ association tables (they were dropped from the Investments schema — PSIP has n
 combined-cycle attribute types), so there are no group indices: this is always empty. Kept as a
 seam so `_attach_attribute!` can stay group-index-aware if a plant-family type is ever added.
 """
-_group_index_by_pair(::PD.PortfolioDocument) = Dict{Tuple{Int, Int}, Vector{Int}}()
+_group_index_by_pair(::PI.PortfolioDocument) = Dict{Tuple{Int, Int}, Vector{Int}}()
 
 """
 Loud error naming `id` when the document's declared `attribute_type` is absent or does
@@ -60,7 +60,7 @@ actually resolved to. No silent skip.
 function load_supplemental_attribute_associations!(
     portfolio::Portfolio,
     refs::OpenAPIRefs,
-    doc::PD.PortfolioDocument,
+    doc::PI.PortfolioDocument,
 )
     attribute_rows = Dict{Int, Any}(
         Int(getproperty(attr, :id)) => attr for attr in doc.supplemental_attributes

@@ -237,7 +237,7 @@ function _write_bundle(
         time_series_storage_path=storage_path,
         write_catalog=write_catalog,
     )
-    PD.write_document(doc, document_path; pretty=pretty, force=force)
+    PI.write_document(doc, document_path; pretty=pretty, force=force)
     return nothing
 end
 
@@ -331,7 +331,7 @@ function _read_bundle(document_path::AbstractString; portfolio_kwargs...)
     if !isfile(document_path)
         throw(IS.DataFormatError("$document_path is not a serialized Portfolio document"))
     end
-    doc = PD.read_portfolio_document(document_path)
+    doc = PI.read_portfolio_document(document_path)
     dir = dirname(document_path)
     if isempty(dir)
         dir = "."
@@ -351,8 +351,8 @@ Absolute path of the sidecar the document names, or `nothing` when it names none
 Errors when the document names a file that is absent: the alternative is a `Portfolio` quietly
 missing every time series the document declared.
 """
-function _resolve_sidecar(doc::PD.PortfolioDocument, dir::AbstractString)
-    named = PD.get_time_series_storage_file(doc)
+function _resolve_sidecar(doc::PI.PortfolioDocument, dir::AbstractString)
+    named = PI.get_time_series_storage_file(doc)
     return _resolve_sidecar(named, dir)
 end
 

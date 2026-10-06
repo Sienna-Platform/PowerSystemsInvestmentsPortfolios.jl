@@ -21,7 +21,7 @@ function _build_roundtrip_portfolio()
     PSY.add_component!(base_sys, ref_bus)
 
     # Topology region referenced by the technology.
-    zone = PSY.Area(; input_basis=PSY.CU, name="zone1", base_power=100.0)
+    zone = PSY.Area(; input_basis=u"CU", name="zone1", base_power=100.0)
     PSIP.add_topology!(port, zone)
 
     # One technology, with its own financial data + operation costs.
@@ -158,6 +158,24 @@ end
         @test_throws IS.DataFormatError PSIP.to_file(port, document)
         @test_throws ErrorException PSIP.to_file(port, joinpath(dir, "case.txt"))
         @test_throws IS.DataFormatError PSIP.from_file(joinpath(dir, "case.txt"))
+    end
+end
+
+@testset "documents are stamped with, and checked against, the schema version" begin
+    port = _build_roundtrip_portfolio()
+    mktempdir() do dir
+        path = joinpath(dir, "stamped.json")
+        PSIP.to_file(port, path; force=true)
+        raw = JSON3.read(read(path, String), Dict)
+        @test occursin(r"^\d+\.\d+\.\d+$", raw["schema_version"])
+
+        rewrite(doc) = open(io -> JSON3.write(io, doc), path, "w")
+        # A document from another compatibility line is refused before anything is decoded.
+        rewrite(merge(raw, Dict("schema_version" => "99.0.0")))
+        @test_throws PSIP.IC.SchemaVersionError PSIP.from_file(path)
+        # So is one with no stamp at all: it predates versioning and must be regenerated.
+        rewrite(delete!(copy(raw), "schema_version"))
+        @test_throws PSIP.IC.SchemaVersionError PSIP.from_file(path)
     end
 end
 

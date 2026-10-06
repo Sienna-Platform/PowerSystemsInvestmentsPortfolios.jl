@@ -52,7 +52,7 @@ const DOCUMENT_PLAN_KEYS = _document_plan_keys(DOCUMENT_PLAN)
 # A `oneOf` field holds its member wrapped only after deserialization; a document built in
 # memory assigns the member directly. Unwrap by dispatch, the way `convert_cost` does
 # (`cost_conversion.jl`), so both shapes read the same.
-_unwrap_oneof(x::PowerOpenAPIModels.OneOfAPIModel) = _unwrap_oneof(x.value)
+_unwrap_oneof(x::IC.OneOfAPIModel) = _unwrap_oneof(x.value)
 _unwrap_oneof(x) = x
 
 """
@@ -229,12 +229,12 @@ of splitting on which one happens to be applied after construction.
 """
 function _apply_document_metadata!(
     portfolio::Portfolio,
-    doc::PD.PortfolioDocument,
+    doc::PI.PortfolioDocument,
     supplied,
 )
-    :name in supplied || _apply_metadata_field!(set_name!, portfolio, PD.get_name(doc))
+    :name in supplied || _apply_metadata_field!(set_name!, portfolio, PI.get_name(doc))
     :description in supplied ||
-        _apply_metadata_field!(set_description!, portfolio, PD.get_description(doc))
+        _apply_metadata_field!(set_description!, portfolio, PI.get_description(doc))
     return nothing
 end
 
@@ -254,10 +254,10 @@ _frequency_kwarg(value) = (; frequency=Float64(value))
 """
 $(TYPEDSIGNATURES)
 
-Build a `System` from a `PowerCoreOpenAPIModels.PortfolioDocument`.
+Build a `System` from a `PowerInvestmentsOpenAPIModels.PortfolioDocument`.
 
 Takes the typed container, not JSON: reading a file belongs to
-`PowerCoreOpenAPIModels.read_document`, which [`from_file`](@ref) drives.
+`PowerInvestmentsOpenAPIModels.read_portfolio_document`, which [`from_file`](@ref) drives.
 
 Converts every component in dependency order ([`DOCUMENT_PLAN`](@ref), verified against
 dependency order), then runs [`resolve_deferred_refs!`](@ref) once to patch in any
@@ -296,7 +296,7 @@ this builds (e.g. `time_series_in_memory`, `time_series_directory`, `time_series
 """
 function from_openapi(
     ::Type{Portfolio},
-    doc::PD.PortfolioDocument,
+    doc::PI.PortfolioDocument,
     document_path::AbstractString;
     base_power::Float64=100.0,
     time_series_storage_path=nothing,
@@ -337,7 +337,7 @@ function from_openapi(
 
     _with_import_store(store) do
         for (psip_type, key) in DOCUMENT_PLAN
-            for po in PD.get_components(doc, key)
+            for po in PI.get_components(doc, key)
                 component = from_openapi(po, refs)
                 extras = get(doc.ext, Int(po.id), nothing)
                 isnothing(extras) || _merge_doc_ext!(component, extras)
@@ -364,8 +364,8 @@ add_component!(portfolio::Portfolio, component::Technology) =
 add_component!(portfolio::Portfolio, component::Requirement) =
     add_requirement!(portfolio, component)
 
-function _resolve_investment_schedule(doc::PD.PortfolioDocument)
-    results = PD.get_investment_schedule(doc)
+function _resolve_investment_schedule(doc::PI.PortfolioDocument)
+    results = PI.get_investment_schedule(doc)
     return isnothing(results) ? nothing : _deserialize_schedule(results)
 end
 
@@ -386,8 +386,8 @@ function _read_base_system(path::AbstractString; portfolio_kwargs...)
     return PSY.from_file(path; system_kwargs...)
 end
 
-function _resolve_base_system(doc::PD.PortfolioDocument, dir::AbstractString)
-    named = PD.get_base_system_file(doc)
+function _resolve_base_system(doc::PI.PortfolioDocument, dir::AbstractString)
+    named = PI.get_base_system_file(doc)
     named === nothing && return nothing
     path = joinpath(dir, named)
     ispath(path) || throw(
@@ -413,11 +413,11 @@ Runs before the component pass, not after it: a `MarketBidTimeSeriesCost` or tim
 `FuelCurve` resolves its `association_id` against the store while its owner is being built,
 so the rows have to be there first.
 """
-_load_time_series_associations!(::Portfolio, ::PD.PortfolioDocument, ::Nothing) = nothing
+_load_time_series_associations!(::Portfolio, ::PI.PortfolioDocument, ::Nothing) = nothing
 
 function _load_time_series_associations!(
     portfolio::Portfolio,
-    doc::PD.PortfolioDocument,
+    doc::PI.PortfolioDocument,
     store,
 )
     isempty(doc.time_series_associations) && return nothing
@@ -443,7 +443,7 @@ _catalog_is_authoritative(store) = !iszero(IS.get_num_time_series(store))
 A `System` whose time series store is the document's InfraStore sidecar, adopted rather than
 replayed. Without a sidecar this is just `Portfolio(base_power; portfolio_kwargs...)`.
 
-`doc` must be a `PowerCoreOpenAPIModels.PortfolioDocument`.
+`doc` must be a `PowerInvestmentsOpenAPIModels.PortfolioDocument`.
 
 `time_series_read_only` and `time_series_directory` are read from `portfolio_kwargs` (and left in
 place for `System` itself) because they govern how the store is opened: a read-only open
@@ -452,7 +452,7 @@ corrupt the document's sidecar. The adopted store's `supplemental_attribute_asso
 are left as they are — `load_supplemental_attribute_associations!` reads them.
 """
 function _portfolio_with_sidecar(
-    doc::PD.PortfolioDocument,
+    doc::PI.PortfolioDocument,
     time_series_storage_path;
     portfolio_kwargs...,
 )
@@ -484,6 +484,9 @@ function _portfolio_with_sidecar(
     return Portfolio(data, _deserialize_type_name(doc.aggregation); portfolio_kwargs...)
 end
 
+# PowerSystems delegates this check to `PC.validate_time_series_catalog`, which the 0.2 model
+# packages define for `SystemDocument` only. Until there is a `PortfolioDocument` method, PSIP
+# keeps its own copy of the same rule below; replace it with the upstream call when one exists.
 """
 Cross-check the document's own `time_series_associations` rows against the adopted sidecar's
 catalog. A no-op when there is no sidecar or the document names no rows.
@@ -502,7 +505,7 @@ differing fields. Sidecar rows the document does not mention are tolerated (`@de
 """
 function _validate_time_series_associations!(
     portfolio::Portfolio,
-    doc::PD.PortfolioDocument,
+    doc::PI.PortfolioDocument,
 )
     store_rows = [
         _unwrap_oneof(row) for
