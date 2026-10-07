@@ -79,7 +79,7 @@
 
     # SupplyTechnology: all fields
     PSIP.set_requirements!(supply, supply_req)
-    PSIP.set_outage_factor!(supply, 0.93)
+    PSIP.set_outage_factors!(supply, (planned=0.05, forced=0.05))
     PSIP.set_prime_mover_type!(supply, PrimeMovers.OT)
     PSIP.set_capital_costs!(supply, supply_capital)
     PSIP.set_lifetime!(supply, 35)
@@ -104,7 +104,7 @@
     PSIP.set_capacity_limits!(supply, (min=5.0, max=600.0))
 
     @test PSIP.get_requirements(supply) === supply_req
-    @test PSIP.get_outage_factor(supply) == 0.93
+    @test PSIP.get_outage_factors(supply) == (planned=0.05, forced=0.05)
     @test PSIP.get_prime_mover_type(supply) == PrimeMovers.OT
     @test PSIP.get_capital_costs(supply) === supply_capital
     @test PSIP.get_lifetime(supply) == 35

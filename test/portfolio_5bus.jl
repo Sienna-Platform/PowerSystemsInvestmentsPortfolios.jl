@@ -80,7 +80,7 @@ function build_portfolio()
     #, coal_new_capex / coal_new_capex_2028
     t_th = SupplyTechnology{PSY.ThermalStandard}(;
         prime_mover_type=PrimeMovers.ST,
-        capital_costs=LinearCurve(coal_igcc_capex * 1000.0),
+        capital_costs=CapitalCost(LinearCurve(coal_igcc_capex * 1000.0), 0.0),
         id=1,
         available=true,
         name="cheap_thermal",
@@ -93,7 +93,7 @@ function build_portfolio()
             shut_down=0.0,
         ),#LinearCurve(0.0),
         capacity_limits=(0.0, 3000.0),
-        outage_factor=0.92,
+        outage_factors=(planned=0.05, forced=0.05),
         region=[z1],
         unit_size=250.0,
         financial_data=tech_financials,
@@ -101,7 +101,7 @@ function build_portfolio()
 
     t_th_exp = SupplyTechnology{PSY.ThermalStandard}(;
         prime_mover_type=PrimeMovers.ST,
-        capital_costs=LinearCurve(coal_new_capex * 1000.0),
+        capital_costs=CapitalCost(LinearCurve(coal_new_capex * 1000.0), 0.0),
         id=2,
         available=true,
         name="expensive_thermal",
@@ -114,7 +114,7 @@ function build_portfolio()
             shut_down=0.0,
         ),
         capacity_limits=(0.0, 3000.0),
-        outage_factor=0.95,
+        outage_factors=(planned=0.05, forced=0.05),
         region=[z2],
         unit_size=75.0,
         financial_data=tech_financials,
@@ -168,7 +168,7 @@ function build_portfolio()
 
     t_wind = SupplyTechnology{PSY.RenewableDispatch}(;
         prime_mover_type=PrimeMovers.WT,
-        capital_costs=LinearCurve(wind_capex * 1000.0), # to $/MW
+        capital_costs=CapitalCost(LinearCurve(wind_capex * 1000.0), 0.0), # to $/MW
         id=3,
         available=true,
         name="wind",
@@ -181,7 +181,7 @@ function build_portfolio()
             shut_down=0.0,
         ),
         capacity_limits=(0.0, 300.0),
-        outage_factor=0.92,
+        outage_factors=(planned=0.05, forced=0.05),
         region=[z2],
         financial_data=tech_financials,
     )
@@ -229,7 +229,7 @@ function build_portfolio()
 
     t_pv1 = SupplyTechnology{PSY.RenewableDispatch}(;
         prime_mover_type=PrimeMovers.PVe,
-        capital_costs=LinearCurve(pv_capex * 1000.0), # to $/MW
+        capital_costs=CapitalCost(LinearCurve(pv_capex * 1000.0), 0.0), # to $/MW
         id=4,
         available=true,
         name="PV1",
@@ -242,14 +242,14 @@ function build_portfolio()
             shut_down=0.0,
         ),
         capacity_limits=(0.0, 1e8),
-        outage_factor=0.92,
+        outage_factors=(planned=0.05, forced=0.05),
         region=[z1],
         financial_data=tech_financials,
     )
 
     t_pv2 = SupplyTechnology{PSY.RenewableDispatch}(;
         prime_mover_type=PrimeMovers.PVe,
-        capital_costs=LinearCurve(pv_capex * 1000.0), # to $/MW
+        capital_costs=CapitalCost(LinearCurve(pv_capex * 1000.0), 0.0), # to $/MW
         id=5,
         available=true,
         name="PV2",
@@ -262,7 +262,7 @@ function build_portfolio()
             shut_down=0.0,
         ),
         capacity_limits=(0.0, 1e8),
-        outage_factor=0.92,
+        outage_factors=(planned=0.05, forced=0.05),
         region=[z2],
         financial_data=tech_financials,
     )
@@ -306,8 +306,12 @@ function build_portfolio()
         power_systems_type="EnergyReservoirStorage",
         prime_mover_type=PrimeMovers.BT,
         available=true,
-        capital_costs_discharge=LinearCurve(stor_kw_capex * 1000),
-        capital_costs_energy=LinearCurve(stor_kwh_capex * 1000),
+        capital_costs_storage=StorageCapitalCost(;
+            charge_capital_cost=LinearCurve(0.0),
+            discharge_capital_cost=LinearCurve(stor_kw_capex * 1000),
+            energy_capital_cost=LinearCurve(stor_kwh_capex * 1000),
+            interconnection_cost=0.0,
+        ),
         operation_costs=StorageCost(
             charge_variable_cost=CostCurve(LinearCurve(0.0)),
             discharge_variable_cost=CostCurve(LinearCurve(0.0)),
@@ -421,7 +425,7 @@ function build_portfolio()
         end_region=z2,
         capacity_limits=(min=0, max=900),
         line_loss=0.05,
-        capital_costs=LinearCurve(5000.0),
+        capital_costs=CapitalCost(LinearCurve(5000.0), 0.0),
         available=true,
         power_systems_type="TransportTechnology",
         id=11,
@@ -434,7 +438,7 @@ function build_portfolio()
         end_region=z2,
         capacity_limits=(min=0, max=900),
         line_loss=0.05,
-        capital_costs=LinearCurve(5000.0),
+        capital_costs=CapitalCost(LinearCurve(5000.0), 0.0),
         available=true,
         power_systems_type="TransportTechnology",
         id=12,
@@ -447,7 +451,7 @@ function build_portfolio()
         available=true,
         power_systems_type="Nodal",
         capacity_limits=(min=0, max=900),
-        capital_costs=LinearCurve(5000.0),
+        capital_costs=CapitalCost(LinearCurve(5000.0), 0.0),
         start_node=n1,
         end_node=n2,
         financial_data=tech_financials,

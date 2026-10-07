@@ -240,9 +240,9 @@
                     "default": "Dict()"
                 },
                 "capital_costs": {
-                    "type": "PSY.ValueCurve",
+                    "type": "CapitalCost",
                     "description": "Capital costs for investing in a technology. (USD/MW)",
-                    "default": "LinearCurve(0.0)"
+                    "default": "CapitalCost(nothing)"
                 },
                 "operation_costs": {
                     "type": "PSY.OperationalCost",
@@ -259,10 +259,10 @@
                     "description": "Minimum and maximum allowable installed capacity for a technology (MW)",
                     "default": "(min=0, max=1e8)"
                 },
-                "outage_factor": {
-                    "type": "Float64",
+                "outage_factors": {
+                    "type": "OutageFactors",
                     "description": "Derating factor to account for planned or forced outages of a technology. Fraction of hours in a year where technology is unavailable.",
-                    "default": "1.0"
+                    "default": "(planned=0.0, forced=0.0)"
                 },
                 "min_generation_fraction": {
                     "type": "Float64",
@@ -580,20 +580,10 @@
                     ],
                     "description": "Storage Technology Type"
                 },
-                "capital_costs_energy": {
-                    "type": "PSY.ValueCurve",
-                    "description": "Capital costs for investing in a technology. (USD/MWh)",
-                    "default": "LinearCurve(0.0)"
-                },
-                "capital_costs_charge": {
-                    "type": "Union{Nothing, PSY.ValueCurve}",
-                    "description": "Capital costs for investing in a technology. (USD/MW)",
-                    "default": "nothing"
-                },
-                "capital_costs_discharge": {
-                    "type": "PSY.ValueCurve",
-                    "description": "Capital costs for investing in a technology. (USD/MW)",
-                    "default": "LinearCurve(0.0)"
+                "capital_costs_storage": {
+                    "type": "StorageCapitalCost",
+                    "description": "Capital costs for investing in a storage technology. (USD/MWh)",
+                    "default": "StorageCapitalCost(nothing)"
                 },
                 "operation_costs": {
                     "type": "PSY.OperationalCost",
@@ -826,9 +816,9 @@
                     "default": "1"
                 },
                 "capital_costs": {
-                    "type": "PSY.ValueCurve",
+                    "type": "CapitalCost",
                     "description": "Cost of adding new capacity to the nodal transmission line. (USD/MW)",
-                    "default": "LinearCurve(0.0)"
+                    "default": "CapitalCost(nothing)"
                 },
                 "line_loss": {
                     "type": "Union{IS.LinearCurve, IS.PiecewiseIncrementalCurve}",
@@ -906,9 +896,9 @@
                   "default": "1"
               },
               "capital_costs": {
-                  "type": "PSY.ValueCurve",
+                  "type": "CapitalCost",
                   "description": "Cost of adding new capacity to the nodal transmission line. (USD/MW)",
-                  "default": "LinearCurve(0.0)"
+                  "default": "CapitalCost(nothing)"
               },
               "line_loss": {
                   "type": "Float64",
@@ -986,9 +976,9 @@
                     "default": "1.0"
                 },
                 "capital_costs": {
-                    "type": "PSY.ValueCurve",
+                    "type": "CapitalCost",
                     "description": "Cost of adding new capacity to the nodal transmission line (USD/MW).",
-                    "default": "LinearCurve(0.0)"
+                    "default": "CapitalCost(nothing)"
                 },
                 "resistance": {
                     "type": "Float64",
@@ -1518,9 +1508,9 @@
                     "default": "True"
                 },
                 "capital_costs_solar": {
-                    "type": "PSY.ValueCurve",
+                    "type": "CapitalCost",
                     "description": "Capital costs for investing in a technology. (USD/MW)",
-                    "default": "LinearCurve(0.0)"
+                    "default": "CapitalCost(nothing)"
                 },
                 "operation_costs_solar": {
                     "type": "PSY.OperationalCost",
@@ -1538,9 +1528,9 @@
                     "default": "100"
                 },
                 "capital_costs_wind": {
-                    "type": "PSY.ValueCurve",
+                    "type": "CapitalCost",
                     "description": "Capital costs for investing in a technology. (USD/MW)",
-                    "default": "LinearCurve(0.0)"
+                    "default": "CapitalCost(nothing)"
                 },
                 "operation_costs_wind": {
                     "type": "PSY.OperationalCost",
@@ -1557,22 +1547,12 @@
                     "description": "Maximum number of years a technology can be active once installed (years)",
                     "default": "100"
                 },
-                "capital_costs_energy": {
-                    "type": "PSY.ValueCurve",
+                "capital_costs_storage": {
+                    "type": "StorageCapitalCost",
                     "description": "Capital costs for investing in a storage technology's energy capacity. (USD/MWh)",
-                    "default": "LinearCurve(0.0)"
+                    "default": "StorageCapitalCost(nothing)"
                 },
-                "capital_costs_power": {
-                    "type": "PSY.ValueCurve",
-                    "description": "Capital costs for investing in a storage technology's charge/discharge capacity. (USD/MW)",
-                    "default": "LinearCurve(0.0)"
-                },
-                "operation_costs_energy": {
-                    "type": "PSY.OperationalCost",
-                    "description": "Fixed and variable O&M costs for a storage technology",
-                    "default": "StorageCost(nothing)"
-                },
-                "operation_costs_power": {
+                "operation_costs_storage": {
                     "type": "PSY.OperationalCost",
                     "description": "Fixed and variable O&M costs for a storage technology",
                     "default": "StorageCost(nothing)"
@@ -1622,7 +1602,7 @@
                     "default": "1e8"
                 },
                 "capital_costs_inverter": {
-                    "type": "PSY.ValueCurve",
+                    "type": "CapitalCost",
                     "description": "Capitals costs for investing in inverter capacity (USD/MW)"
                 },
                 "operation_costs_inverter": {
