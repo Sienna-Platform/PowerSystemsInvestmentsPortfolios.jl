@@ -209,15 +209,35 @@ end
 @testset "Test region and requirement APIs" begin
     port = Portfolio()
 
-    zone = Zone(name="zone_test")
-    node = Node(name="node_test")
-    PSIP.add_region!(port, zone)
-    PSIP.add_region!(port, node)
+    zone = PSY.Area(; input_basis=u"CU", name="zone_test", base_power=100.0)
+    load_zone = PSY.LoadZone(;
+        input_basis=u"CU",
+        name="zone_test_lz",
+        peak_active_power=0.0,
+        peak_reactive_power=0.0,
+        base_power=100.0,
+    )
+    node = PSY.ACBus(;
+        input_basis=u"CU",
+        number=910,
+        name="node_test",
+        available=true,
+        bustype=PSY.ACBusTypes.PQ,
+        angle=0.0,
+        magnitude=1.0,
+        voltage_limits=(min=0.9, max=1.1),
+        base_voltage=138.0,
+        area=zone,
+        load_zone=load_zone,
+    )
+    PSIP.add_topology!(port, zone)
+    PSIP.add_topology!(port, load_zone)
+    PSIP.add_topology!(port, node)
 
-    regions = collect(PSIP.get_regions(RegionTopology, port))
-    @test length(regions) == 2
-    @test PSIP.get_region(Zone, port, "zone_test") === zone
-    @test PSIP.get_region(Node, port, "node_test") === node
+    regions = collect(PSIP.get_regions(PSY.Topology, port))
+    @test length(regions) == 3
+    @test PSIP.get_region(PSY.Area, port, "zone_test") === zone
+    @test PSIP.get_region(PSY.ACBus, port, "node_test") === node
 
     req = CarbonTax(name="req_test", available=true)
     PSIP.add_requirement!(port, req)
@@ -257,25 +277,51 @@ end
 
 @testset "Test supplemental attribute APIs" begin
     port = build_portfolio()
-    zone = first(get_regions(Zone, port))
 
-    attr = TopologyMapping(buses=["b1", "b2"])
-    PSIP.add_supplemental_attribute!(port, zone, attr)
+    attrs_on_port = PSIP.get_supplemental_attributes(RetirementPotential, port)
+    @test length(attrs_on_port) > 0
 
-    attrs_on_component = PSIP.get_supplemental_attributes(TopologyMapping, zone)
-    @test length(attrs_on_component) == 1
-    @test attrs_on_component[1] === attr
+    @test PSIP.get_supplemental_attribute(port, IS.get_id(first(attrs_on_port))) ===
+          first(attrs_on_port)
 
-    attrs_on_port = PSIP.get_supplemental_attributes(TopologyMapping, port)
-    @test length(attrs_on_port) >= 1
+    t_th_exp = PSIP.get_technology(SupplyTechnology, port, "expensive_thermal")
+    attr = first(PSIP.get_supplemental_attributes(RetirementPotential, t_th_exp))
+    PSIP.remove_supplemental_attribute!(port, t_th_exp, attr)
+    @test length(PSIP.get_supplemental_attributes(RetirementPotential, t_th_exp)) == 0
 
-    @test PSIP.get_supplemental_attribute(port, IS.get_id(attr)) === attr
+    # t_th_exp = get_technology(SupplyTechnology, port, "expensive_thermal")
+    # attr = first(get_supplemental_attributes(RetirementPotential, port))
+    # PSIP.remove_supplemental_attribute!(port, t_th_exp, attr)
+    # @test length(PSIP.get_supplemental_attributes(RetirementPotential, t_th_exp)) == 1
+end
 
-    PSIP.remove_supplemental_attribute!(port, zone, attr)
-    @test isempty(PSIP.get_supplemental_attributes(TopologyMapping, zone))
+@testset "PowerSystems topology types are re-exported" begin
+    # Every `PSY.Topology` type — abstract and concrete — so a user building a portfolio
+    # never needs the `PSY.` prefix. Walked from the type tree rather than listed, so a
+    # topology type PowerSystems adds later fails here until it is re-exported too.
+    topology_types(T) =
+        vcat([T], [topology_types(S) for S in InteractiveUtils.subtypes(T)]...)
+    for T in unique(topology_types(PSY.Topology))
+        name = nameof(T)
+        @test Base.isexported(PowerSystemsInvestmentsPortfolios, name)
+        # The same binding as PowerSystems', so `using` both packages does not clash.
+        @test getfield(PowerSystemsInvestmentsPortfolios, name) === T
+    end
+end
 
-    attr3 = TopologyMapping(buses=["b4"])
-    PSIP.add_supplemental_attribute!(port, zone, attr3)
-    PSIP.remove_supplemental_attributes!(TopologyMapping, port)
-    @test isempty(PSIP.get_supplemental_attributes(TopologyMapping, port))
+@testset "topology construction helpers are re-exported" begin
+    # The `PerUnit` unit module (so `input_basis=u"CU"` / `u"NU"` resolve with only PSIP
+    # loaded), the bus-type enum, and the `CU`/`NU` markers `to_file` takes.
+    for name in (:PerUnit, :CU, :NU, :ACBusTypes)
+        @test Base.isexported(PowerSystemsInvestmentsPortfolios, name)
+        @test getfield(PowerSystemsInvestmentsPortfolios, name) ===
+              getfield(PowerSystems, name)
+    end
+    @test !Base.isexported(PowerSystemsInvestmentsPortfolios, :SU)
+    # `@u_str` only searches unit modules bound by name in the calling module: a module that
+    # loads nothing but PSIP must still be able to write `u"CU"`.
+    only_psip = Module()
+    Core.eval(only_psip, :(using PowerSystemsInvestmentsPortfolios))
+    @test Core.eval(only_psip, :(u"CU")) === PowerSystems.PerUnit.CU
+    @test Core.eval(only_psip, :(u"NU")) === PowerSystems.PerUnit.NU
 end

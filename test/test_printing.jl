@@ -8,8 +8,9 @@
         @test occursin("Portfolio", out)
         @test occursin("Technologies", out)
         @test occursin("Topology", out)
-        @test occursin("Zone", out)           # row content from topology table
-        @test occursin("Node", out)           # row content from topology table
+        @test occursin("Area", out)           # row content from topology table
+        @test occursin("LoadZone", out)           # row content from topology table
+        @test occursin("ACBus", out)           # row content from topology table
         @test occursin("Time Series", out)
     end
 
@@ -41,7 +42,7 @@
         @test occursin("has_supplemental_attributes", out)
     end
 
-    @testset "show_region_topology_table empty portfolio" begin
+    @testset "show_technologies_table empty portfolio" begin
         # Build an empty portfolio (no regions added) and verify no output is produced.
         # skip_serialization=true: PowerSystems.jl's OpenAPI export path
         # (export_cost_conversion.jl) still fails to serialize a CostCurve with no
@@ -50,7 +51,7 @@
         empty_port = Portfolio(sys)
 
         buf = IOBuffer()
-        PSIP.show_region_topology_table(buf, empty_port; backend=:auto)
+        PSIP.show_technologies_table(buf, empty_port; backend=:auto)
         out = String(take!(buf))
 
         @test isempty(out)

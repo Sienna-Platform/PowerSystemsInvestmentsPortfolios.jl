@@ -8,18 +8,17 @@ This file is auto-generated. Do not edit.
     mutable struct SupplyTechnology{T <: PSY.Generator} <: ResourceTechnology
         name::String
         power_systems_type::String
-        region::Vector{RegionTopology}
+        region::Vector{PSY.Topology}
         available::Bool
         prime_mover_type::PrimeMovers.Value
         fuel::Vector{ThermalFuels.Value}
-        co2::Dict{ThermalFuels.Value, Float64}
         cofire_start_limits::Dict{ThermalFuels.Value, MinMax}
         cofire_level_limits::Dict{ThermalFuels.Value, MinMax}
-        capital_costs::PSY.ValueCurve
+        capital_costs::CapitalCost
         operation_costs::PSY.OperationalCost
         unit_size::Float64
-        capacity_limits::MinMax
-        outage_factor::Float64
+        capacity_limits::Union{MinMax, Dict{PSY.Topology, MinMax}}
+        outage_factor::OutageFactors
         min_generation_fraction::Float64
         ramp_limits::UpDown
         time_limits::UpDown
@@ -36,18 +35,17 @@ Candidate generation technology for a region. Can represent either a thermal or 
 # Arguments
 - `name::String`: The technology name
 - `power_systems_type::String`: Corresponding type in PowerSystems.jl to be used in PCM modeling
-- `region::Vector{RegionTopology}`: (default: `Vector()`) Location where technology operates. Can be a zone or node.
+- `region::Vector{PSY.Topology}`: (default: `Vector()`) Location where technology operates. Can be a zone or node.
 - `available::Bool`: (default: `true`) Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)
 - `prime_mover_type::PrimeMovers.Value`: (default: `PrimeMovers.OT`) Prime mover technology according to EIA 923.
 - `fuel::Vector{ThermalFuels.Value}`: (default: `[ThermalFuels.OTHER]`) Prime mover fuel according to EIA 923.
-- `co2::Dict{ThermalFuels.Value, Float64}`: (default: `Dict()`) Carbon Intensity of fuel for generator, units of tons CO2 per MMBTU of fuel. Units: t/MMBtu.
 - `cofire_start_limits::Dict{ThermalFuels.Value, MinMax}`: (default: `Dict()`) Minimum and maximum blending level (%) of each fuel during start-up process for multi-fuel generator
 - `cofire_level_limits::Dict{ThermalFuels.Value, MinMax}`: (default: `Dict()`) Minimum and maximum blending level (%) of each fuel during normal generation process for multi-fuel generator
-- `capital_costs::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Capital costs for investing in a technology. (USD/MW)
+- `capital_costs::CapitalCost`: (default: `CapitalCost(nothing)`) Capital costs for investing in a technology. (USD/MW)
 - `operation_costs::PSY.OperationalCost`: (default: `ThermalGenerationCost(nothing)`) Fixed and variable O&M costs for a technology
 - `unit_size::Float64`: (default: `0.0`) Used for discrete investment decisions. Size of each unit being built (MW)
-- `capacity_limits::MinMax`: (default: `(min=0, max=1e8)`) Minimum and maximum allowable installed capacity for a technology (MW)
-- `outage_factor::Float64`: (default: `1.0`) Derating factor to account for planned or forced outages of a technology. Fraction of hours in a year where technology is unavailable.
+- `capacity_limits::Union{MinMax, Dict{PSY.Topology, MinMax}}`: (default: `(min = 0.0, max = 1e8)`) Minimum and maximum allowable installed capacity for a technology (MW)
+- `outage_factor::OutageFactors`: (default: `(planned = 0.0, forced = 0.0)`) Planned and forced outage factors for a technology, each a fraction of total availability.
 - `min_generation_fraction::Float64`: (default: `0.0`) Minimum generation as a fraction of total capacity
 - `ramp_limits::UpDown`: (default: `(up=1.0, down=1.0)`) Maximum decrease and increase in output between operation periods. Fraction of nameplate capacity per hour
 - `time_limits::UpDown`: (default: `(up=60.0, down=60.0)`) Minimum amount of time a resource has to stay in the committed or shutdown state (minutes). Units: min.
@@ -64,29 +62,27 @@ mutable struct SupplyTechnology{T <: PSY.Generator} <: ResourceTechnology
     "Corresponding type in PowerSystems.jl to be used in PCM modeling"
     power_systems_type::String
     "Location where technology operates. Can be a zone or node."
-    region::Vector{RegionTopology}
+    region::Vector{PSY.Topology}
     "Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)"
     available::Bool
     "Prime mover technology according to EIA 923."
     prime_mover_type::PrimeMovers.Value
     "Prime mover fuel according to EIA 923."
     fuel::Vector{ThermalFuels.Value}
-    "Carbon Intensity of fuel for generator, units of tons CO2 per MMBTU of fuel. Units: t/MMBtu."
-    co2::Dict{ThermalFuels.Value, Float64}
     "Minimum and maximum blending level (%) of each fuel during start-up process for multi-fuel generator"
     cofire_start_limits::Dict{ThermalFuels.Value, MinMax}
     "Minimum and maximum blending level (%) of each fuel during normal generation process for multi-fuel generator"
     cofire_level_limits::Dict{ThermalFuels.Value, MinMax}
     "Capital costs for investing in a technology. (USD/MW)"
-    capital_costs::PSY.ValueCurve
+    capital_costs::CapitalCost
     "Fixed and variable O&M costs for a technology"
     operation_costs::PSY.OperationalCost
     "Used for discrete investment decisions. Size of each unit being built (MW)"
     unit_size::Float64
     "Minimum and maximum allowable installed capacity for a technology (MW)"
-    capacity_limits::MinMax
-    "Derating factor to account for planned or forced outages of a technology. Fraction of hours in a year where technology is unavailable."
-    outage_factor::Float64
+    capacity_limits::Union{MinMax, Dict{PSY.Topology, MinMax}}
+    "Planned and forced outage factors for a technology, each a fraction of total availability."
+    outage_factor::OutageFactors
     "Minimum generation as a fraction of total capacity"
     min_generation_fraction::Float64
     "Maximum decrease and increase in output between operation periods. Fraction of nameplate capacity per hour"
@@ -108,8 +104,8 @@ mutable struct SupplyTechnology{T <: PSY.Generator} <: ResourceTechnology
 end
 
 
-function SupplyTechnology{T}(; name, power_systems_type, region=Vector(), available=true, prime_mover_type=PrimeMovers.OT, fuel=[ThermalFuels.OTHER], co2=Dict(), cofire_start_limits=Dict(), cofire_level_limits=Dict(), capital_costs=LinearCurve(0.0), operation_costs=ThermalGenerationCost(nothing), unit_size=0.0, capacity_limits=(min=0, max=1e8), outage_factor=1.0, min_generation_fraction=0.0, ramp_limits=(up=1.0, down=1.0), time_limits=(up=60.0, down=60.0), start_fuel_mmbtu_per_mw=0.0, lifetime=100, requirements=Vector(), financial_data, ext=Dict(), internal=InfrastructureSystemsInternal(), ) where T <: PSY.Generator
-    SupplyTechnology{T}(name, power_systems_type, region, available, prime_mover_type, fuel, co2, cofire_start_limits, cofire_level_limits, capital_costs, operation_costs, unit_size, capacity_limits, outage_factor, min_generation_fraction, ramp_limits, time_limits, start_fuel_mmbtu_per_mw, lifetime, requirements, financial_data, ext, internal, )
+function SupplyTechnology{T}(; name, power_systems_type, region=Vector(), available=true, prime_mover_type=PrimeMovers.OT, fuel=[ThermalFuels.OTHER], cofire_start_limits=Dict(), cofire_level_limits=Dict(), capital_costs=CapitalCost(nothing), operation_costs=ThermalGenerationCost(nothing), unit_size=0.0, capacity_limits=(min = 0.0, max = 1e8), outage_factor=(planned = 0.0, forced = 0.0), min_generation_fraction=0.0, ramp_limits=(up=1.0, down=1.0), time_limits=(up=60.0, down=60.0), start_fuel_mmbtu_per_mw=0.0, lifetime=100, requirements=Vector(), financial_data, ext=Dict(), internal=InfrastructureSystemsInternal(), ) where T <: PSY.Generator
+    SupplyTechnology{T}(name, power_systems_type, region, available, prime_mover_type, fuel, cofire_start_limits, cofire_level_limits, capital_costs, operation_costs, unit_size, capacity_limits, outage_factor, min_generation_fraction, ramp_limits, time_limits, start_fuel_mmbtu_per_mw, lifetime, requirements, financial_data, ext, internal, )
 end
 
 """Get [`SupplyTechnology`](@ref) `name`."""
@@ -124,37 +120,27 @@ get_available(value::SupplyTechnology) = value.available
 get_prime_mover_type(value::SupplyTechnology) = value.prime_mover_type
 """Get [`SupplyTechnology`](@ref) `fuel`."""
 get_fuel(value::SupplyTechnology) = value.fuel
-"""Get [`SupplyTechnology`](@ref) `co2` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_co2_unitful`](@ref)."""
-get_co2(value::SupplyTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:co2), Val(:t_per_mmbtu), units))
-"""Get [`SupplyTechnology`](@ref) `co2` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_co2`](@ref)."""
-get_co2_unitful(value::SupplyTechnology, units) = get_value(value, Val(:co2), Val(:t_per_mmbtu), units)
-InfrastructureSystems.display_units_arg(::typeof(get_co2), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_co2_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
 """Get [`SupplyTechnology`](@ref) `cofire_start_limits`."""
 get_cofire_start_limits(value::SupplyTechnology) = value.cofire_start_limits
 """Get [`SupplyTechnology`](@ref) `cofire_level_limits`."""
 get_cofire_level_limits(value::SupplyTechnology) = value.cofire_level_limits
-"""Get [`SupplyTechnology`](@ref) `capital_costs` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_capital_costs_unitful`](@ref)."""
-get_capital_costs(value::SupplyTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:capital_costs), Val(:usd_per_mw), units))
-"""Get [`SupplyTechnology`](@ref) `capital_costs` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_capital_costs`](@ref)."""
-get_capital_costs_unitful(value::SupplyTechnology, units) = get_value(value, Val(:capital_costs), Val(:usd_per_mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_capital_costs), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_capital_costs_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
-"""Get [`SupplyTechnology`](@ref) `operation_costs` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_operation_costs_unitful`](@ref)."""
+"""Get [`SupplyTechnology`](@ref) `capital_costs`."""
+get_capital_costs(value::SupplyTechnology) = value.capital_costs
+"""Get [`SupplyTechnology`](@ref) `operation_costs` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_operation_costs_unitful`](@ref)."""
 get_operation_costs(value::SupplyTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:operation_costs), Val(:usd_per_mwh), units))
-"""Get [`SupplyTechnology`](@ref) `operation_costs` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_operation_costs`](@ref)."""
+"""Get [`SupplyTechnology`](@ref) `operation_costs` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_operation_costs`](@ref)."""
 get_operation_costs_unitful(value::SupplyTechnology, units) = get_value(value, Val(:operation_costs), Val(:usd_per_mwh), units)
 InfrastructureSystems.display_units_arg(::typeof(get_operation_costs), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_operation_costs_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
-"""Get [`SupplyTechnology`](@ref) `unit_size` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_unit_size_unitful`](@ref)."""
+"""Get [`SupplyTechnology`](@ref) `unit_size` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_unit_size_unitful`](@ref)."""
 get_unit_size(value::SupplyTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:unit_size), Val(:mw), units))
-"""Get [`SupplyTechnology`](@ref) `unit_size` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_unit_size`](@ref)."""
+"""Get [`SupplyTechnology`](@ref) `unit_size` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_unit_size`](@ref)."""
 get_unit_size_unitful(value::SupplyTechnology, units) = get_value(value, Val(:unit_size), Val(:mw), units)
 InfrastructureSystems.display_units_arg(::typeof(get_unit_size), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_unit_size_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
-"""Get [`SupplyTechnology`](@ref) `capacity_limits` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_capacity_limits_unitful`](@ref)."""
+"""Get [`SupplyTechnology`](@ref) `capacity_limits` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_capacity_limits_unitful`](@ref)."""
 get_capacity_limits(value::SupplyTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:capacity_limits), Val(:mw), units))
-"""Get [`SupplyTechnology`](@ref) `capacity_limits` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_capacity_limits`](@ref)."""
+"""Get [`SupplyTechnology`](@ref) `capacity_limits` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_capacity_limits`](@ref)."""
 get_capacity_limits_unitful(value::SupplyTechnology, units) = get_value(value, Val(:capacity_limits), Val(:mw), units)
 InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
@@ -162,27 +148,27 @@ InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_unitful), :
 get_outage_factor(value::SupplyTechnology) = value.outage_factor
 """Get [`SupplyTechnology`](@ref) `min_generation_fraction`."""
 get_min_generation_fraction(value::SupplyTechnology) = value.min_generation_fraction
-"""Get [`SupplyTechnology`](@ref) `ramp_limits` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_ramp_limits_unitful`](@ref)."""
+"""Get [`SupplyTechnology`](@ref) `ramp_limits` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_ramp_limits_unitful`](@ref)."""
 get_ramp_limits(value::SupplyTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:ramp_limits), Val(:mw_per_min), units))
-"""Get [`SupplyTechnology`](@ref) `ramp_limits` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_ramp_limits`](@ref)."""
+"""Get [`SupplyTechnology`](@ref) `ramp_limits` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_ramp_limits`](@ref)."""
 get_ramp_limits_unitful(value::SupplyTechnology, units) = get_value(value, Val(:ramp_limits), Val(:mw_per_min), units)
 InfrastructureSystems.display_units_arg(::typeof(get_ramp_limits), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_ramp_limits_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
-"""Get [`SupplyTechnology`](@ref) `time_limits` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_time_limits_unitful`](@ref)."""
+"""Get [`SupplyTechnology`](@ref) `time_limits` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_time_limits_unitful`](@ref)."""
 get_time_limits(value::SupplyTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:time_limits), Val(:min), units))
-"""Get [`SupplyTechnology`](@ref) `time_limits` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_time_limits`](@ref)."""
+"""Get [`SupplyTechnology`](@ref) `time_limits` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_time_limits`](@ref)."""
 get_time_limits_unitful(value::SupplyTechnology, units) = get_value(value, Val(:time_limits), Val(:min), units)
 InfrastructureSystems.display_units_arg(::typeof(get_time_limits), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_time_limits_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
-"""Get [`SupplyTechnology`](@ref) `start_fuel_mmbtu_per_mw` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_start_fuel_mmbtu_per_mw_unitful`](@ref)."""
+"""Get [`SupplyTechnology`](@ref) `start_fuel_mmbtu_per_mw` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_start_fuel_mmbtu_per_mw_unitful`](@ref)."""
 get_start_fuel_mmbtu_per_mw(value::SupplyTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:start_fuel_mmbtu_per_mw), Val(:mmbtu_per_mw), units))
-"""Get [`SupplyTechnology`](@ref) `start_fuel_mmbtu_per_mw` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_start_fuel_mmbtu_per_mw`](@ref)."""
+"""Get [`SupplyTechnology`](@ref) `start_fuel_mmbtu_per_mw` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_start_fuel_mmbtu_per_mw`](@ref)."""
 get_start_fuel_mmbtu_per_mw_unitful(value::SupplyTechnology, units) = get_value(value, Val(:start_fuel_mmbtu_per_mw), Val(:mmbtu_per_mw), units)
 InfrastructureSystems.display_units_arg(::typeof(get_start_fuel_mmbtu_per_mw), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_start_fuel_mmbtu_per_mw_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
-"""Get [`SupplyTechnology`](@ref) `lifetime` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_lifetime_unitful`](@ref)."""
+"""Get [`SupplyTechnology`](@ref) `lifetime` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_lifetime_unitful`](@ref)."""
 get_lifetime(value::SupplyTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:lifetime), Val(:yr), units))
-"""Get [`SupplyTechnology`](@ref) `lifetime` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_lifetime`](@ref)."""
+"""Get [`SupplyTechnology`](@ref) `lifetime` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_lifetime`](@ref)."""
 get_lifetime_unitful(value::SupplyTechnology, units) = get_value(value, Val(:lifetime), Val(:yr), units)
 InfrastructureSystems.display_units_arg(::typeof(get_lifetime), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_lifetime_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
@@ -207,14 +193,12 @@ set_available!(value::SupplyTechnology, val) = value.available = val
 set_prime_mover_type!(value::SupplyTechnology, val) = value.prime_mover_type = val
 """Set [`SupplyTechnology`](@ref) `fuel`."""
 set_fuel!(value::SupplyTechnology, val) = value.fuel = val
-"""Set [`SupplyTechnology`](@ref) `co2`."""
-set_co2!(value::SupplyTechnology, val, unit) = value.co2 = set_value(value, Val(:co2), val, unit, Val(:t_per_mmbtu))
 """Set [`SupplyTechnology`](@ref) `cofire_start_limits`."""
 set_cofire_start_limits!(value::SupplyTechnology, val) = value.cofire_start_limits = val
 """Set [`SupplyTechnology`](@ref) `cofire_level_limits`."""
 set_cofire_level_limits!(value::SupplyTechnology, val) = value.cofire_level_limits = val
 """Set [`SupplyTechnology`](@ref) `capital_costs`."""
-set_capital_costs!(value::SupplyTechnology, val, unit) = value.capital_costs = set_value(value, Val(:capital_costs), val, unit, Val(:usd_per_mw))
+set_capital_costs!(value::SupplyTechnology, val) = value.capital_costs = val
 """Set [`SupplyTechnology`](@ref) `operation_costs`."""
 set_operation_costs!(value::SupplyTechnology, val, unit) = value.operation_costs = set_value(value, Val(:operation_costs), val, unit, Val(:usd_per_mwh))
 """Set [`SupplyTechnology`](@ref) `unit_size`."""
@@ -248,24 +232,22 @@ function from_openapi(po::PI.SupplyTechnology, refs::OpenAPIRefs)
     return SupplyTechnology{parameter}(;
         name = po.name,
         power_systems_type = po.power_systems_type,
-        region = resolve_refs(refs, po.region, RegionTopology),
-        available = po.available,
-        prime_mover_type = PrimeMovers.Value(po.prime_mover_type),
-        fuel = [ThermalFuels.Value(v) for v in po.fuel],
-        co2 = Dict(ThermalFuels.Value(k) => v for (k, v) in po.co2),
-        cofire_start_limits = Dict(ThermalFuels.Value(k) => _minmax_from_po(v) for (k, v) in po.cofire_start_limits),
-        cofire_level_limits = Dict(ThermalFuels.Value(k) => _minmax_from_po(v) for (k, v) in po.cofire_level_limits),
-        capital_costs = convert_value_curve(po.capital_costs),
-        operation_costs = convert_cost(po.operation_costs)::PSY.OperationalCost,
-        unit_size = po.unit_size,
-        capacity_limits = _minmax_from_po(po.capacity_limits),
-        outage_factor = po.outage_factor,
-        min_generation_fraction = po.min_generation_fraction,
-        ramp_limits = _updown_from_po(po.ramp_limits),
-        time_limits = _updown_from_po(po.time_limits),
-        start_fuel_mmbtu_per_mw = po.start_fuel_mmbtu_per_mw,
-        lifetime = po.lifetime,
-        requirements = resolve_refs(refs, po.requirements, Requirement),
+        region = _or_default(resolve_refs(refs, po.region, PSY.Topology), Vector()),
+        available = _or_default(po.available, true),
+        prime_mover_type = _or_default(_enum_from_po(po.prime_mover_type, PrimeMovers.Value), PrimeMovers.OT),
+        fuel = _or_default(_enum_vector_from_po(po.fuel, ThermalFuels.Value), [ThermalFuels.OTHER]),
+        cofire_start_limits = _or_default(_enum_dict_from_po(po.cofire_start_limits, ThermalFuels.Value, _minmax_from_po), Dict()),
+        cofire_level_limits = _or_default(_enum_dict_from_po(po.cofire_level_limits, ThermalFuels.Value, _minmax_from_po), Dict()),
+        capital_costs = _or_default(_nested_optional(po.capital_costs), CapitalCost(nothing)),
+        operation_costs = _or_default(_cost_optional(po.operation_costs), ThermalGenerationCost(nothing))::PSY.OperationalCost,
+        unit_size = _or_default(po.unit_size, 0.0),
+        capacity_limits = _or_default(_capacity_bound_from_po(po.capacity_limits, refs), (min = 0.0, max = 1e8)),
+        outage_factor = _or_default(_outagefactors_from_po(po.outage_factor), (planned = 0.0, forced = 0.0)),
+        min_generation_fraction = _or_default(po.min_generation_fraction, 0.0),
+        ramp_limits = _or_default(_updown_from_po(po.ramp_limits), (up=1.0, down=1.0)),
+        time_limits = _or_default(_updown_from_po(po.time_limits), (up=60.0, down=60.0)),
+        start_fuel_mmbtu_per_mw = _or_default(po.start_fuel_mmbtu_per_mw, 0.0),
+        lifetime = _or_default(po.lifetime, 100),
         financial_data = convert_nested_data(po.financial_data),
     )
 end
@@ -277,22 +259,20 @@ function to_openapi(value::SupplyTechnology{T}, refs::OpenAPIRefs) where {T <: P
         power_systems_type = string(nameof(T)),
         region = component_ids(refs, get_region(value)),
         available = get_available(value),
-        prime_mover_type = string(get_prime_mover_type(value)),
-        fuel = [string(v) for v in get_fuel(value)],
-        co2 = Dict(string(k) => v for (k, v) in get_co2(value, IS.NU)),
-        cofire_start_limits = Dict(string(k) => _minmax_po(v) for (k, v) in get_cofire_start_limits(value)),
-        cofire_level_limits = Dict(string(k) => _minmax_po(v) for (k, v) in get_cofire_level_limits(value)),
-        capital_costs = convert_value_curve_to_openapi(get_capital_costs(value, IS.NU)),
-        operation_costs = convert_cost_to_openapi(get_operation_costs(value, IS.NU)),
+        prime_mover_type = PC.PrimeMovers(string(get_prime_mover_type(value))),
+        fuel = [PC.ThermalFuels(string(v)) for v in get_fuel(value)],
+        cofire_start_limits = PC.MinMaxByKey(; additional_properties = Dict(string(k) => _minmax_po(v) for (k, v) in get_cofire_start_limits(value))),
+        cofire_level_limits = PC.MinMaxByKey(; additional_properties = Dict(string(k) => _minmax_po(v) for (k, v) in get_cofire_level_limits(value))),
+        capital_costs = convert_nested_data_to_openapi(get_capital_costs(value)),
+        operation_costs = PI.SupplyTechnologyOperationCosts(convert_cost_to_openapi(get_operation_costs(value, IS.NU))),
         unit_size = get_unit_size(value, IS.NU),
-        capacity_limits = _minmax_po(get_capacity_limits(value, IS.NU)),
-        outage_factor = get_outage_factor(value),
+        capacity_limits = PI.SupplyTechnologyCapacityLimits(_capacity_bound_po_value(get_capacity_limits(value, IS.NU), refs)),
+        outage_factor = _outagefactors_po(get_outage_factor(value)),
         min_generation_fraction = get_min_generation_fraction(value),
         ramp_limits = _updown_po(get_ramp_limits(value, IS.NU)),
         time_limits = _updown_po(get_time_limits(value, IS.NU)),
         start_fuel_mmbtu_per_mw = get_start_fuel_mmbtu_per_mw(value, IS.NU),
         lifetime = get_lifetime(value, IS.NU),
-        requirements = component_ids(refs, get_requirements(value)),
         financial_data = convert_nested_data_to_openapi(get_financial_data(value)),
     )
 end

@@ -59,7 +59,7 @@ set_internal!(value::ExistingDevices, val) = value.internal = val
 
 function from_openapi(po::PI.ExistingDevices, refs::OpenAPIRefs)
     return ExistingDevices(;
-        existing_devices = po.existing_devices,
+        existing_devices = _or_default(po.existing_devices, Vector()),
     )
 end
 

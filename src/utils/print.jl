@@ -60,7 +60,11 @@ end
 
 # `getter_func` is deliberately not a type parameter: both callers resolve it through
 # `getproperty(PowerSystems, ::Symbol)`, so there is no concrete type to specialize on.
-function _show_accessor_value(getter_func::Function, ist::Union{Technology, Requirement}; units = nothing)
+function _show_accessor_value(
+    getter_func::Function,
+    ist::Union{Technology, Requirement};
+    units=nothing,
+)
     trait_arg = IS.display_units_arg(getter_func, typeof(ist))
     # Fields without a units trait (e.g. `get_name`) aren't unit-convertible at
     # all — an explicit `units` override must not force a units argument onto

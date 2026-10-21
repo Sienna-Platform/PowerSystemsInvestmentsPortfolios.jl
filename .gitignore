@@ -43,6 +43,7 @@ Manifest.toml
 *.h5
 docs/superpowers/
 .claude/plans/
+*.code-workspace
 
 ################################################################################
 #                              Operating systems                               #

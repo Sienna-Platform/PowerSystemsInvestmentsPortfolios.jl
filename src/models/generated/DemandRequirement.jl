@@ -15,7 +15,7 @@ This file is auto-generated. Do not edit.
         conformity::PSY.LoadConformity.Value
         value_of_lost_load::Float64
         unserved_demand_curve::PSY.ValueCurve
-        region::Vector{RegionTopology}
+        region::Vector{PSY.Topology}
         requirements::Vector{Requirement}
         ext::Dict
         internal::InfrastructureSystemsInternal
@@ -30,10 +30,10 @@ Demand requirements for a region.
 - `new_demand_mw::Float64`: (default: `0.0`) The value of the peak demand to be used for new DemandRequirements (MW).
 - `new_construction_year::Int64`: (default: `2020`) The year in which the new demand requirement will be installed. Should only be used for new demand requirements.
 - `growth_rate::Float64`: (default: `0.0`) The annual growth rate of the demand requirement, used to scale present-day loads into future projections. Should only be used for conforming loads
-- `conformity::PSY.LoadConformity.Value`: (default: `PSY.LoadConformity.UNDEFINED`) Indicator of how the demand requirement should conform to the load profile of existing technologies in the system. Should only be used for new demand requirements.
+- `conformity::PSY.LoadConformity.Value`: (default: `LoadConformity.UNDEFINED`) Indicator of how the demand requirement should conform to the load profile of existing technologies in the system. Should only be used for new demand requirements.
 - `value_of_lost_load::Float64`: (default: `1e8`) Value of unserved load (USD/MWh)
 - `unserved_demand_curve::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Piecewise curve to scale the cost of unserved load based on the value of lost load
-- `region::Vector{RegionTopology}`: (default: `Vector()`) Zone or node where the demand requirement is located
+- `region::Vector{PSY.Topology}`: (default: `Vector()`) Zone or node where the demand requirement is located
 - `requirements::Vector{Requirement}`: (default: `Vector()`) List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology
 - `ext::Dict`: (default: `Dict()`) Optional dictionary to provide additional data
 - `internal::InfrastructureSystemsInternal`: (default: `InfrastructureSystemsInternal()`) (**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference
@@ -58,7 +58,7 @@ mutable struct DemandRequirement{T <: PSY.StaticInjection} <: DemandTechnology
     "Piecewise curve to scale the cost of unserved load based on the value of lost load"
     unserved_demand_curve::PSY.ValueCurve
     "Zone or node where the demand requirement is located"
-    region::Vector{RegionTopology}
+    region::Vector{PSY.Topology}
     "List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology"
     requirements::Vector{Requirement}
     "Optional dictionary to provide additional data"
@@ -68,7 +68,7 @@ mutable struct DemandRequirement{T <: PSY.StaticInjection} <: DemandTechnology
 end
 
 
-function DemandRequirement{T}(; name, available=true, power_systems_type, new_demand_mw=0.0, new_construction_year=2020, growth_rate=0.0, conformity=PSY.LoadConformity.UNDEFINED, value_of_lost_load=1e8, unserved_demand_curve=LinearCurve(0.0), region=Vector(), requirements=Vector(), ext=Dict(), internal=InfrastructureSystemsInternal(), ) where T <: PSY.StaticInjection
+function DemandRequirement{T}(; name, available=true, power_systems_type, new_demand_mw=0.0, new_construction_year=2020, growth_rate=0.0, conformity=LoadConformity.UNDEFINED, value_of_lost_load=1e8, unserved_demand_curve=LinearCurve(0.0), region=Vector(), requirements=Vector(), ext=Dict(), internal=InfrastructureSystemsInternal(), ) where T <: PSY.StaticInjection
     DemandRequirement{T}(name, available, power_systems_type, new_demand_mw, new_construction_year, growth_rate, conformity, value_of_lost_load, unserved_demand_curve, region, requirements, ext, internal, )
 end
 
@@ -78,9 +78,9 @@ get_name(value::DemandRequirement) = value.name
 get_available(value::DemandRequirement) = value.available
 """Get [`DemandRequirement`](@ref) `power_systems_type`."""
 get_power_systems_type(value::DemandRequirement) = value.power_systems_type
-"""Get [`DemandRequirement`](@ref) `new_demand_mw` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_new_demand_mw_unitful`](@ref)."""
+"""Get [`DemandRequirement`](@ref) `new_demand_mw` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_new_demand_mw_unitful`](@ref)."""
 get_new_demand_mw(value::DemandRequirement, units) = InfrastructureSystems._strip_units(get_value(value, Val(:new_demand_mw), Val(:mw), units))
-"""Get [`DemandRequirement`](@ref) `new_demand_mw` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_new_demand_mw`](@ref)."""
+"""Get [`DemandRequirement`](@ref) `new_demand_mw` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_new_demand_mw`](@ref)."""
 get_new_demand_mw_unitful(value::DemandRequirement, units) = get_value(value, Val(:new_demand_mw), Val(:mw), units)
 InfrastructureSystems.display_units_arg(::typeof(get_new_demand_mw), ::Type{DemandRequirement{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_new_demand_mw_unitful), ::Type{DemandRequirement{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
@@ -90,15 +90,15 @@ get_new_construction_year(value::DemandRequirement) = value.new_construction_yea
 get_growth_rate(value::DemandRequirement) = value.growth_rate
 """Get [`DemandRequirement`](@ref) `conformity`."""
 get_conformity(value::DemandRequirement) = value.conformity
-"""Get [`DemandRequirement`](@ref) `value_of_lost_load` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_value_of_lost_load_unitful`](@ref)."""
+"""Get [`DemandRequirement`](@ref) `value_of_lost_load` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_value_of_lost_load_unitful`](@ref)."""
 get_value_of_lost_load(value::DemandRequirement, units) = InfrastructureSystems._strip_units(get_value(value, Val(:value_of_lost_load), Val(:usd_per_mwh_scalar), units))
-"""Get [`DemandRequirement`](@ref) `value_of_lost_load` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_value_of_lost_load`](@ref)."""
+"""Get [`DemandRequirement`](@ref) `value_of_lost_load` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_value_of_lost_load`](@ref)."""
 get_value_of_lost_load_unitful(value::DemandRequirement, units) = get_value(value, Val(:value_of_lost_load), Val(:usd_per_mwh_scalar), units)
 InfrastructureSystems.display_units_arg(::typeof(get_value_of_lost_load), ::Type{DemandRequirement{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_value_of_lost_load_unitful), ::Type{DemandRequirement{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-"""Get [`DemandRequirement`](@ref) `unserved_demand_curve` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_unserved_demand_curve_unitful`](@ref)."""
+"""Get [`DemandRequirement`](@ref) `unserved_demand_curve` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_unserved_demand_curve_unitful`](@ref)."""
 get_unserved_demand_curve(value::DemandRequirement, units) = InfrastructureSystems._strip_units(get_value(value, Val(:unserved_demand_curve), Val(:usd_per_mwh), units))
-"""Get [`DemandRequirement`](@ref) `unserved_demand_curve` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_unserved_demand_curve`](@ref)."""
+"""Get [`DemandRequirement`](@ref) `unserved_demand_curve` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_unserved_demand_curve`](@ref)."""
 get_unserved_demand_curve_unitful(value::DemandRequirement, units) = get_value(value, Val(:unserved_demand_curve), Val(:usd_per_mwh), units)
 InfrastructureSystems.display_units_arg(::typeof(get_unserved_demand_curve), ::Type{DemandRequirement{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_unserved_demand_curve_unitful), ::Type{DemandRequirement{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
@@ -143,16 +143,15 @@ function from_openapi(po::PI.DemandRequirement, refs::OpenAPIRefs)
     parameter = getproperty(PowerSystems, Symbol(po.power_systems_type))
     return DemandRequirement{parameter}(;
         name = po.name,
-        available = po.available,
+        available = _or_default(po.available, true),
         power_systems_type = po.power_systems_type,
-        new_demand_mw = po.new_demand_mw,
-        new_construction_year = po.new_construction_year,
-        growth_rate = po.growth_rate,
-        conformity = PSY.LoadConformity.Value(po.conformity),
-        value_of_lost_load = po.value_of_lost_load,
-        unserved_demand_curve = convert_value_curve(po.unserved_demand_curve),
-        region = resolve_refs(refs, po.region, RegionTopology),
-        requirements = resolve_refs(refs, po.requirements, Requirement),
+        new_demand_mw = _or_default(po.new_demand_mw, 0.0),
+        new_construction_year = _or_default(po.new_construction_year, 2020),
+        growth_rate = _or_default(po.growth_rate, 0.0),
+        conformity = _or_default(_enum_from_po(po.conformity, PSY.LoadConformity.Value), LoadConformity.UNDEFINED),
+        value_of_lost_load = _or_default(po.value_of_lost_load, 1e8),
+        unserved_demand_curve = _or_default(_value_curve_optional(po.unserved_demand_curve), LinearCurve(0.0)),
+        region = _or_default(resolve_refs(refs, po.region, PSY.Topology), Vector()),
     )
 end
 
@@ -167,8 +166,7 @@ function to_openapi(value::DemandRequirement{T}, refs::OpenAPIRefs) where {T <: 
         growth_rate = get_growth_rate(value),
         conformity = string(get_conformity(value)),
         value_of_lost_load = get_value_of_lost_load(value, IS.NU),
-        unserved_demand_curve = convert_value_curve_to_openapi(get_unserved_demand_curve(value, IS.NU)),
+        unserved_demand_curve = _curve_to_openapi(PI.DemandRequirementUnservedDemandCurve, get_unserved_demand_curve(value, IS.NU)),
         region = component_ids(refs, get_region(value)),
-        requirements = component_ids(refs, get_requirements(value)),
     )
 end

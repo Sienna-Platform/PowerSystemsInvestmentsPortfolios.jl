@@ -9,7 +9,7 @@ This file is auto-generated. Do not edit.
         name::String
         available::Bool
         power_systems_type::String
-        region::Vector{RegionTopology}
+        region::Vector{PSY.Topology}
         technology_efficiency::Float64
         price_per_unit::PSY.ValueCurve
         min_power::Float64
@@ -31,7 +31,7 @@ Represents demand side technologies such as electric vehicles or hydrogen electr
 - `name::String`: The technology name
 - `available::Bool`: Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)
 - `power_systems_type::String`: Corresponding type in PowerSystems.jl to be used in PCM modeling
-- `region::Vector{RegionTopology}`: (default: `Vector()`) Location where technology is operated
+- `region::Vector{PSY.Topology}`: (default: `Vector()`) Location where technology is operated
 - `technology_efficiency::Float64`: (default: `0.0`) MWh of electricity per unit of output. Ex: MWh per ton of hydrogen for electrolyzers
 - `price_per_unit::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Price or value per unit of output. Ex: USD per ton of hydrogen for electrolyzers. Units: USD/t.
 - `min_power::Float64`: (default: `0.0`) Minimum operation of demandside unit as a fraction of peak demand
@@ -54,7 +54,7 @@ mutable struct DemandSideTechnology{T <: PSY.StaticInjection} <: DemandTechnolog
     "Corresponding type in PowerSystems.jl to be used in PCM modeling"
     power_systems_type::String
     "Location where technology is operated"
-    region::Vector{RegionTopology}
+    region::Vector{PSY.Topology}
     "MWh of electricity per unit of output. Ex: MWh per ton of hydrogen for electrolyzers"
     technology_efficiency::Float64
     "Price or value per unit of output. Ex: USD per ton of hydrogen for electrolyzers. Units: USD/t."
@@ -98,45 +98,45 @@ get_power_systems_type(value::DemandSideTechnology) = value.power_systems_type
 get_region(value::DemandSideTechnology) = value.region
 """Get [`DemandSideTechnology`](@ref) `technology_efficiency`."""
 get_technology_efficiency(value::DemandSideTechnology) = value.technology_efficiency
-"""Get [`DemandSideTechnology`](@ref) `price_per_unit` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_price_per_unit_unitful`](@ref)."""
+"""Get [`DemandSideTechnology`](@ref) `price_per_unit` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_price_per_unit_unitful`](@ref)."""
 get_price_per_unit(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:price_per_unit), Val(:usd_per_t), units))
-"""Get [`DemandSideTechnology`](@ref) `price_per_unit` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_price_per_unit`](@ref)."""
+"""Get [`DemandSideTechnology`](@ref) `price_per_unit` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_price_per_unit`](@ref)."""
 get_price_per_unit_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:price_per_unit), Val(:usd_per_t), units)
 InfrastructureSystems.display_units_arg(::typeof(get_price_per_unit), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_price_per_unit_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
 """Get [`DemandSideTechnology`](@ref) `min_power`."""
 get_min_power(value::DemandSideTechnology) = value.min_power
-"""Get [`DemandSideTechnology`](@ref) `peak_demand_mw` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_peak_demand_mw_unitful`](@ref)."""
+"""Get [`DemandSideTechnology`](@ref) `peak_demand_mw` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_peak_demand_mw_unitful`](@ref)."""
 get_peak_demand_mw(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:peak_demand_mw), Val(:mw), units))
-"""Get [`DemandSideTechnology`](@ref) `peak_demand_mw` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_peak_demand_mw`](@ref)."""
+"""Get [`DemandSideTechnology`](@ref) `peak_demand_mw` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_peak_demand_mw`](@ref)."""
 get_peak_demand_mw_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:peak_demand_mw), Val(:mw), units)
 InfrastructureSystems.display_units_arg(::typeof(get_peak_demand_mw), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_peak_demand_mw_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-"""Get [`DemandSideTechnology`](@ref) `curtailment_cost` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_curtailment_cost_unitful`](@ref)."""
+"""Get [`DemandSideTechnology`](@ref) `curtailment_cost` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_curtailment_cost_unitful`](@ref)."""
 get_curtailment_cost(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:curtailment_cost), Val(:usd_per_mwh), units))
-"""Get [`DemandSideTechnology`](@ref) `curtailment_cost` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_curtailment_cost`](@ref)."""
+"""Get [`DemandSideTechnology`](@ref) `curtailment_cost` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_curtailment_cost`](@ref)."""
 get_curtailment_cost_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:curtailment_cost), Val(:usd_per_mwh), units)
 InfrastructureSystems.display_units_arg(::typeof(get_curtailment_cost), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_curtailment_cost_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
 """Get [`DemandSideTechnology`](@ref) `max_demand_curtailment`."""
 get_max_demand_curtailment(value::DemandSideTechnology) = value.max_demand_curtailment
-"""Get [`DemandSideTechnology`](@ref) `max_demand_delay` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_max_demand_delay_unitful`](@ref)."""
+"""Get [`DemandSideTechnology`](@ref) `max_demand_delay` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_max_demand_delay_unitful`](@ref)."""
 get_max_demand_delay(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:max_demand_delay), Val(:min), units))
-"""Get [`DemandSideTechnology`](@ref) `max_demand_delay` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_max_demand_delay`](@ref)."""
+"""Get [`DemandSideTechnology`](@ref) `max_demand_delay` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_max_demand_delay`](@ref)."""
 get_max_demand_delay_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:max_demand_delay), Val(:min), units)
 InfrastructureSystems.display_units_arg(::typeof(get_max_demand_delay), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_max_demand_delay_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-"""Get [`DemandSideTechnology`](@ref) `max_demand_advance` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_max_demand_advance_unitful`](@ref)."""
+"""Get [`DemandSideTechnology`](@ref) `max_demand_advance` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_max_demand_advance_unitful`](@ref)."""
 get_max_demand_advance(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:max_demand_advance), Val(:min), units))
-"""Get [`DemandSideTechnology`](@ref) `max_demand_advance` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_max_demand_advance`](@ref)."""
+"""Get [`DemandSideTechnology`](@ref) `max_demand_advance` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_max_demand_advance`](@ref)."""
 get_max_demand_advance_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:max_demand_advance), Val(:min), units)
 InfrastructureSystems.display_units_arg(::typeof(get_max_demand_advance), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_max_demand_advance_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
 """Get [`DemandSideTechnology`](@ref) `demand_energy_efficiency`."""
 get_demand_energy_efficiency(value::DemandSideTechnology) = value.demand_energy_efficiency
-"""Get [`DemandSideTechnology`](@ref) `shift_variable_cost` as a bare number in the requested `units` (e.g. `SU`, `CU`; domain-provided units such as `MW` are also accepted when the owning domain package has registered a `_strip_units` method for the returned quantity type). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_shift_variable_cost_unitful`](@ref)."""
+"""Get [`DemandSideTechnology`](@ref) `shift_variable_cost` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_shift_variable_cost_unitful`](@ref)."""
 get_shift_variable_cost(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:shift_variable_cost), Val(:usd_per_mwh), units))
-"""Get [`DemandSideTechnology`](@ref) `shift_variable_cost` as a unit-bearing quantity in the requested `units` (e.g. `SU`, `CU`, `MW`). For a bare number see [`get_shift_variable_cost`](@ref)."""
+"""Get [`DemandSideTechnology`](@ref) `shift_variable_cost` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_shift_variable_cost`](@ref)."""
 get_shift_variable_cost_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:shift_variable_cost), Val(:usd_per_mwh), units)
 InfrastructureSystems.display_units_arg(::typeof(get_shift_variable_cost), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_shift_variable_cost_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
@@ -189,18 +189,17 @@ function from_openapi(po::PI.DemandSideTechnology, refs::OpenAPIRefs)
         name = po.name,
         available = po.available,
         power_systems_type = po.power_systems_type,
-        region = resolve_refs(refs, po.region, RegionTopology),
-        technology_efficiency = po.technology_efficiency,
-        price_per_unit = convert_value_curve(po.price_per_unit),
-        min_power = po.min_power,
-        peak_demand_mw = po.peak_demand_mw,
-        curtailment_cost = convert_value_curve(po.curtailment_cost),
-        max_demand_curtailment = po.max_demand_curtailment,
-        max_demand_delay = po.max_demand_delay,
-        max_demand_advance = po.max_demand_advance,
-        demand_energy_efficiency = po.demand_energy_efficiency,
-        shift_variable_cost = convert_value_curve(po.shift_variable_cost),
-        requirements = resolve_refs(refs, po.requirements, Requirement),
+        region = _or_default(resolve_refs(refs, po.region, PSY.Topology), Vector()),
+        technology_efficiency = _or_default(po.technology_efficiency, 0.0),
+        price_per_unit = _or_default(_value_curve_optional(po.price_per_unit), LinearCurve(0.0)),
+        min_power = _or_default(po.min_power, 0.0),
+        peak_demand_mw = _or_default(po.peak_demand_mw, 0.0),
+        curtailment_cost = _or_default(_value_curve_optional(po.curtailment_cost), LinearCurve(0.0)),
+        max_demand_curtailment = _or_default(po.max_demand_curtailment, 0.0),
+        max_demand_delay = _or_default(po.max_demand_delay, 0.0),
+        max_demand_advance = _or_default(po.max_demand_advance, 0.0),
+        demand_energy_efficiency = _or_default(po.demand_energy_efficiency, 0.0),
+        shift_variable_cost = _or_default(_value_curve_optional(po.shift_variable_cost), LinearCurve(0.0)),
     )
 end
 
@@ -212,15 +211,14 @@ function to_openapi(value::DemandSideTechnology{T}, refs::OpenAPIRefs) where {T 
         power_systems_type = string(nameof(T)),
         region = component_ids(refs, get_region(value)),
         technology_efficiency = get_technology_efficiency(value),
-        price_per_unit = convert_value_curve_to_openapi(get_price_per_unit(value, IS.NU)),
+        price_per_unit = _curve_to_openapi(PI.DemandSideTechnologyPricePerUnit, get_price_per_unit(value, IS.NU)),
         min_power = get_min_power(value),
         peak_demand_mw = get_peak_demand_mw(value, IS.NU),
-        curtailment_cost = convert_value_curve_to_openapi(get_curtailment_cost(value, IS.NU)),
+        curtailment_cost = _curve_to_openapi(PI.DemandSideTechnologyCurtailmentCost, get_curtailment_cost(value, IS.NU)),
         max_demand_curtailment = get_max_demand_curtailment(value),
         max_demand_delay = get_max_demand_delay(value, IS.NU),
         max_demand_advance = get_max_demand_advance(value, IS.NU),
         demand_energy_efficiency = get_demand_energy_efficiency(value),
-        shift_variable_cost = convert_value_curve_to_openapi(get_shift_variable_cost(value, IS.NU)),
-        requirements = component_ids(refs, get_requirements(value)),
+        shift_variable_cost = _curve_to_openapi(PI.DemandSideTechnologyShiftVariableCost, get_shift_variable_cost(value, IS.NU)),
     )
 end
