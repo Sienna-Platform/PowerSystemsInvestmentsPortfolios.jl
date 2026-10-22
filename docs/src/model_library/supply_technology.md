@@ -4,7 +4,8 @@ CurrentModule = PowerSystemsInvestmentsPortfolios
 
 # Supply Technology
 
-A [`SupplyTechnology{T}`](@ref) represents a candidate generation technology for capacity expansion. Each instance describes one buildable option: where it can be built, how much it costs, its operational characteristics, and any constraints.
+A [`SupplyTechnology{T}`](@ref) represents a candidate generation technology. Each instance
+describes one buildable option: where it can be built, what it costs, and how it operates.
 
 ## Type parameter
 
@@ -12,23 +13,28 @@ A [`SupplyTechnology{T}`](@ref) represents a candidate generation technology for
 
 | `T`                     | Typical technology                  |
 |:----------------------- |:----------------------------------- |
-| `PSY.ThermalStandard`   | Gas CCGT, coal, nuclear             |
+| `PSY.ThermalStandard`   | Gas, coal, nuclear                  |
 | `PSY.RenewableDispatch` | Variable renewable (wind, solar PV) |
-| `PSY.HydroDispatch`     | Run-of-river hydropower             |
+| `PSY.HydroDispatch`     | Hydropower                          |
 
 ## Key field groups
 
-**Identity and availability:** `name`, `id`, `available`, `power_systems_type`, `region`
+**Identity and location:** `name`, `available`, `power_systems_type`, `region`
+(`Vector{PSY.Topology}`)
 
-**Capacity:** `capacity_limits` (`MinMax` in MW), `unit_size` (discrete build increment in MW)
+**Capacity:** `capacity_limits` (`MinMax` in MW, or a `Dict{PSY.Topology, MinMax}` for a
+technology in several regions), `unit_size` (MW per unit for discrete investment)
 
-**Economics:** `capital_costs` (`PSY.ValueCurve` in USD/MW), `operation_costs` (`PSY.OperationalCost`), `financial_data` (`TechnologyFinancialData`)
+**Economics:** `capital_costs` ([`CapitalCost`](@ref)), `operation_costs`
+(`PSY.OperationalCost`), `financial_data` ([`TechnologyFinancialData`](@ref))
 
-**Fuel and prime mover:** `fuel` (`Vector{ThermalFuels}`), `prime_mover_type` (`PrimeMovers`), `co2` (Dict of emission rates), `heat_rate_mmbtu_per_mwh`, `start_fuel_mmbtu_per_mw`
+**Fuel and prime mover:** `prime_mover_type` (`PrimeMovers`), `fuel` (`Vector{ThermalFuels}`),
+`start_fuel_mmbtu_per_mw`, `cofire_level_limits`, `cofire_start_limits`
 
-**Operational constraints:** `ramp_limits` (`UpDown` in fraction/hr), `time_limits` (`UpDown` minimum up/down hours), `min_generation_fraction`, `outage_factor`, `lifetime`
+**Operation:** `ramp_limits` (`UpDown`), `time_limits` (`UpDown`, minutes),
+`min_generation_fraction`, `outage_factor` (`(planned, forced)`), `lifetime` (years)
 
-**Multi-fuel co-firing:** `cofire_level_limits`, `cofire_start_limits`
+**Policy:** `requirements` (`Vector{Requirement}`)
 
 ```@docs
 SupplyTechnology
@@ -36,7 +42,10 @@ SupplyTechnology
 
 ## `ColocatedSupplyStorageTechnology`
 
-A [`ColocatedSupplyStorageTechnology`](@ref) represents a co-located supply and storage system (e.g., solar PV + battery) that shares a single grid interconnection point. Both the supply and storage components are built and dispatched together under one technology entry.
+A [`ColocatedSupplyStorageTechnology`](@ref) represents a supply and a storage technology
+that share one inverter and grid connection (e.g., solar PV plus a battery). It owns the two
+technologies it references, which are masked in the portfolio; see
+[Add a Co-located Supply and Storage Technology](@ref).
 
 ```@docs
 ColocatedSupplyStorageTechnology

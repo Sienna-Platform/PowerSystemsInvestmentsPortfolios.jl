@@ -40,9 +40,9 @@ The `time_stamps` vector holds one `(start, end)` date tuple per investment peri
 
 ## Representative operational periods
 
-Rather than simulating 8 760 hours per year, PSI uses a small set of representative operating days — typically between 10 and 365 — that statistically approximate the full operational year. Each representative day captures a 24-hour pattern of renewable availability and load, and is weighted by how many real days it represents.
+Rather than simulating 8 760 hours per year, PSI uses a small set of representative operating days — typically between 10 and 365 — that statistically approximate the full operational year. Each representative day captures a daily pattern of renewable availability and load, and is weighted by how many real days it represents. Time steps do not have to be hourly, but they must be evenly spaced within a representative day.
 
-Each representative day is identified by a `(year, rep_day)` pair: a two-element tuple where `year` is the investment period year and `rep_day` is an integer index within that year. This pair is stored as key-value metadata on every operational time series chunk.
+Each representative day is identified by a `year` and a `rep_day`: `year` is the investment period year (a `String`) and `rep_day` is an integer index of the day. They are stored as the `features` of every operational time series chunk.
 
 PSIP stores time series for representative days using `OperationalPeriods` internally:
 
@@ -56,19 +56,23 @@ struct OperationalPeriods
 end
 ```
 
-The `time_stamps` vector contains the datetime index for each hourly step across all representative days. The `consecutive_slices` field groups those steps into per-day blocks. The `inverse_invest_mapping` records, for each representative day, which investment period it belongs to.
+The `time_stamps` vector contains the datetime index for each time step across all representative days. The `consecutive_slices` field groups those steps into per-day blocks. The `inverse_invest_mapping` records, for each representative day, which investment period it belongs to.
 
 ## How PSIP stores time series for both dimensions
 
 PSIP uses InfrastructureSystems (IS) `SingleTimeSeries` for all profiles. Two categories of time series live in a portfolio:
 
-**Investment-period time series** are indexed by investment year. They are used for quantities that change over the planning horizon, such as capital cost multipliers. These are attached to a technology component with a key identifying the economic parameter they represent. For example, `"inv_capex"` carries the capital expenditure multiplier per investment period.
+**Investment-period time series** are indexed by investment year and carry no features. They are used for quantities that change over the planning horizon, such as capital cost multipliers. These are attached to a technology with a name identifying the economic parameter they represent. For example, `"inv_capex"` carries the capital expenditure multiplier per investment period.
 
-**Operational time series** are hourly or sub-hourly profiles for capacity factors, demand, and similar quantities. They are attached with keys such as `"ops_variable_cap_factor"` for variable renewable capacity factors or `"ops_demand"` for load profiles. The metadata on each time series chunk identifies which representative day it belongs to via `(year, rep_day)` key-value pairs.
+**Operational time series** are hourly or sub-hourly profiles for capacity factors, demand, and similar quantities. They are attached with names such as `"ops_variable_cap_factor"` for variable renewable capacity factors or `"ops_peak_load"` for load profiles. The features of each time series chunk identify which representative day it belongs to:
+
+```julia
+add_time_series!(portfolio, wind, ts; features=Dict("year" => "2024", "rep_day" => 1))
+```
 
 !!! note
     
-    The time series key names (e.g., `"inv_capex"`, `"ops_variable_cap_factor"`, `"ops_demand"`) are conventions expected by PSI. Using non-standard key names will cause PSI to ignore or error on the time series data. Refer to the PSI documentation for the full list of expected keys.
+    The time series key names (e.g., `"inv_capex"`, `"ops_variable_cap_factor"`, `"ops_peak_load"`) are conventions expected by PSI. Using non-standard key names will cause PSI to ignore or error on the time series data. Refer to the PSI documentation for the full list of expected keys.
 
 ## The `InvestmentIntervals` and `OperationalPeriods` structs
 
@@ -81,4 +85,4 @@ They are documented here for completeness and for users who need to inspect the 
   - [`InvestmentIntervals`](@ref)
   - [`OperationalPeriods`](@ref)
   - [`TimeMapping`](@ref)
-  - [`SupplyTechnology`](@ref)
+  - [Working With Time Series](@ref)

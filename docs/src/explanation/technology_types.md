@@ -6,17 +6,22 @@ CurrentModule = PowerSystemsInvestmentsPortfolios
 
 ## The `Technology` Abstract Type
 
-All technology types in PSIP extend the abstract type `Technology`, which itself extends `IS.InfrastructureSystemsComponent`. This means every technology is a first-class InfrastructureSystems component: it lives inside the portfolio's `data` field, can hold supplemental attributes, and can carry attached time series.
+All technology types in PSIP extend the abstract type `Technology`, which itself extends
+`IS.InfrastructureSystemsComponent`. Every technology is a first-class InfrastructureSystems
+component: it lives inside the portfolio, can hold supplemental attributes, and can carry
+time series.
 
-Every concrete technology type shares a common set of fields:
+Most technologies share these fields:
 
-| Field                | Type                                      | Purpose                                                                                    |
-|:-------------------- |:----------------------------------------- |:------------------------------------------------------------------------------------------ |
-| `name`               | `String`                                  | Unique identifier for this technology within the portfolio                                 |
-| `available`          | `Bool`                                    | Whether this technology is active in the model; set to `false` to exclude without deleting |
-| `power_systems_type` | `String`                                  | PSY type name stored as a string; used for JSON serialization and PSI lookup               |
-| `financial_data`     | `Union{Nothing, TechnologyFinancialData}` | Technology-level economic parameters; overrides portfolio defaults when set                |
-| `region`             | `Vector{<:RegionTopology}`                | The regions where this technology operates                                                 |
+| Field                | Type                              | Purpose                                                                       |
+|:-------------------- |:--------------------------------- |:----------------------------------------------------------------------------- |
+| `name`               | `String`                          | Identifier, unique within the technology's concrete type                      |
+| `available`          | `Bool`                            | Whether the technology is considered; `false` excludes it without deleting it |
+| `power_systems_type` | `String`                          | Name of the PSY type the technology maps to, kept for serialization           |
+| `region`             | `Vector{PSY.Topology}`            | Where the technology can be built (transmission uses endpoints instead)       |
+| `financial_data`     | [`TechnologyFinancialData`](@ref) | Financing parameters (supply, storage, co-located, and transmission)          |
+| `requirements`       | `Vector{Requirement}`             | Policy requirements the technology contributes to                             |
+| `ext`                | `Dict`                            | Extra user data                                                               |
 
 ## Type Hierarchy
 
@@ -35,72 +40,73 @@ Technology (abstract) <: IS.InfrastructureSystemsComponent
     └── DemandSideTechnology{T <: PSY.StaticInjection}
 ```
 
-All concrete types except the supplemental attributes described below are added to a portfolio with `add_technology!`.
+All of these are added to a portfolio with `add_technology!`.
 
 ## The `{T}` Type Parameter
 
-Every concrete technology type is parameterized by a PSY component type. For example:
+Every concrete technology type is parameterized by a PSY component type, for example
+`SupplyTechnology{PSY.RenewableDispatch}`. `PowerSystemsInvestments.jl` dispatches on `T` to
+choose formulations and to find existing units of the same type in the base system. Because
+a type cannot be written to a file directly, `power_systems_type` records its name so the
+parameter can be restored when the portfolio is read.
 
-  - [`SupplyTechnology`](@ref)`{T}` where `T <: PSY.Generator`
-  - [`StorageTechnology`](@ref)`{T}` where `T <: PSY.Storage`
-  - [`AggregateTransportTechnology`](@ref)`{T}` where `T <: PSY.Device`
-
-This parameterization serves two purposes. At runtime, PSI uses the `{T}` parameter to look up operating costs, capacity limits, and constraints from the base system using the PSY type dispatch system. At serialization time, the concrete `T` cannot be stored directly in JSON, so the `power_systems_type` field records the type name as a string to reconstruct the parameterization on deserialization.
-
-Common values of `T` for each technology branch:
-
-| `T`                          | Typical technology           |
-|:---------------------------- |:---------------------------- |
-| `PSY.ThermalStandard`        | Gas CCGT, coal, nuclear      |
-| `PSY.RenewableDispatch`      | Wind, solar PV               |
-| `PSY.HydroDispatch`          | Run-of-river hydro           |
-| `PSY.EnergyReservoirStorage` | Battery, pumped hydro        |
-| `PSY.ACBranch`               | AC transmission line (zonal) |
+| `T`                          | Typical technology    |
+|:---------------------------- |:--------------------- |
+| `PSY.ThermalStandard`        | Gas, coal, nuclear    |
+| `PSY.RenewableDispatch`      | Wind, solar PV        |
+| `PSY.HydroDispatch`          | Run-of-river hydro    |
+| `PSY.EnergyReservoirStorage` | Battery, pumped hydro |
+| `PSY.ACBranch`, `PSY.Line`   | AC transmission       |
+| `PSY.PowerLoad`              | Demand                |
 
 ## ResourceTechnology, TransmissionTechnology, and DemandTechnology
 
-The three abstract branches partition the technology space by role in the model.
+The three abstract branches partition technologies by their role in the model.
 
-**`ResourceTechnology`** covers generation and storage candidates — technologies that inject power into or absorb power from a region. [`SupplyTechnology`](@ref) models dispatchable and variable generators. [`StorageTechnology`](@ref) models energy storage. [`ColocatedSupplyStorageTechnology`](@ref) models a generator and storage device that share a grid interconnection point and are optimized jointly.
+**`ResourceTechnology`** covers generation and storage. [`SupplyTechnology`](@ref) models
+dispatchable and variable generators, [`StorageTechnology`](@ref) models energy storage, and
+[`ColocatedSupplyStorageTechnology`](@ref) models a generator and a storage device that share
+one inverter and grid connection.
 
-**`TransmissionTechnology`** covers buildable connections between regions. [`AggregateTransportTechnology`](@ref) models a zonal transport constraint (a transfer capacity between two zones). [`NodalACTransportTechnology`](@ref) and [`NodalHVDCTransportTechnology`](@ref) model individual AC and HVDC lines in nodal formulations.
+**`TransmissionTechnology`** covers buildable connections.
+[`AggregateTransportTechnology`](@ref) is a transfer corridor between two zones;
+[`NodalACTransportTechnology`](@ref) and [`NodalHVDCTransportTechnology`](@ref) are AC and
+HVDC lines between two buses.
 
-**`DemandTechnology`** covers demand-side modeling. [`DemandRequirement`](@ref) represents load that must be served (see the note below). [`DemandSideTechnology`](@ref) represents demand flexibility resources — loads that can shift, curtail, or respond to price signals.
+**`DemandTechnology`** covers demand. [`DemandRequirement`](@ref) is load that must be
+served; [`DemandSideTechnology`](@ref) is flexible demand that can be curtailed or shifted.
 
 ## `DemandRequirement`
 
 !!! note
     
-    [`DemandRequirement`](@ref)`{T}` is a subtype of `DemandTechnology`, **not** a `Requirement`. Despite its name, it lives in the technology branch of the hierarchy, and it is added to the portfolio with `add_technology!`, not through the requirements interface.
-    
-    The naming reflects that a `DemandRequirement` *requires* generation to serve it: it encodes a load that the optimizer must meet in each region and time period. Think of it as the demand side of the supply-demand balance constraint.
+    [`DemandRequirement`](@ref)`{T}` is a subtype of `DemandTechnology`, **not** a
+    `Requirement`. It is added with `add_technology!`. Its name reflects that it *requires*
+    generation to serve it: it is the demand side of the supply-demand balance.
 
-## Supplemental Attributes for Existing Capacity and Retirement
+## Co-located Technologies and Masking
 
-Several types that describe existing capacity or retirement and retrofit potential are **not subtypes of `Technology`**. They are `IS.SupplementalAttribute` instances that attach to a technology object:
+A [`ColocatedSupplyStorageTechnology`](@ref) owns the supply and storage technologies it
+references. When it is added to a portfolio those parts become **masked**: they stay in the
+portfolio and reachable through [`get_subcomponents`](@ref) and
+[`get_masked_technologies`](@ref), but [`get_technologies`](@ref) leaves them out. This is
+the same rule PowerSystems applies to the subcomponents of a `HybridSystem`, and it keeps a
+model from building the project twice.
 
-| Type                           | Purpose                                                         |
-|:------------------------------ |:--------------------------------------------------------------- |
-| [`ExistingDevices`](@ref)      | Records existing devices associated with a technology candidate |
-| `RetirementPotential`          | Marks a technology as having retirable existing capacity        |
-| `AggregateRetirementPotential` | Aggregated retirement potential across a region                 |
-| `RetrofitPotential`            | Marks a technology as having retrofittable existing capacity    |
-| `AggregateRetrofitPotential`   | Aggregated retrofit potential across a region                   |
+## Supplemental Attributes for Existing Capacity
 
-These are attached via `add_supplemental_attribute!`, not `add_technology!`:
+Data about existing units is attached to a technology as `IS.SupplementalAttribute`s rather
+than stored as technologies:
 
-```julia
-existing = ExistingDevices(; existing_devices=["gas_unit_1", "gas_unit_2"])
-add_supplemental_attribute!(portfolio, wind_tech, existing)
-```
+| Type                          | Purpose                                                         |
+|:----------------------------- |:--------------------------------------------------------------- |
+| [`ExistingDevices`](@ref)     | Base system components whose capacity counts for the technology |
+| [`RetirementPotential`](@ref) | Existing units that may be retired, and the cost of retiring    |
+| [`RetrofitPotential`](@ref)   | Existing units that may be retrofitted, and the cost            |
 
-!!! note
-    
-    Because these are supplemental attributes rather than technologies, they do not appear when iterating over `get_technologies(portfolio)`. Retrieve them with `IS.get_supplemental_attributes(ExistingDevices, portfolio, wind_tech)` or the equivalent PSIP accessor.
-
-```@docs
-ExistingDevices
-```
+A technology without an `ExistingDevices` attribute is new ([`is_new`](@ref) returns `true`)
+and has no existing capacity. See
+[Link Existing, Retiring, and Retrofit Capacity](@ref).
 
 ## See Also
 
@@ -110,4 +116,3 @@ ExistingDevices
   - [`AggregateTransportTechnology`](@ref)
   - [`NodalACTransportTechnology`](@ref)
   - [`DemandRequirement`](@ref)
-  - [`ExistingDevices`](@ref)

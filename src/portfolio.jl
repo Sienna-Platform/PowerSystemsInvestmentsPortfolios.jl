@@ -337,6 +337,12 @@ Set the base system of the portfolio.
 """
 set_base_system!(val::Portfolio, system::PSY.System) = val.base_system = system
 
+# Holdover from the pre-document serialization path (mirrors PowerSystems' own definition in
+# base.jl). The document-based import never sets this flag, so it defaults to `false`; it stays
+# as the defensive default `add_technology!` reads for `allow_existing_time_series`.
+_is_deserialization_in_progress(portfolio::Portfolio) =
+    get(get_ext(portfolio), "deserialization_in_progress", false)
+
 """
 Add a technology to the portfolio.
 
@@ -357,12 +363,6 @@ add_technology!(portfolio, bus)
 foreach(x -> add_technology!(portfolio, x), Iterators.flatten((buses, generators)))
 ```
 """
-# Holdover from the pre-document serialization path (mirrors PowerSystems' own definition in
-# base.jl). The document-based import never sets this flag, so it defaults to `false`; it stays
-# as the defensive default `add_technology!` reads for `allow_existing_time_series`.
-_is_deserialization_in_progress(portfolio::Portfolio) =
-    get(get_ext(portfolio), "deserialization_in_progress", false)
-
 function add_technology!(
     portfolio::Portfolio,
     technology::T;

@@ -16,6 +16,7 @@ responsible for and which one to reach for at each stage of a capacity expansion
 | Grid snapshots            | [`PowerSystems.jl`](https://sienna-platform.github.io/PowerSystems.jl/stable/)            | Buses, generators, loads, lines — steady-state grid data               |
 | **Investment portfolios** | **`PowerSystemsInvestmentsPortfolios.jl`**                                                | **Technologies, regions, requirements, financial data — this package** |
 | Investment optimization   | [`PowerSystemsInvestments.jl`](https://github.com/NREL-Sienna/PowerSystemsInvestments.jl) | Builds and solves capacity expansion models from a `Portfolio`         |
+| File format               | `PowerInvestmentsOpenAPIModels.jl`                                                        | OpenAPI models of the document [`to_file`](@ref) writes                |
 
 ## Data flow
 
@@ -25,10 +26,11 @@ A typical capacity expansion workflow moves data through the stack in order:
     infrastructure. Both PSY and PSIP build on top of it; most users never interact with it
     directly.
  2. **`PowerSystems.jl`** holds the existing grid snapshot — buses, existing generators,
-    loads, and transmission lines. A [`Portfolio`](@ref) always references a `PSY.System`
-    as its `base_system`.
+    loads, and transmission lines, along with the topology (areas, load zones, buses) that
+    technologies are located in. A [`Portfolio`](@ref) always references a `PSY.System` as
+    its `base_system`.
  3. **`PowerSystemsInvestmentsPortfolios.jl`** (this package) adds the investment layer:
-    technology candidates, planning regions, policy requirements, and time series profiles
+    technology candidates, policy requirements, financial data, and time series profiles
     for the investment horizon.
  4. **`PowerSystemsInvestments.jl`** reads the `Portfolio` and builds the optimization
     model. After solving, investment decisions are written back into the `Portfolio`'s

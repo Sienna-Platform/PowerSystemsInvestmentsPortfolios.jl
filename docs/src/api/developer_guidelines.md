@@ -6,21 +6,41 @@ CurrentModule = PowerSystemsInvestmentsPortfolios
 
 ## Auto-generated files
 
-The files under `src/models/generated/` are auto-generated from JSON descriptors. **Never edit them directly.** To add or modify a type:
+The files under `src/models/generated/` are generated from the descriptor
+`src/descriptors/SiennaInvestSchema.json`. **Never edit them directly.** To add or modify a
+type:
 
- 1. Edit the corresponding JSON descriptor in `src/descriptors/SiennaInvestSchema.json`.
- 2. Run the struct generator from the REPL: `PowerSystemsInvestmentsPortfolios.StructGeneration.generate_structs(descriptor_file, "src/models/generated")`.
- 3. Review the generated file and commit both the descriptor and generated file.
+ 1. Edit its entry in `src/descriptors/SiennaInvestSchema.json`. A field with
+    `"needs_conversion": true` and a `"conversion_unit"` token (e.g. `":mw"`, `":min"`,
+    `":usd_per_mwh"`) gets units-aware getters and setters.
+ 2. Regenerate from the REPL:
+    `PowerSystemsInvestmentsPortfolios.StructGeneration.generate_structs("src/descriptors/SiennaInvestSchema.json", "src/models/generated")`.
+ 3. Review the generated file and commit both the descriptor and the generated file.
 
-If a new type needs custom serialization (e.g., a field that cannot round-trip through JSON automatically), add it to `PSIP_ENCODE_FIELDS` in `src/serialization.jl`.
+## Serialization
+
+A portfolio is written as a document of the PowerSystemsInvestments OpenAPI schema, whose
+Julia models come from the registered `PowerInvestmentsOpenAPIModels`,
+`PowerCoreOpenAPIModels`, and related packages. The conversion lives in `src/openapi/`:
+
+  - `export_document.jl` — `to_openapi`, a `Portfolio` to an OpenAPI document
+  - `import_document.jl` — `from_openapi`, an OpenAPI document to a `Portfolio`
+  - `cost_conversion.jl`, `export_cost_conversion.jl` — cost curves in both directions
+  - `file_io.jl` — [`to_file`](@ref) and [`from_file`](@ref)
+
+A new type or field needs a mapping in both directions.
 
 ## Adding a new Technology type
 
- 1. **Define the descriptor** in `src/models/descriptors/` following the existing pattern (see `SupplyTechnology.json` as a reference).
- 2. **Regenerate** with `PowerSystemsInvestmentsPortfolios.StructGeneration.generate_structs`.
- 3. **Register serialization** if the type has encoded fields — add to `PSIP_ENCODE_FIELDS`.
- 4. **Add tests** in `test/` covering construction, `add_technology!`, `get_technology`, and round-trip serialization (`to_json` → `Portfolio(path)`).
- 5. **Add a model library page** in `docs/src/model_library/` and wire it into `docs/make.jl`.
+ 1. **Define the descriptor** entry in `src/descriptors/SiennaInvestSchema.json`, following
+    an existing technology such as `SupplyTechnology`.
+ 2. **Regenerate** with `StructGeneration.generate_structs`.
+ 3. **Add validation** (`validate_technology`) in `src/validation.jl` if the type has rules.
+ 4. **Add the OpenAPI conversion** in `src/openapi/`.
+ 5. **Add tests** in `test/` covering construction, `add_technology!`, `get_technology`, and
+    a `to_file` → `from_file` round trip; add the type to `test/portfolio_5bus.jl`.
+ 6. **Add it to the docs**: a model library page in `docs/src/model_library/` wired into
+    `docs/make.jl`, and a how-to if it needs one.
 
 ## Coding style
 
@@ -37,8 +57,12 @@ Follow the [Sienna development conventions](https://sienna-platform.github.io/Si
 julia --project=test test/runtests.jl
 ```
 
-The test suite uses `test/test_data/portfolio_5bus.jl` as the primary test portfolio fixture. When adding a new type, add a corresponding construction test in that fixture.
+The test suite uses `build_portfolio()` in `test/portfolio_5bus.jl` as the main test
+portfolio. When adding a new type, add an instance of it there.
 
-## OpenAPI models
+## Building the documentation
 
-PSIP includes OpenAPI-generated models under `src/models/generated/open_api_models/` for database serialization. These are also auto-generated — do not edit them directly. See `src/models/generated/open_api_models/README.md` for regeneration instructions.
+```bash
+julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+julia --project=docs docs/make.jl
+```

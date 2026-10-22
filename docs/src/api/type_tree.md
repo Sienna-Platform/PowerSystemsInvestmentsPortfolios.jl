@@ -36,23 +36,44 @@ Requirement (abstract) <: PSY.Service
 └── MaximumCapacityRequirements
 ```
 
-## RegionTopology hierarchy
+## Topology
+
+PSIP uses the `PowerSystems.jl` topology types; it defines none of its own.
 
 ```
-RegionTopology (abstract) <: IS.InfrastructureSystemsComponent
-├── Zone
-└── Node
+PSY.Topology
+├── PSY.AggregationTopology
+│   ├── PSY.Area
+│   └── PSY.LoadZone
+├── PSY.Bus
+│   ├── PSY.ACBus
+│   └── PSY.DCBus
+└── PSY.Arc
 ```
 
 ## Supplemental attributes
 
-The following types are `IS.SupplementalAttribute` instances attached to technologies, not subtypes of `Technology`:
+The following types are `IS.SupplementalAttribute`s attached to technologies, not subtypes of
+`Technology`:
 
 ```
 IS.SupplementalAttribute
 ├── ExistingDevices
 ├── RetirementPotential
-├── AggregateRetirementPotential
-├── RetrofitPotential
-└── AggregateRetrofitPotential
+└── RetrofitPotential
+```
+
+## Costs and financial data
+
+```
+IS.DeviceParameter
+├── InvestmentCost
+│   ├── CapitalCost
+│   └── StorageCapitalCost
+└── FinancialData
+    └── TechnologyFinancialData
+
+IS.InfrastructureSystemsType
+├── PortfolioFinancialData
+└── InvestmentScheduleResults
 ```

@@ -9,15 +9,20 @@ pages = OrderedDict(
     "Quick Start Guide" => "quick_start_guide.md",
     "Tutorials" => Any[],   # populated below by make_tutorials()
     "How to..." => Any[
+        "...define regions and topology" => "how_to/define_topology.md",
         "...add technologies" => Any[
             "Add a Supply Technology" => "how_to/add_supply_technology.md",
             "Add a Storage Technology" => "how_to/add_storage_technology.md",
+            "Add a Co-located Supply and Storage Technology" => "how_to/add_colocated_technology.md",
             "Add a Transmission Technology" => "how_to/add_transmission_technology.md",
+            "Add a Demand Technology" => "how_to/add_demand_technology.md",
         ],
+        "...link existing, retiring, and retrofit capacity" => "how_to/add_existing_capacity.md",
         "...add requirements" => "how_to/add_requirements.md",
         "...configure financial data" => "how_to/configure_financial_data.md",
         "...work with units" => "how_to/work_with_units.md",
         "...save and load a Portfolio" => "how_to/serialize_portfolio.md",
+        "...update to a new version" => Any["Migrate to the PowerSystems 6 data model" => "how_to/migrate_to_psy6.md",],
     ],
     "Explanation" => Any[
         "The Portfolio Container" => "explanation/portfolio.md",
@@ -46,21 +51,9 @@ pages = OrderedDict(
 pages["Tutorials"] = make_tutorials()
 
 pages["Model Library"] = make_model_library(
-    categories=[
-        ResourceTechnology,
-        DemandTechnology,
-        TransmissionTechnology,
-        Requirement,
-        RegionTopology,
-    ],
-    exceptions=[
-        Technology,
-        ResourceTechnology,
-        DemandTechnology,
-        TransmissionTechnology,
-        RegionTopology,
-        Requirement,
-    ],
+    # Parametric technology types have no concrete subtypes, so only Requirement generates
+    # pages; the technologies are documented on the manual pages below.
+    categories=[ResourceTechnology, DemandTechnology, TransmissionTechnology, Requirement],
     manual_additions=Dict{String, Any}(
         "ResourceTechnology" => Any[
             "Supply Technology" => "model_library/supply_technology.md",
@@ -72,7 +65,10 @@ pages["Model Library"] = make_model_library(
             Any["Demand Technologies" => "model_library/demand_technologies.md",],
         "Requirement" =>
             Any["Policy Requirements" => "model_library/requirements_models.md",],
-        "RegionTopology" => Any["Regions" => "model_library/region_topologies.md",],
+        "Supplemental Attributes" =>
+            Any["Existing, Retirement, and Retrofit Data" => "model_library/supplemental_attributes.md",],
+        "Costs and Financial Data" =>
+            Any["Capital Costs and Financial Data" => "model_library/costs_and_financial_data.md",],
     ),
 )
 

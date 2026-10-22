@@ -54,12 +54,26 @@ The CRF represents the fraction of the overnight cost that must be recovered eac
 
 ## How PSI Uses These Values
 
-PSI reads financial data from the Portfolio at model construction time:
+PSI reads financial data from the Portfolio when it builds the model:
 
-  - `PortfolioFinancialData` feeds the `DiscountedCashFlow` object, which defines the investment horizon and discount framework for the entire optimization.
-  - `TechnologyFinancialData` is used to compute the annualized capital cost for each technology candidate. If a technology does not have `TechnologyFinancialData` attached, PSI falls back to portfolio-level parameters.
+  - The `base_year` and `discount_rate` of `PortfolioFinancialData` are used to discount
+    costs in the objective. PSI's `DiscountedCashFlow` capital model supplies only the
+    investment periods.
+  - `TechnologyFinancialData` is used to annualize each technology's capital cost. It is a
+    required field of supply, storage, co-located, and transmission technologies.
 
-The annualized cost is what the optimizer actually minimizes. Costs are expressed as net present value of all annualized capital and operating payments over the planning horizon, discounted back to `base_year` using the portfolio `discount_rate`.
+## Capital Costs
+
+The overnight cost of building a technology is stored on the technology itself, separately
+from its financing:
+
+| Type                         | Used by                                   | Fields                                                                                                            |
+|:---------------------------- |:----------------------------------------- |:----------------------------------------------------------------------------------------------------------------- |
+| [`CapitalCost`](@ref)        | Supply, transmission, co-located inverter | `capital_cost` (USD/MW curve), `interconnection_cost` (USD/MW)                                                    |
+| [`StorageCapitalCost`](@ref) | Storage                                   | `charge_capital_cost`, `discharge_capital_cost` (USD/MW), `energy_capital_cost` (USD/MWh), `interconnection_cost` |
+
+The cost curves are `PSY.ValueCurve`s, usually a `LinearCurve`. An `"inv_capex"` time series
+of multipliers can make the cost change across investment periods.
 
 ## `technology_base_year` and Cost Inflation
 
@@ -75,4 +89,6 @@ This adjustment ensures that all technology candidates are evaluated on a consis
 
   - [`PortfolioFinancialData`](@ref)
   - [`TechnologyFinancialData`](@ref)
-  - [`Portfolio`](@ref)
+  - [`CapitalCost`](@ref)
+  - [`StorageCapitalCost`](@ref)
+  - [Configure Financial Data](@ref)

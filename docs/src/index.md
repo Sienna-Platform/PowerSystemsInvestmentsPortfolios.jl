@@ -25,18 +25,19 @@ model for capacity expansion modeling — the structured container that your opt
 engine reads from and writes to. Data flows from PSIP into
 [`PowerSystemsInvestments.jl`](https://github.com/NREL-Sienna/PowerSystemsInvestments.jl)
 (PSI), which builds and solves the capacity expansion problem. PSIP's central container is
-[`Portfolio`](@ref), which holds technologies, regions, policy requirements, financial
-parameters, and time series profiles that together fully describe a capacity expansion
-scenario.
+[`Portfolio`](@ref), which holds technologies, policy requirements, financial parameters,
+and time series profiles, together with a `PowerSystems.jl` base system for the existing grid
+and its topology, that fully describe a capacity expansion scenario.
 
 The main features include:
 
   - Comprehensive library of data structures for capacity expansion modeling, including
     supply, storage, transmission, and demand technologies.
-  - Support for both zonal and nodal spatial resolution, with region types that link
-    directly to existing `PowerSystems.jl` topology.
-  - Optimized container for technology data and time series supporting serialization to
-    portable file formats and configurable validation routines.
+  - Support for both zonal and nodal spatial resolution, using `PowerSystems.jl` topology
+    (`Area`, `LoadZone`, `ACBus`) directly.
+  - Natural-unit data with units-aware accessors to read and write any field in other units.
+  - Optimized container for technology data and time series, with validation and
+    serialization to an OpenAPI-based file format.
 
 ## How To Use This Documentation
 

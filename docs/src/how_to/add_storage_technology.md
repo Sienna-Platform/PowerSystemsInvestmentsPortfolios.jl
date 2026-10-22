@@ -4,20 +4,24 @@ CurrentModule = PowerSystemsInvestmentsPortfolios
 
 # Add a Storage Technology
 
-`StorageTechnology{T}` represents a storage asset — battery, pumped hydro, or other storage — that can be built or retired in a capacity expansion model.
+[`StorageTechnology{T}`](@ref) represents a candidate storage technology — battery, pumped
+hydro, or other storage — whose charge power, discharge power, and energy capacity can be
+built independently.
 
 ## Minimal working example
 
-The example below adds a 4-hour lithium-ion battery to a portfolio.
+The example below adds a lithium-ion battery that may be built with 1 to 8 hours of
+storage duration.
 
 ```julia
 using PowerSystemsInvestmentsPortfolios
 import PowerSystems as PSY
+using PowerSystems: LinearCurve, CostCurve, StorageCost
 
 portfolio = Portfolio()
 
-zone = Zone(; name="Zone_1", id=1)
-add_region!(portfolio, zone)
+west = Area(; name="West", input_basis=u"NU")
+add_topology!(portfolio, west)
 
 fin = TechnologyFinancialData(;
     capital_recovery_period=15,
@@ -29,48 +33,67 @@ fin = TechnologyFinancialData(;
 )
 
 battery = StorageTechnology{PSY.EnergyReservoirStorage}(;
-    name="battery_z1",
-    id=1,
+    name="battery_west",
     available=true,
-    region=[zone],
+    region=[west],
     power_systems_type="EnergyReservoirStorage",
     financial_data=fin,
-    storage_tech=StorageTech.LI_ION,
-    capital_costs_energy=LinearCurve(280.0),   # USD/MWh
-    capital_costs_discharge=LinearCurve(100.0),   # USD/MW
-    duration_limits=(min=1.0, max=8.0),   # hours
-    efficiency=(in=0.92, out=0.92),
-    capacity_limits_energy=(min=0.0, max=2000.0),  # MWh
+    prime_mover_type=PrimeMovers.BT,
+    storage_tech=StorageTech.LIB,
+    capital_costs=StorageCapitalCost(;
+        discharge_capital_cost=LinearCurve(300_000.0),   # USD/MW
+        energy_capital_cost=LinearCurve(250_000.0),      # USD/MWh
+    ),
+    operation_costs=StorageCost(;
+        charge_variable_cost=CostCurve(LinearCurve(0.0)),
+        discharge_variable_cost=CostCurve(LinearCurve(0.0)),
+        fixed=0.0,
+    ),
     capacity_limits_discharge=(min=0.0, max=500.0),   # MW
+    capacity_limits_energy=(min=0.0, max=2000.0),     # MWh
+    duration_limits=(min=60.0, max=480.0),            # minutes
+    efficiency=(in=0.92, out=0.92),
+    lifetime=15,
 )
 
 add_technology!(portfolio, battery)
 ```
 
+## Capital costs for power and energy
+
+A [`StorageCapitalCost`](@ref) holds one cost curve for each capacity that can be built,
+plus an interconnection cost:
+
+  - **`energy_capital_cost`** (USD/MWh) — cost of adding energy capacity.
+  - **`discharge_capital_cost`** (USD/MW) — cost of adding discharge power capacity.
+  - **`charge_capital_cost`** (USD/MW) — cost of adding charge power capacity, for
+    technologies where it is sized separately (e.g. asymmetric pumped hydro).
+  - **`interconnection_cost`** (USD/MW) — last-mile interconnection cost.
+
+Every curve defaults to `LinearCurve(0.0)`. For a battery whose charge and discharge
+hardware are the same, set only the energy and discharge curves.
+
 ## Key fields
 
-| Field                       | Type                     | Description                                                       |
-|:--------------------------- |:------------------------ |:----------------------------------------------------------------- |
-| `capacity_limits_energy`    | `MinMax` (NamedTuple)    | Minimum and maximum buildable energy capacity in MWh              |
-| `capacity_limits_discharge` | `MinMax` (NamedTuple)    | Minimum and maximum buildable discharge power capacity in MW      |
-| `capacity_limits_charge`    | `Union{Nothing, MinMax}` | Charge power limit in MW; `nothing` means charge equals discharge |
-| `duration_limits`           | `MinMax` (NamedTuple)    | Allowed energy-to-power ratio range in hours                      |
-| `efficiency`                | `InOut` (NamedTuple)     | Round-trip efficiency: `in` (charge), `out` (discharge), 0–1      |
-| `losses`                    | `Float64`                | Standing self-discharge losses per period (default: `0.0`)        |
-| `storage_tech`              | `StorageTech`            | Storage chemistry or technology type (e.g. `StorageTech.LI_ION`)  |
+| Field                       | Type                         | Description                                                   |
+|:--------------------------- |:---------------------------- |:------------------------------------------------------------- |
+| `capital_costs`             | [`StorageCapitalCost`](@ref) | Charge, discharge, energy, and interconnection costs          |
+| `operation_costs`           | `PSY.StorageCost`            | Charge/discharge variable costs and fixed O&M                 |
+| `capacity_limits_energy`    | `MinMax` or `Dict`           | Minimum and maximum energy capacity in MWh                    |
+| `capacity_limits_discharge` | `MinMax` or `Dict`           | Minimum and maximum discharge capacity in MW                  |
+| `capacity_limits_charge`    | `MinMax` or `Dict`           | Minimum and maximum charge capacity in MW                     |
+| `duration_limits`           | `MinMax`                     | Allowed ratio of energy to discharge capacity, in minutes     |
+| `efficiency`                | `InOut`                      | Charge (`in`) and discharge (`out`) efficiency, fractions     |
+| `losses`                    | `Float64`                    | Self-discharge, fraction of stored energy per hour            |
+| `unit_size_energy`          | `Float64`                    | Size of each energy unit for discrete investment, MWh         |
+| `unit_size_discharge`       | `Float64`                    | Size of each discharge unit for discrete investment, MW       |
+| `unit_size_charge`          | `Union{Nothing, Float64}`    | Size of each charge unit; `nothing` when not sized separately |
+| `storage_tech`              | `StorageTech`                | Storage technology (e.g. `StorageTech.LIB`)                   |
 
-## Capacity vs. energy capital costs
-
-Storage technologies have separate capital cost curves for two independent decision variables:
-
-  - **`capital_costs_energy`** (`USD/MWh`) — cost of adding energy capacity (the tank size).
-  - **`capital_costs_discharge`** (`USD/MW`) — cost of adding discharge power capacity (the inverter/turbine).
-  - **`capital_costs_charge`** (`USD/MW`, optional) — cost of adding charge power capacity when it differs from the discharge side (e.g. asymmetric pumped hydro). Leave as `nothing` for symmetric systems.
-
-For a standard lithium-ion battery where charge and discharge power hardware are the same, omit `capital_costs_charge` and set only the energy and discharge curves.
+See [`StorageTechnology`](@ref) for the complete list of fields and their defaults.
 
 ## See also
 
+  - [Add a Co-located Supply and Storage Technology](@ref)
   - [`SupplyTechnology`](@ref)
-  - [`TechnologyFinancialData`](@ref)
   - [`add_technology!`](@ref)

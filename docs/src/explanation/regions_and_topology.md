@@ -4,97 +4,76 @@ CurrentModule = PowerSystemsInvestmentsPortfolios
 
 # Regions and Topology
 
-## `RegionTopology` abstract type
+## Topology comes from PowerSystems
 
-[`RegionTopology`](@ref) is the abstract type for all spatial units in PSIP. It defines where capacity expansion decisions apply. Every technology must be assigned to one or more `RegionTopology` instances via its `region` field, and every requirement can scope its effect to a set of eligible regions.
+PSIP does not define its own region types. A technology is located with the same topology
+components a `PowerSystems.jl` `System` uses:
 
-Two concrete types extend `RegionTopology`:
+| PowerSystems type | Role in a portfolio                                        |
+|:----------------- |:---------------------------------------------------------- |
+| `PSY.Area`        | A planning zone in a zonal model (the default aggregation) |
+| `PSY.LoadZone`    | A planning zone in a zonal model                           |
+| `PSY.ACBus`       | A node in a nodal model                                    |
+| `PSY.Arc`         | A connection between two buses in the base system          |
 
-  - [`Zone`](@ref) — represents a planning zone in a zonal model
-  - [`Node`](@ref) — represents a bus in a nodal model
+These components live in the portfolio's **base system**. [`add_topology!`](@ref) stores a
+component there, and [`get_topologies`](@ref) and [`get_topology`](@ref) read it back. Because
+the portfolio and the base system share the same objects, a technology located in `Area`
+"West" and an existing generator on a bus in "West" refer to the same region — there is no
+name matching between two separate sets of regions.
 
-The choice between zonal and nodal models affects which transmission technology types are available and how PSI builds the network constraints.
+PSIP re-exports these types, so they can be used without the `PSY.` prefix.
 
-## Zone vs. Node — when to use each
+## How technologies reference topology
 
-|                      | [`Zone`](@ref)                 | [`Node`](@ref)                                               |
-|:-------------------- |:------------------------------ |:------------------------------------------------------------ |
-| Typical PSY analogue | `PSY.LoadZone`                 | `PSY.ACBus`                                                  |
-| Spatial resolution   | Planning zone (aggregate)      | Individual bus                                               |
-| Transmission model   | Zonal transport capacity       | Nodal AC (or HVDC) power flow                                |
-| Technology class     | `AggregateTransportTechnology` | `NodalACTransportTechnology`, `NodalHVDCTransportTechnology` |
-| Typical use          | Multi-zone capacity expansion  | Power-flow-constrained investment                            |
+| Technology                                                                   | Field(s)                     | Type                      |
+|:---------------------------------------------------------------------------- |:---------------------------- |:------------------------- |
+| Supply, storage, co-located, demand                                          | `region`                     | `Vector{PSY.Topology}`    |
+| [`AggregateTransportTechnology`](@ref)                                       | `start_region`, `end_region` | `PSY.AggregationTopology` |
+| [`NodalACTransportTechnology`](@ref), [`NodalHVDCTransportTechnology`](@ref) | `start_node`, `end_node`     | `PSY.Bus`                 |
 
-**Zone fields:**
+When a technology is added, PSIP checks that:
 
-```julia
-Zone(;
-    name::String,   # name of the zone — should match PSY.LoadZone name in base_system
-    id::Int64,      # unique integer ID
-)
-```
+  - a supply, storage, co-located, or demand technology has at least one region, with no
+    duplicates;
+  - every region and transport endpoint is already in the portfolio.
 
-**Node fields:**
+So topology is always added before the technologies located in it.
 
-```julia
-Node(;
-    name::String,         # name of the node — should match PSY.ACBus name in base_system
-    id::Int64,            # unique integer ID
-    bus_type::ACBusTypes, # default: ACBusTypes.PQ
-)
-```
+## Technologies in several regions
 
-Creating a zone and adding it to a portfolio:
+A `region` vector can hold several regions. A supply technology located in more than one
+region represents capacity that can be built in any of them, and its `capacity_limits` can
+be given per region as a `Dict{PSY.Topology, MinMax}`. Most technologies have a single
+region.
 
-```julia
-zone = Zone(; name="MISO_North", id=1)
-add_region!(portfolio, zone)
-```
+## Aggregation level
 
-## How regions relate to the `base_system`
-
-Zone and Node names are matched against the base `PSY.System` by PSI when it builds the optimization model. A zone named `"MISO_North"` must correspond to a `PSY.LoadZone` with the same name in the `base_system`; otherwise PSI cannot link supply technologies to their demand or network topology.
-
-The same matching requirement applies to nodes: a `Node` named `"BUS_101"` must correspond to a `PSY.ACBus` named `"BUS_101"` in the `base_system`.
-
-!!! tip
-    
-    When building a portfolio from an existing `PSY.System`, iterate over the system's `LoadZone` or `ACBus` components to create the corresponding `Zone` or `Node` objects — this ensures names match automatically.
+The portfolio records its spatial resolution as an aggregation type — `PSY.Area` by default,
+or another `PSY.AggregationTopology` subtype or `PSY.ACBus`. It is set when the portfolio is
+constructed:
 
 ```julia
-for (i, lz) in enumerate(get_components(PSY.LoadZone, base_sys))
-    add_region!(portfolio, Zone(; name=get_name(lz), id=i))
-end
+portfolio = Portfolio(PSY.LoadZone, base_sys, 2030, 0.07, 0.025, 0.05)
 ```
 
-## Multiple regions per technology
+| Aggregation type     | Spatial unit | Typical transmission technology                                              |
+|:-------------------- |:------------ |:---------------------------------------------------------------------------- |
+| `PSY.Area` (default) | Area         | [`AggregateTransportTechnology`](@ref)                                       |
+| `PSY.LoadZone`       | Load zone    | [`AggregateTransportTechnology`](@ref)                                       |
+| `PSY.ACBus`          | Bus          | [`NodalACTransportTechnology`](@ref), [`NodalHVDCTransportTechnology`](@ref) |
 
-The `region` field of [`SupplyTechnology`](@ref) is `Vector{RegionTopology}`, not a scalar. A single technology can span multiple zones, which is the correct representation for inter-regional technologies whose output can serve demand in more than one zone.
+Nodal models need more data — bus types, line impedances, voltages — and produce much larger
+optimization problems, so zonal aggregation is the usual choice for capacity expansion.
 
-Most technologies will have a single-element region vector:
+## Units of topology data
 
-```julia
-wind = SupplyTechnology{PSY.RenewableDispatch}(;
-    region=[zone_west],
-    # ...
-)
-```
-
-For technologies that operate in multiple zones simultaneously, pass all relevant zones:
-
-```julia
-interregional_solar = SupplyTechnology{PSY.RenewableDispatch}(;
-    region=[zone_west, zone_east],
-    # ...
-)
-```
-
-Requirements also accept a region vector to scope their applicability. A reserve margin requirement assigned to `[zone_west, zone_east]` must be satisfied by supply capacity located in either of those zones.
+PowerSystems 6 topology constructors take an `input_basis`. Pass `u"NU"` to give values
+such as a bus `base_voltage` in natural units (kV), consistent with the rest of a portfolio.
 
 ## See Also
 
-  - [`Zone`](@ref)
-  - [`Node`](@ref)
-  - [`RegionTopology`](@ref)
+  - [Define Regions and Topology](@ref)
+  - [`add_topology!`](@ref)
   - [`AggregateTransportTechnology`](@ref)
   - [`NodalACTransportTechnology`](@ref)

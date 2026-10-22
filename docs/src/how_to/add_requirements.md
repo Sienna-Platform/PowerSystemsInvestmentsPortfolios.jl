@@ -4,138 +4,128 @@ CurrentModule = PowerSystemsInvestmentsPortfolios
 
 # Add Policy Requirements
 
-Requirements represent policy constraints that influence investment decisions. They are added to a portfolio via `add_requirement!`.
+Requirements represent policies that constrain investment decisions. Adding one takes two
+steps:
 
-!!! note
-    
-    `Requirement` subtypes use `add_requirement!`, not `add_technology!`. Passing a requirement to `add_technology!` will throw a method error.
+ 1. Add the requirement to the portfolio with [`add_requirement!`](@ref).
+ 2. List it in the `requirements` field of every technology that contributes to it, either
+    at construction (`requirements=[...]`) or with `set_requirements!`.
+
+The examples below assume a portfolio containing the `wind`, `ccgt`, and `datacenter`
+technologies from the other how-to pages.
 
 ## Add a [`CarbonCaps`](@ref) constraint
 
-`CarbonCaps` enforces a CO₂ limit. It supports two modes — use `max_tons_mwh` to cap emission *intensity* (tCO₂/MWh), or use `max_mtons` to cap the *absolute* annual volume (million tCO₂). You may set one or both.
+`CarbonCaps` limits CO₂ emissions in the target year. Use `max_mtons` for an absolute limit
+(million tonnes) or `max_tons_mwh` for an emission rate limit (Mt/MWh).
 
 ```julia
 using PowerSystemsInvestmentsPortfolios
 
-# Intensity-based cap: no more than 0.05 tCO2/MWh by 2035
-cap = CarbonCaps(;
-    name="carbon_intensity_cap",
-    id=1,
-    available=true,
-    max_tons_mwh=0.05,   # intensity limit (tCO2/MWh); use max_mtons for absolute limit
-    target_year=2035,
-)
-
+cap = CarbonCaps(; name="carbon_cap_2035", available=true, target_year=2035, max_mtons=50.0)
 add_requirement!(portfolio, cap)
 ```
 
 ## Add a [`CarbonTax`](@ref)
 
-`CarbonTax` adds a price signal on CO₂ emissions rather than a hard cap.
+`CarbonTax` adds a price on CO₂ emissions rather than a hard cap.
 
 ```julia
 tax = CarbonTax(;
     name="carbon_tax_2040",
-    id=2,
     available=true,
-    tax_dollars_per_ton=75.0,   # USD/tCO2
     target_year=2040,
+    tax_dollars_per_ton=75.0,   # USD/tCO2
 )
-
 add_requirement!(portfolio, tax)
 ```
 
 ## Add a [`CapacityReserveMargin`](@ref)
 
-`CapacityReserveMargin` requires installed capacity to exceed peak demand by a given fraction. A value of `0.15` means 15% above peak demand.
+`CapacityReserveMargin` requires installed capacity to exceed peak demand by a fraction.
 
 ```julia
 crm = CapacityReserveMargin(;
     name="reserve_margin",
-    id=3,
     available=true,
+    target_year=2030,
     capacity_reserve_fraction=0.15,   # 15% above peak demand
-    target_year=2050,
 )
-
 add_requirement!(portfolio, crm)
 ```
 
 ## Add an [`EnergyShareRequirements`](@ref)
 
-`EnergyShareRequirements` enforces that a minimum fraction of total annual energy is served by eligible resources. A value of `0.50` means 50% of demand must be met by the eligible resources.
+`EnergyShareRequirements` requires a fraction of annual demand to be met by the contributing
+technologies.
 
 ```julia
 rps = EnergyShareRequirements(;
     name="50pct_rps",
-    id=4,
     available=true,
-    generation_fraction_requirement=0.50,   # 50% of total annual demand
     target_year=2030,
-    eligible_resources=[wind_tech, solar_tech],
+    generation_fraction_requirement=0.50,
 )
-
 add_requirement!(portfolio, rps)
 ```
 
 ## Add an [`HourlyMatching`](@ref) constraint
 
-`HourlyMatching` enforces hour-by-hour clean energy matching (24/7 carbon-free energy, CFE). Eligible resources must cover eligible demand in every hour of the year, not just on an annual average basis.
+`HourlyMatching` requires generation from contributing supply technologies to match demand
+from contributing demand technologies in every hour.
 
 ```julia
-cfe = HourlyMatching(;
-    name="247_cfe",
-    id=5,
-    available=true,
-    eligible_resources=[wind_tech, solar_tech, storage_tech],
-    eligible_demand=[datacenter_demand],
-)
-
+cfe = HourlyMatching(; name="247_cfe", available=true)
 add_requirement!(portfolio, cfe)
 ```
 
-## MinimumCapacityRequirements and MaximumCapacityRequirements
+## Add capacity limits
 
-These requirements enforce a floor or ceiling on total installed capacity for a set of eligible resources.
+[`MinimumCapacityRequirements`](@ref) and [`MaximumCapacityRequirements`](@ref) set a floor
+or a ceiling on the total capacity of the contributing technologies.
 
 ```julia
-min_cap = MinimumCapacityRequirements(;
-    name="min_offshore_wind",
-    id=6,
+min_wind = MinimumCapacityRequirements(;
+    name="min_wind",
     available=true,
-    min_capacity_mw=2000.0,   # at least 2 GW of eligible resources
     target_year=2035,
-    eligible_resources=[offshore_wind_tech],
+    min_capacity_mw=200.0,
 )
-
-add_requirement!(portfolio, min_cap)
-
-max_cap = MaximumCapacityRequirements(;
-    name="max_nuclear",
-    id=7,
+max_gas = MaximumCapacityRequirements(;
+    name="max_gas",
     available=true,
-    max_capacity_mw=5000.0,   # no more than 5 GW of eligible resources
     target_year=2050,
-    eligible_resources=[nuclear_tech],
+    max_capacity_mw=800.0,
 )
-
-add_requirement!(portfolio, max_cap)
+add_requirement!(portfolio, min_wind)
+add_requirement!(portfolio, max_gas)
 ```
 
-## Querying requirements
+## Link technologies to requirements
 
-Use `get_requirements` to retrieve all requirements of a given type, or `get_requirement` to retrieve one by name.
+A technology contributes to every requirement in its `requirements` field. For a capacity
+requirement, those are the technologies whose capacity is counted; for an energy share, the
+technologies whose generation is counted; for hourly matching, both the supply and the
+demand technologies that are matched.
 
 ```julia
-# Retrieve all capacity reserve margin requirements
-all_crm = get_requirements(CapacityReserveMargin, portfolio)
+set_requirements!(wind, [crm, rps, cfe, min_wind])
+set_requirements!(ccgt, [cap, tax, crm, max_gas])
+set_requirements!(datacenter, [cfe])
+```
 
-# Retrieve a single requirement by type and name
-rps = get_requirement(EnergyShareRequirements, portfolio, "50pct_rps")
+## Query requirements
+
+```julia
+get_requirements(CapacityReserveMargin, portfolio)       # all requirements of a type
+get_requirement(EnergyShareRequirements, portfolio, "50pct_rps")
+get_contributing_technologies(portfolio, cfe)            # [wind, datacenter]
+has_requirement(wind, rps)                               # true
+has_requirement(wind, CarbonTax)                         # false
 ```
 
 ## See also
 
+  - [Requirements](@ref)
   - [`Requirement`](@ref)
-  - [`get_requirement`](@ref)
-  - [`remove_technology!`](@ref)
+  - [`get_contributing_technologies`](@ref)

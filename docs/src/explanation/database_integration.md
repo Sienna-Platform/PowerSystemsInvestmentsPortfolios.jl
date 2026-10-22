@@ -8,22 +8,28 @@ CurrentModule = PowerSystemsInvestmentsPortfolios
 
 Constructing a [`Portfolio`](@ref) manually field-by-field is verbose for large, real-world systems with hundreds of technologies, many zones, time series data for every technology, and complex financial parameters. A database back-end (SiennaGridDB) stores technology inputs in a structured relational schema that is maintained separately from any specific model run. The PSIP database parser reads that schema and automatically translates it into typed PSIP structs, ready to pass to the optimizer.
 
-The parser handles: region creation, technology construction (supply, storage, transmission), demand requirements, time series loading, and technology financial data — everything that would otherwise require hundreds of individual [`add_technology!`](@ref) and [`add_region!`](@ref) calls.
+The parser handles: topology creation, technology construction (supply, storage, transmission), demand requirements, existing units in the base system, time series loading, and technology financial data — everything that would otherwise require hundreds of individual [`add_technology!`](@ref) and [`add_topology!`](@ref) calls.
+
+!!! warning "Not yet updated for PowerSystems 6"
+    
+    Parts of the parser still construct the removed `Zone` and `Node` region types, so
+    `database_to_portfolio` does not run on this version. The mapping below describes the
+    intended behavior once the parser is updated.
 
 ## Conceptual mapping
 
 The database parser maps SiennaGridDB relational tables to PSIP types:
 
-| Database concept                | PSIP type                                        |
-|:------------------------------- |:------------------------------------------------ |
-| `planning_regions` table rows   | [`Zone`](@ref)                                   |
-| `balancing_topologies` rows     | [`Node`](@ref) (nodal models)                    |
-| `supply_technologies` rows      | [`SupplyTechnology`](@ref)                       |
-| `generation_units` rows         | [`ExistingDevices`](@ref) supplemental attribute |
-| `storage_units` rows            | [`StorageTechnology`](@ref)                      |
-| `transport_technologies` rows   | [`AggregateTransportTechnology`](@ref)           |
-| `loads` rows                    | [`DemandRequirement`](@ref)                      |
-| `time_series_associations` rows | InfrastructureSystems time series attachments    |
+| Database concept                | PSIP type                                                                                               |
+|:------------------------------- |:------------------------------------------------------------------------------------------------------- |
+| `planning_regions` table rows   | `PSY.Area` in the base system                                                                           |
+| `balancing_topologies` rows     | `PSY.ACBus` in the base system                                                                          |
+| `supply_technologies` rows      | [`SupplyTechnology`](@ref)                                                                              |
+| `generation_units` rows         | [`ExistingDevices`](@ref) supplemental attribute                                                        |
+| `storage_units` rows            | [`StorageTechnology`](@ref)                                                                             |
+| `transport_technologies` rows   | [`AggregateTransportTechnology`](@ref), or [`NodalACTransportTechnology`](@ref) for a nodal aggregation |
+| `loads` rows                    | [`DemandRequirement`](@ref)                                                                             |
+| `time_series_associations` rows | InfrastructureSystems time series attachments                                                           |
 
 ## How to invoke it
 
@@ -43,7 +49,7 @@ portfolio = PSIP.DBParser.database_to_portfolio(
     0.025,                       # inflation_rate
     0.05,                        # interest_rate
     2030;                        # base_year
-    aggregation=PSY.LoadZone,  # optional: spatial resolution (default PSY.Area)
+    aggregation=PSY.ACBus,     # optional: spatial resolution (default PSY.Area)
     system=base_sys,           # optional: PSY.System with existing grid data
 )
 ```
@@ -60,12 +66,11 @@ Note that the parser's SQL queries are tightly coupled to the current SiennaGrid
 
 ## See also
 
-  - [`Zone`](@ref)
-  - [`Node`](@ref)
+  - [Regions and Topology](@ref)
   - [`SupplyTechnology`](@ref)
   - [`StorageTechnology`](@ref)
   - [`AggregateTransportTechnology`](@ref)
   - [`DemandRequirement`](@ref)
   - [`add_technology!`](@ref)
-  - [`add_region!`](@ref)
+  - [`add_topology!`](@ref)
   - [`add_requirement!`](@ref)

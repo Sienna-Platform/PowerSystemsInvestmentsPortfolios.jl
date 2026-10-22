@@ -4,7 +4,8 @@ CurrentModule = PowerSystemsInvestmentsPortfolios
 
 # Storage Technology
 
-A [`StorageTechnology{T}`](@ref) represents a candidate energy storage technology. Storage is characterized by separate energy (MWh) and power (MW) capacity limits and costs, reflecting that energy and power can be sized independently.
+A [`StorageTechnology{T}`](@ref) represents a candidate storage technology whose charge
+power, discharge power, and energy capacity are sized independently.
 
 ## Type parameter
 
@@ -16,17 +17,22 @@ A [`StorageTechnology{T}`](@ref) represents a candidate energy storage technolog
 
 ## Key field groups
 
-**Capacity:** `capacity_limits_energy` (`MinMax` in MWh), `capacity_limits_discharge` (`MinMax` in MW), `capacity_limits_charge` (optional `MinMax` in MW)
+**Capacity:** `capacity_limits_energy` (MWh), `capacity_limits_discharge` (MW),
+`capacity_limits_charge` (MW) — each a `MinMax` or a `Dict{PSY.Topology, MinMax}`
 
-**Efficiency:** `efficiency` (`InOut` — charging and discharging efficiency fractions), `losses` (self-discharge fraction per hour), `min_discharge_fraction`
+**Duration:** `duration_limits` (`MinMax` in minutes — ratio of energy to discharge capacity)
 
-**Duration:** `duration_limits` (`MinMax` in hours — ratio of energy to discharge power capacity)
+**Efficiency:** `efficiency` (`InOut` — charge and discharge efficiency), `losses`
+(self-discharge, fraction of stored energy per hour), `min_discharge_fraction`
 
-**Economics:** `capital_costs_energy` (`PSY.ValueCurve` in USD/MWh), `capital_costs_discharge` (`PSY.ValueCurve` in USD/MW), `capital_costs_charge` (optional `PSY.ValueCurve`), `operation_costs`, `financial_data`
+**Economics:** `capital_costs` ([`StorageCapitalCost`](@ref)), `operation_costs`
+(`PSY.StorageCost`), `financial_data` ([`TechnologyFinancialData`](@ref))
 
-**Build increments:** `unit_size_energy` (MWh), `unit_size_discharge` (MW), `unit_size_charge` (MW)
+**Build increments:** `unit_size_energy` (MWh), `unit_size_discharge` (MW),
+`unit_size_charge` (MW, or `nothing`)
 
-**Other:** `storage_tech` (`StorageTech` enum), `prime_mover_type`, `lifetime`
+**Other:** `storage_tech` (`StorageTech`), `prime_mover_type`, `lifetime` (years),
+`requirements`
 
 ```@docs
 StorageTechnology
