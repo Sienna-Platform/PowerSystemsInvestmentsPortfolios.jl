@@ -58,7 +58,6 @@
         name="demand_requirement",
         id=12,
         power_systems_type="PowerLoad",
-        value_of_lost_load=1000.0,
         available=true,
         region=[zone_a],
     )

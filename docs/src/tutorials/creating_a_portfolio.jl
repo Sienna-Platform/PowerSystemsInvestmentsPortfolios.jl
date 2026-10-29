@@ -215,7 +215,7 @@ t_demand = DemandRequirement{PSY.PowerLoad}(;
     available=true,
     power_systems_type="PowerLoad",
     region=[z1],
-    value_of_lost_load=50_000.0,   # $/MWh
+    unserved_demand_cost=LinearCurve(50_000.0),   # $/MWh
 )
 
 add_technology!(portfolio, t_demand)

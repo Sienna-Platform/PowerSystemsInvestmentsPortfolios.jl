@@ -87,7 +87,7 @@ t_demand = DemandRequirement{PSY.PowerLoad}(;
     available=true,
     power_systems_type="PowerLoad",
     region=[z1],
-    value_of_lost_load=50_000.0,
+    unserved_demand_cost=LinearCurve(50_000.0),
 )
 add_technology!(portfolio, t_demand)
 

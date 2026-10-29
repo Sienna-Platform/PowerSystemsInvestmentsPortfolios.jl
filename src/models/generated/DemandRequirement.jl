@@ -13,13 +13,12 @@ This file is auto-generated. Do not edit.
         conformity::PSY.LoadConformity
         growth_rate::Float64
         power_systems_type::String
-        value_of_lost_load::Float64
         internal::InfrastructureSystemsInternal
         ext::Dict
         region::Vector{RegionTopology}
-        unserved_demand_curve::PSY.ValueCurve
-        new_construction_year::Int64
-        new_demand_mw::Float64
+        unserved_demand_cost::PSY.ValueCurve
+        construction_year::Int64
+        peak_demand_mw::Float64
     end
 
 Demand requirements for a region.
@@ -32,13 +31,12 @@ Demand requirements for a region.
 - `conformity::PSY.LoadConformity`: (default: `PSY.LoadConformity.UNDEFINED`) Indicator of how the demand requirement should conform to the load profile of existing technologies in the system. Should only be used for new demand requirements.
 - `growth_rate::Float64`: (default: `0.0`) The annual growth rate of the demand requirement, used to scale present-day loads into future projections. Should only be used for conforming loads
 - `power_systems_type::String`: Corresponding type in PowerSystems.jl to be used in PCM modeling
-- `value_of_lost_load::Float64`: Value of unserved load (USD/MWh)
 - `internal::InfrastructureSystemsInternal`: (default: `InfrastructureSystemsInternal()`) (**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference
 - `ext::Dict`: (default: `Dict()`) Optional dictionary to provide additional data
 - `region::Vector{RegionTopology}`: (default: `Vector()`) Zone or node where the demand requirement is located
-- `unserved_demand_curve::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Piecewise curve to scale the cost of unserved load based on the value of lost load
-- `new_construction_year::Int64`: (default: `2020`) The year in which the new demand requirement will be installed. Should only be used for new demand requirements.
-- `new_demand_mw::Float64`: (default: `0.0`) The value of the peak demand to be used for new DemandRequirements.
+- `unserved_demand_cost::PSY.ValueCurve`: (default: `PiecewiseIncrementalCurve(0.0, [0.0, 1.0], [1e8])`) Cost of unserved demand (USD/MWh). A LinearCurve is a single price for all unserved demand. A PiecewiseIncrementalCurve gives segments of unserved demand whose x coordinates are fractions of demand and whose slopes are prices (USD/MWh)
+- `construction_year::Int64`: (default: `2020`) The year in which the new demand requirement will be installed. Should only be used for new demand requirements.
+- `peak_demand_mw::Float64`: (default: `0.0`) Peak demand (MW). Demands with existing devices in the base system derive their peak demand from those devices, not from this value.
 """
 mutable struct DemandRequirement{T <: PSY.StaticInjection} <: DemandTechnology
     "List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology"
@@ -55,25 +53,23 @@ mutable struct DemandRequirement{T <: PSY.StaticInjection} <: DemandTechnology
     growth_rate::Float64
     "Corresponding type in PowerSystems.jl to be used in PCM modeling"
     power_systems_type::String
-    "Value of unserved load (USD/MWh)"
-    value_of_lost_load::Float64
     "(**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference"
     internal::InfrastructureSystemsInternal
     "Optional dictionary to provide additional data"
     ext::Dict
     "Zone or node where the demand requirement is located"
     region::Vector{RegionTopology}
-    "Piecewise curve to scale the cost of unserved load based on the value of lost load"
-    unserved_demand_curve::PSY.ValueCurve
+    "Cost of unserved demand (USD/MWh). A LinearCurve is a single price for all unserved demand. A PiecewiseIncrementalCurve gives segments of unserved demand whose x coordinates are fractions of demand and whose slopes are prices (USD/MWh)"
+    unserved_demand_cost::PSY.ValueCurve
     "The year in which the new demand requirement will be installed. Should only be used for new demand requirements."
-    new_construction_year::Int64
-    "The value of the peak demand to be used for new DemandRequirements."
-    new_demand_mw::Float64
+    construction_year::Int64
+    "Peak demand (MW). Demands with existing devices in the base system derive their peak demand from those devices, not from this value."
+    peak_demand_mw::Float64
 end
 
 
-function DemandRequirement{T}(; requirements=Vector(), available=true, name, id, conformity=PSY.LoadConformity.UNDEFINED, growth_rate=0.0, power_systems_type, value_of_lost_load, internal=InfrastructureSystemsInternal(), ext=Dict(), region=Vector(), unserved_demand_curve=LinearCurve(0.0), new_construction_year=2020, new_demand_mw=0.0, ) where T <: PSY.StaticInjection
-    DemandRequirement{T}(requirements, available, name, id, conformity, growth_rate, power_systems_type, value_of_lost_load, internal, ext, region, unserved_demand_curve, new_construction_year, new_demand_mw, )
+function DemandRequirement{T}(; requirements=Vector(), available=true, name, id, conformity=PSY.LoadConformity.UNDEFINED, growth_rate=0.0, power_systems_type, internal=InfrastructureSystemsInternal(), ext=Dict(), region=Vector(), unserved_demand_cost=PiecewiseIncrementalCurve(0.0, [0.0, 1.0], [1e8]), construction_year=2020, peak_demand_mw=0.0, ) where T <: PSY.StaticInjection
+    DemandRequirement{T}(requirements, available, name, id, conformity, growth_rate, power_systems_type, internal, ext, region, unserved_demand_cost, construction_year, peak_demand_mw, )
 end
 
 """Get [`DemandRequirement`](@ref) `requirements`."""
@@ -90,20 +86,18 @@ get_conformity(value::DemandRequirement) = value.conformity
 get_growth_rate(value::DemandRequirement) = value.growth_rate
 """Get [`DemandRequirement`](@ref) `power_systems_type`."""
 get_power_systems_type(value::DemandRequirement) = value.power_systems_type
-"""Get [`DemandRequirement`](@ref) `value_of_lost_load`."""
-get_value_of_lost_load(value::DemandRequirement) = value.value_of_lost_load
 """Get [`DemandRequirement`](@ref) `internal`."""
 get_internal(value::DemandRequirement) = value.internal
 """Get [`DemandRequirement`](@ref) `ext`."""
 get_ext(value::DemandRequirement) = value.ext
 """Get [`DemandRequirement`](@ref) `region`."""
 get_region(value::DemandRequirement) = value.region
-"""Get [`DemandRequirement`](@ref) `unserved_demand_curve`."""
-get_unserved_demand_curve(value::DemandRequirement) = value.unserved_demand_curve
-"""Get [`DemandRequirement`](@ref) `new_construction_year`."""
-get_new_construction_year(value::DemandRequirement) = value.new_construction_year
-"""Get [`DemandRequirement`](@ref) `new_demand_mw`."""
-get_new_demand_mw(value::DemandRequirement) = value.new_demand_mw
+"""Get [`DemandRequirement`](@ref) `unserved_demand_cost`."""
+get_unserved_demand_cost(value::DemandRequirement) = value.unserved_demand_cost
+"""Get [`DemandRequirement`](@ref) `construction_year`."""
+get_construction_year(value::DemandRequirement) = value.construction_year
+"""Get [`DemandRequirement`](@ref) `peak_demand_mw`."""
+get_peak_demand_mw(value::DemandRequirement) = value.peak_demand_mw
 
 """Set [`DemandRequirement`](@ref) `requirements`."""
 set_requirements!(value::DemandRequirement, val) = value.requirements = val
@@ -119,20 +113,18 @@ set_conformity!(value::DemandRequirement, val) = value.conformity = val
 set_growth_rate!(value::DemandRequirement, val) = value.growth_rate = val
 """Set [`DemandRequirement`](@ref) `power_systems_type`."""
 set_power_systems_type!(value::DemandRequirement, val) = value.power_systems_type = val
-"""Set [`DemandRequirement`](@ref) `value_of_lost_load`."""
-set_value_of_lost_load!(value::DemandRequirement, val) = value.value_of_lost_load = val
 """Set [`DemandRequirement`](@ref) `internal`."""
 set_internal!(value::DemandRequirement, val) = value.internal = val
 """Set [`DemandRequirement`](@ref) `ext`."""
 set_ext!(value::DemandRequirement, val) = value.ext = val
 """Set [`DemandRequirement`](@ref) `region`."""
 set_region!(value::DemandRequirement, val) = value.region = val
-"""Set [`DemandRequirement`](@ref) `unserved_demand_curve`."""
-set_unserved_demand_curve!(value::DemandRequirement, val) = value.unserved_demand_curve = val
-"""Set [`DemandRequirement`](@ref) `new_construction_year`."""
-set_new_construction_year!(value::DemandRequirement, val) = value.new_construction_year = val
-"""Set [`DemandRequirement`](@ref) `new_demand_mw`."""
-set_new_demand_mw!(value::DemandRequirement, val) = value.new_demand_mw = val
+"""Set [`DemandRequirement`](@ref) `unserved_demand_cost`."""
+set_unserved_demand_cost!(value::DemandRequirement, val) = value.unserved_demand_cost = val
+"""Set [`DemandRequirement`](@ref) `construction_year`."""
+set_construction_year!(value::DemandRequirement, val) = value.construction_year = val
+"""Set [`DemandRequirement`](@ref) `peak_demand_mw`."""
+set_peak_demand_mw!(value::DemandRequirement, val) = value.peak_demand_mw = val
 
 function serialize_openapi_struct(technology::DemandRequirement{T}, vals...) where T <: PSY.StaticInjection
     base_struct = APIServer.DemandRequirement(; vals...)

@@ -44,6 +44,7 @@ export get_co2
 export get_cofire_level_limits
 export get_cofire_start_limits
 export get_conformity
+export get_construction_year
 export get_curtailment_cost
 export get_demand_energy_efficiency
 export get_duration_limits
@@ -81,8 +82,6 @@ export get_min_generation_fraction
 export get_min_inverter_capacity
 export get_min_power
 export get_name
-export get_new_construction_year
-export get_new_demand_mw
 export get_operation_costs
 export get_operation_costs_inverter
 export get_operation_costs_solar
@@ -116,8 +115,7 @@ export get_unit_size
 export get_unit_size_charge
 export get_unit_size_discharge
 export get_unit_size_energy
-export get_unserved_demand_curve
-export get_value_of_lost_load
+export get_unserved_demand_cost
 export get_voltage
 export set_available!
 export set_build_year!
@@ -141,6 +139,7 @@ export set_co2!
 export set_cofire_level_limits!
 export set_cofire_start_limits!
 export set_conformity!
+export set_construction_year!
 export set_curtailment_cost!
 export set_demand_energy_efficiency!
 export set_duration_limits!
@@ -178,8 +177,6 @@ export set_min_generation_fraction!
 export set_min_inverter_capacity!
 export set_min_power!
 export set_name!
-export set_new_construction_year!
-export set_new_demand_mw!
 export set_operation_costs!
 export set_operation_costs_inverter!
 export set_operation_costs_solar!
@@ -213,6 +210,5 @@ export set_unit_size!
 export set_unit_size_charge!
 export set_unit_size_discharge!
 export set_unit_size_energy!
-export set_unserved_demand_curve!
-export set_value_of_lost_load!
+export set_unserved_demand_cost!
 export set_voltage!

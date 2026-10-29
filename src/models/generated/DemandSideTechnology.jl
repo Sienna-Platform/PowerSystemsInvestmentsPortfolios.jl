@@ -7,6 +7,7 @@ This file is auto-generated. Do not edit.
 """
     mutable struct DemandSideTechnology{T <: PSY.StaticInjection} <: DemandTechnology
         requirements::Vector{Requirement}
+        capital_costs::CapitalCost
         price_per_unit::PSY.ValueCurve
         available::Bool
         name::String
@@ -30,15 +31,16 @@ Represents demand side technologies such as electric vehicles or hydrogen electr
 
 # Arguments
 - `requirements::Vector{Requirement}`: (default: `Vector()`) List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology
+- `capital_costs::CapitalCost`: (default: `CapitalCost(nothing)`) Capital costs for investing in a demand side technology. (USD/MW)
 - `price_per_unit::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Price or value per unit of output. Ex: USD per ton of hydrogen for electrolyzers
 - `available::Bool`: Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)
 - `name::String`: The technology name
 - `shift_variable_cost::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Variable operation and maintenance costs associated with flexible demand deferral/advancement
 - `curtailment_cost::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Energy cost of curtailed demand, USD per Mwh
 - `id::Int64`: ID for demand side technology
-- `technology_efficiency::Float64`: (default: `0.0`) MWh of electricity per unit of output. Ex: MWh per ton of hydrogen for electrolyzers
+- `technology_efficiency::Float64`: (default: `1.0`) MWh of electricity per unit of output. Ex: MWh per ton of hydrogen for electrolyzers
 - `max_demand_advance::Float64`: (default: `0.0`) Maximum number of hours that demand can be scheduled in advance of the original schedule (hours).
-- `demand_energy_efficiency::Float64`: (default: `0.0`) Energy efficiency associated with time shifting demand. Represents energy losses due to time shifting
+- `demand_energy_efficiency::Float64`: (default: `1.0`) Energy efficiency associated with time shifting demand. Represents energy losses due to time shifting
 - `max_demand_curtailment::Float64`: (default: `0.0`) Maximum fraction of demand that can be curtailed
 - `max_demand_delay::Float64`: (default: `0.0`) Maximum number of hours that demand can be deferred or delayed (hours).
 - `power_systems_type::String`: Corresponding type in PowerSystems.jl to be used in PCM modeling
@@ -51,6 +53,8 @@ Represents demand side technologies such as electric vehicles or hydrogen electr
 mutable struct DemandSideTechnology{T <: PSY.StaticInjection} <: DemandTechnology
     "List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology"
     requirements::Vector{Requirement}
+    "Capital costs for investing in a demand side technology. (USD/MW)"
+    capital_costs::CapitalCost
     "Price or value per unit of output. Ex: USD per ton of hydrogen for electrolyzers"
     price_per_unit::PSY.ValueCurve
     "Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)"
@@ -88,12 +92,14 @@ mutable struct DemandSideTechnology{T <: PSY.StaticInjection} <: DemandTechnolog
 end
 
 
-function DemandSideTechnology{T}(; requirements=Vector(), price_per_unit=LinearCurve(0.0), available, name, shift_variable_cost=LinearCurve(0.0), curtailment_cost=LinearCurve(0.0), id, technology_efficiency=0.0, max_demand_advance=0.0, demand_energy_efficiency=0.0, max_demand_curtailment=0.0, max_demand_delay=0.0, power_systems_type, internal=InfrastructureSystemsInternal(), ext=Dict(), region=Vector(), min_power=0.0, peak_demand_mw=0.0, ) where T <: PSY.StaticInjection
-    DemandSideTechnology{T}(requirements, price_per_unit, available, name, shift_variable_cost, curtailment_cost, id, technology_efficiency, max_demand_advance, demand_energy_efficiency, max_demand_curtailment, max_demand_delay, power_systems_type, internal, ext, region, min_power, peak_demand_mw, )
+function DemandSideTechnology{T}(; requirements=Vector(), capital_costs=CapitalCost(nothing), price_per_unit=LinearCurve(0.0), available, name, shift_variable_cost=LinearCurve(0.0), curtailment_cost=LinearCurve(0.0), id, technology_efficiency=1.0, max_demand_advance=0.0, demand_energy_efficiency=1.0, max_demand_curtailment=0.0, max_demand_delay=0.0, power_systems_type, internal=InfrastructureSystemsInternal(), ext=Dict(), region=Vector(), min_power=0.0, peak_demand_mw=0.0, ) where T <: PSY.StaticInjection
+    DemandSideTechnology{T}(requirements, capital_costs, price_per_unit, available, name, shift_variable_cost, curtailment_cost, id, technology_efficiency, max_demand_advance, demand_energy_efficiency, max_demand_curtailment, max_demand_delay, power_systems_type, internal, ext, region, min_power, peak_demand_mw, )
 end
 
 """Get [`DemandSideTechnology`](@ref) `requirements`."""
 get_requirements(value::DemandSideTechnology) = value.requirements
+"""Get [`DemandSideTechnology`](@ref) `capital_costs`."""
+get_capital_costs(value::DemandSideTechnology) = value.capital_costs
 """Get [`DemandSideTechnology`](@ref) `price_per_unit`."""
 get_price_per_unit(value::DemandSideTechnology) = value.price_per_unit
 """Get [`DemandSideTechnology`](@ref) `available`."""
@@ -131,6 +137,8 @@ get_peak_demand_mw(value::DemandSideTechnology) = value.peak_demand_mw
 
 """Set [`DemandSideTechnology`](@ref) `requirements`."""
 set_requirements!(value::DemandSideTechnology, val) = value.requirements = val
+"""Set [`DemandSideTechnology`](@ref) `capital_costs`."""
+set_capital_costs!(value::DemandSideTechnology, val) = value.capital_costs = val
 """Set [`DemandSideTechnology`](@ref) `price_per_unit`."""
 set_price_per_unit!(value::DemandSideTechnology, val) = value.price_per_unit = val
 """Set [`DemandSideTechnology`](@ref) `available`."""

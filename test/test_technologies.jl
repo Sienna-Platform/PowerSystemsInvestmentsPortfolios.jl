@@ -213,7 +213,6 @@
         name="demand_requirement",
         id=30,
         power_systems_type="PowerLoad",
-        value_of_lost_load=1000.0,
         available=true,
         region=[zone_a],
     )
@@ -231,13 +230,12 @@
     PSIP.set_conformity!(demand_requirement, PSY.LoadConformity.NON_CONFORMING)
     PSIP.set_growth_rate!(demand_requirement, 0.03)
     PSIP.set_power_systems_type!(demand_requirement, "PowerLoadUpdated")
-    PSIP.set_value_of_lost_load!(demand_requirement, 1200.0)
     PSIP.set_internal!(demand_requirement, demand_req_internal)
     PSIP.set_ext!(demand_requirement, demand_req_ext)
     PSIP.set_region!(demand_requirement, demand_req_regions)
-    PSIP.set_unserved_demand_curve!(demand_requirement, demand_req_curve)
-    PSIP.set_new_construction_year!(demand_requirement, 2035)
-    PSIP.set_new_demand_mw!(demand_requirement, 25.0)
+    PSIP.set_unserved_demand_cost!(demand_requirement, demand_req_curve)
+    PSIP.set_construction_year!(demand_requirement, 2035)
+    PSIP.set_peak_demand_mw!(demand_requirement, 25.0)
 
     @test PSIP.get_requirements(demand_requirement) === demand_req_requirements
     @test PSIP.get_name(demand_requirement) == "demand_requirement_updated"
@@ -246,13 +244,12 @@
     @test PSIP.get_conformity(demand_requirement) == PSY.LoadConformity.NON_CONFORMING
     @test PSIP.get_growth_rate(demand_requirement) == 0.03
     @test PSIP.get_power_systems_type(demand_requirement) == "PowerLoadUpdated"
-    @test PSIP.get_value_of_lost_load(demand_requirement) == 1200.0
     @test PSIP.get_internal(demand_requirement) === demand_req_internal
     @test PSIP.get_ext(demand_requirement) === demand_req_ext
     @test PSIP.get_region(demand_requirement) === demand_req_regions
-    @test PSIP.get_unserved_demand_curve(demand_requirement) === demand_req_curve
-    @test PSIP.get_new_construction_year(demand_requirement) == 2035
-    @test PSIP.get_new_demand_mw(demand_requirement) == 25.0
+    @test PSIP.get_unserved_demand_cost(demand_requirement) === demand_req_curve
+    @test PSIP.get_construction_year(demand_requirement) == 2035
+    @test PSIP.get_peak_demand_mw(demand_requirement) == 25.0
 
     demand_side = DemandSideTechnology{PSY.PowerLoad}(
         name="demand_side",

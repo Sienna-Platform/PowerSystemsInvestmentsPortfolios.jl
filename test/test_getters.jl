@@ -76,9 +76,100 @@ end
     demand_b = get_technology(DemandRequirement{PowerLoad}, p_5bus, "demand_b")
     demand_s = get_technology(DemandSideTechnology{PowerLoad}, p_5bus, "test_demand")
 
-    # demand_b has no ExistingDevices → warns and returns 0.0
-    @test get_peak_demand_mw(p_5bus, demand_b) == 0.0
+    # No ExistingDevices: the technology's own peak demand
+    @test get_peak_demand_mw(p_5bus, demand_b) == 120.0
     @test get_peak_demand_mw(p_5bus, demand_s) == 0.0
+end
+
+# Portfolio whose base system has one load per (name, max active power, time series), and a
+# demand mapped to the given load names.
+function peak_demand_portfolio(loads, existing_names)
+    sys = PSY.System(100.0)
+    set_units_base_system!(sys, "NATURAL_UNITS")
+    bus = ACBus(nothing)
+    set_bustype!(bus, ACBusTypes.REF)
+    add_component!(sys, bus)
+    for (name, max_power, time_series) in loads
+        load = PowerLoad(nothing)
+        PSY.set_name!(load, name)
+        PSY.set_bus!(load, bus)
+        add_component!(sys, load)
+        PSY.set_max_active_power!(load, max_power)
+        isnothing(time_series) || PSY.add_time_series!(sys, load, time_series)
+    end
+    port = Portfolio(sys; financial_data=PortfolioFinancialData(2025, 0.07, 0.05, 0.03))
+    zone = Zone(; name="zone", id=1)
+    add_region!(port, zone)
+    demand = DemandRequirement{PowerLoad}(;
+        name="demand",
+        id=1,
+        power_systems_type="PowerLoad",
+        region=[zone],
+    )
+    add_technology!(port, demand)
+    PSIP.add_supplemental_attribute!(
+        port,
+        demand,
+        ExistingDevices(; existing_devices=existing_names),
+    )
+    return port, demand
+end
+
+@testset "get_peak_demand_mw of existing loads" begin
+    stamps =
+        collect(DateTime("2025-01-01T00:00:00"):Hour(1):DateTime("2025-01-01T02:00:00"))
+    profile(values) = SingleTimeSeries(
+        "max_active_power",
+        TimeArray(stamps, values);
+        scaling_factor_multiplier=PSY.get_max_active_power,
+    )
+    offset_loads = [
+        ("load1", 100.0, profile([1.0, 0.5, 0.2])),
+        ("load2", 50.0, profile([0.2, 1.0, 0.4])),
+    ]
+
+    # Coincident peak (110 MW in the first hour), below the sum of the maxima (150 MW)
+    port, demand = peak_demand_portfolio(offset_loads, ["load1", "load2"])
+    @test get_peak_demand_mw(port, demand) ≈ 110.0
+
+    # A load without a profile counts at its maximum in every time step
+    port, demand = peak_demand_portfolio(
+        [offset_loads..., ("load3", 30.0, nothing)],
+        ["load1", "load2", "load3"],
+    )
+    @test (@test_logs (:warn, r"load3") get_peak_demand_mw(port, demand)) ≈ 140.0
+
+    # Profiles must share their time stamps
+    shifted =
+        SingleTimeSeries("max_active_power", TimeArray(stamps .+ Hour(1), [1.0, 0.5, 0.2]))
+    port, demand = peak_demand_portfolio(
+        [offset_loads[1], ("load2", 50.0, shifted)],
+        ["load1", "load2"],
+    )
+    @test_throws ErrorException get_peak_demand_mw(port, demand)
+
+    # Every name must be a load of the base system
+    port, demand = peak_demand_portfolio(offset_loads, ["load1", "missing_load"])
+    @test_throws r"missing_load" get_peak_demand_mw(port, demand)
+
+    # Forecast windows that do not overlap are joined into one profile
+    t0 = DateTime("2025-01-01T00:00:00")
+    forecast(windows) = Deterministic("max_active_power", windows, Hour(1))
+    port, demand = peak_demand_portfolio(
+        [
+            ("load1", 100.0, forecast(Dict(t0 => [1.0, 0.5], t0 + Hour(2) => [0.2, 0.3]))),
+            ("load2", 50.0, forecast(Dict(t0 => [0.2, 1.0], t0 + Hour(2) => [0.4, 1.0]))),
+        ],
+        ["load1", "load2"],
+    )
+    @test get_peak_demand_mw(port, demand) ≈ 110.0
+
+    # Overlapping windows are an error
+    port, demand = peak_demand_portfolio(
+        [("load1", 100.0, forecast(Dict(t0 => [1.0, 0.5], t0 + Hour(1) => [0.2, 0.3])))],
+        ["load1"],
+    )
+    @test_throws r"overlapping" get_peak_demand_mw(port, demand)
 end
 
 @testset "get_heat_rate / get_fuel_cost / get_variable_cost" begin
@@ -176,11 +267,9 @@ end
 @testset "scale_conforming_load" begin
     p_5bus = build_portfolio()
     demand_b = get_technology(DemandRequirement{PowerLoad}, p_5bus, "demand_b")
-    # demand_b has no ExistingDevices → peak demand is 0, growth_rate is 0 (default)
-    # scale_conforming_load returns peak_demand * (1+growth_rate)^(year-base_year)
+    # demand_b is new, with a peak demand of 120 MW and no growth
     result = PSIP.scale_conforming_load(demand_b, p_5bus, 2026)
-    @test result isa Float64
-    @test result == 0.0   # no ExistingDevices → peak demand is 0
+    @test result == 120.0
 end
 
 @testset "get_base_year_for_load" begin
