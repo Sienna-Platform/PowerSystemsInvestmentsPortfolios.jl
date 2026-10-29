@@ -354,14 +354,14 @@ function build_portfolio()
         #scaling_factor_multiplier=get_peak_load,
     )
 
-    t_demand_b = DemandRequirement{PSY.PowerLoad}(
+    t_demand_b = ProjectedDemand{PSY.PowerLoad}(
         #load_growth=0.05,
         name="demand_b",
         id=7,
         available=true,
         power_systems_type="PowerLoad",
         region=[z1],
-        unserved_demand_cost=LinearCurve(10_000.0),
+        value_of_lost_load=10_000.0,
         peak_demand_mw=120.0,
         construction_year=2030,
         #peak_load=peak_load,
@@ -378,7 +378,7 @@ function build_portfolio()
         #scaling_factor_multiplier=get_peak_load,
     )
 
-    t_demand_c = DemandRequirement{PSY.PowerLoad}(
+    t_demand_c = ProjectedDemand{PSY.PowerLoad}(
         #load_growth=0.05,
         name="demand_c",
         id=8,
@@ -393,7 +393,7 @@ function build_portfolio()
     ts_demand_d_2028 =
         SingleTimeSeries("ops_peak_load", TimeArray(tstamp_2028_ops, ts_load_d_2028))
 
-    t_demand_d = DemandRequirement{PSY.PowerLoad}(
+    t_demand_d = ProjectedDemand{PSY.PowerLoad}(
         name="demand_d",
         id=9,
         available=true,
@@ -408,6 +408,7 @@ function build_portfolio()
         id=10,
         region=[z1],
         capital_costs=CapitalCost(LinearCurve(1000.0), 0.0),
+        financial_data=tech_financials,
     )
 
     ########################

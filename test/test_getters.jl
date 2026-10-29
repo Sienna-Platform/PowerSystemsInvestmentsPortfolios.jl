@@ -16,7 +16,7 @@ end
     storage = get_technology(StorageTechnology, p_5bus, "test_storage")
     agg_line = get_technology(AggregateTransportTechnology{ACBranch}, p_5bus, "test_branch")
     ac_line = get_technology(NodalACTransportTechnology{ACBranch}, p_5bus, "test")
-    demand_r = get_technology(DemandRequirement{PowerLoad}, p_5bus, "demand_b")
+    demand_r = get_technology(ProjectedDemand{PowerLoad}, p_5bus, "demand_b")
     demand_s = get_technology(DemandSideTechnology{PowerLoad}, p_5bus, "test_demand")
 
     @test PSIP.get_parameter_type(thermal) == PSY.ThermalStandard
@@ -40,7 +40,7 @@ end
         get_technology(SupplyTechnology{ThermalStandard}, p_5bus, "expensive_thermal")
     renewable = get_technology(SupplyTechnology{RenewableDispatch}, p_5bus, "wind")
     storage = get_technology(StorageTechnology, p_5bus, "test_storage")
-    demand = get_technology(DemandRequirement{PowerLoad}, p_5bus, "demand_b")
+    demand = get_technology(ProjectedDemand{PowerLoad}, p_5bus, "demand_b")
 
     # existing devices are attached to thermal and expensive_thermal
     @test !is_new(thermal)
@@ -73,12 +73,10 @@ end
 
 @testset "get_peak_demand_mw" begin
     p_5bus = build_portfolio()
-    demand_b = get_technology(DemandRequirement{PowerLoad}, p_5bus, "demand_b")
-    demand_s = get_technology(DemandSideTechnology{PowerLoad}, p_5bus, "test_demand")
+    demand_b = get_technology(ProjectedDemand{PowerLoad}, p_5bus, "demand_b")
 
-    # No ExistingDevices: the technology's own peak demand
+    # No ExistingDevices: the demand's own peak demand
     @test get_peak_demand_mw(p_5bus, demand_b) == 120.0
-    @test get_peak_demand_mw(p_5bus, demand_s) == 0.0
 end
 
 # Portfolio whose base system has one load per (name, max active power, time series), and a
@@ -100,7 +98,7 @@ function peak_demand_portfolio(loads, existing_names)
     port = Portfolio(sys; financial_data=PortfolioFinancialData(2025, 0.07, 0.05, 0.03))
     zone = Zone(; name="zone", id=1)
     add_region!(port, zone)
-    demand = DemandRequirement{PowerLoad}(;
+    demand = ProjectedDemand{PowerLoad}(;
         name="demand",
         id=1,
         power_systems_type="PowerLoad",
@@ -266,7 +264,7 @@ end
 
 @testset "scale_conforming_load" begin
     p_5bus = build_portfolio()
-    demand_b = get_technology(DemandRequirement{PowerLoad}, p_5bus, "demand_b")
+    demand_b = get_technology(ProjectedDemand{PowerLoad}, p_5bus, "demand_b")
     # demand_b is new, with a peak demand of 120 MW and no growth
     result = PSIP.scale_conforming_load(demand_b, p_5bus, 2026)
     @test result == 120.0
@@ -274,7 +272,7 @@ end
 
 @testset "get_base_year_for_load" begin
     p_5bus = build_portfolio()
-    demand_b = get_technology(DemandRequirement{PowerLoad}, p_5bus, "demand_b")
+    demand_b = get_technology(ProjectedDemand{PowerLoad}, p_5bus, "demand_b")
     @test PSIP.get_base_year_for_load(demand_b, p_5bus) == get_base_year(p_5bus)
     @test PSIP.get_base_year_for_load(demand_b, p_5bus) == 2025
 end

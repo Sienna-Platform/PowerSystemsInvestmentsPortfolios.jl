@@ -31,7 +31,7 @@ Technology (abstract) <: IS.InfrastructureSystemsComponent
 │   ├── NodalACTransportTechnology{T <: PSY.Device}
 │   └── NodalHVDCTransportTechnology{T <: PSY.Device}
 └── DemandTechnology (abstract)
-    ├── DemandRequirement{T <: PSY.StaticInjection}
+    ├── ProjectedDemand{T <: PSY.StaticInjection}
     └── DemandSideTechnology{T <: PSY.StaticInjection}
 ```
 
@@ -65,15 +65,7 @@ The three abstract branches partition the technology space by role in the model.
 
 **`TransmissionTechnology`** covers buildable connections between regions. [`AggregateTransportTechnology`](@ref) models a zonal transport constraint (a transfer capacity between two zones). [`NodalACTransportTechnology`](@ref) and [`NodalHVDCTransportTechnology`](@ref) model individual AC and HVDC lines in nodal formulations.
 
-**`DemandTechnology`** covers demand-side modeling. [`DemandRequirement`](@ref) represents load that must be served (see the note below). [`DemandSideTechnology`](@ref) represents demand flexibility resources — loads that can shift, curtail, or respond to price signals.
-
-## `DemandRequirement`
-
-!!! note
-    
-    [`DemandRequirement`](@ref)`{T}` is a subtype of `DemandTechnology`, **not** a `Requirement`. Despite its name, it lives in the technology branch of the hierarchy, and it is added to the portfolio with `add_technology!`, not through the requirements interface.
-    
-    The naming reflects that a `DemandRequirement` *requires* generation to serve it: it encodes a load that the optimizer must meet in each region and time period. Think of it as the demand side of the supply-demand balance constraint.
+**`DemandTechnology`** covers demand-side modeling. [`ProjectedDemand`](@ref) represents an exogenous load that must be served, including any flexibility it has: voluntary curtailment and time shifting. [`DemandSideTechnology`](@ref) represents end-use technologies that can be built, such as hydrogen electrolyzers, whose consumption is a decision valued by what they produce.
 
 ## Supplemental Attributes for Existing Capacity and Retirement
 
@@ -109,5 +101,5 @@ ExistingDevices
   - [`ColocatedSupplyStorageTechnology`](@ref)
   - [`AggregateTransportTechnology`](@ref)
   - [`NodalACTransportTechnology`](@ref)
-  - [`DemandRequirement`](@ref)
+  - [`ProjectedDemand`](@ref)
   - [`ExistingDevices`](@ref)

@@ -160,47 +160,6 @@ function serialize(schedule::InvestmentScheduleResults)
     return data
 end
 
-# The generated OpenAPI demand schemas predate these fields: the demand side capital costs,
-# the unserved demand cost, which replaced the value of lost load and its curve, and the
-# renamed peak demand and construction year.
-removed_openapi_fields(::Type{<:DemandRequirement}) =
-    (:value_of_lost_load, :unserved_demand_curve, :new_demand_mw, :new_construction_year)
-removed_openapi_fields(::Type) = ()
-
-added_openapi_fields(::Type{<:DemandSideTechnology}) = (:capital_costs,)
-added_openapi_fields(::Type{<:DemandRequirement}) =
-    (:unserved_demand_cost, :peak_demand_mw, :construction_year)
-added_openapi_fields(::Type) = ()
-
-function serialize_added_fields!(data::Dict, technology)
-    for field in removed_openapi_fields(typeof(technology))
-        delete!(data, string(field))
-    end
-    for field in added_openapi_fields(typeof(technology))
-        data[string(field)] = serialize(getfield(technology, field))
-    end
-    return
-end
-
-function deserialize_added_fields!(vals::Dict, struct_type::Type, serialized)
-    for field in removed_openapi_fields(struct_type)
-        delete!(vals, field)
-    end
-    isnothing(serialized) && return
-    for field in added_openapi_fields(struct_type)
-        haskey(serialized, string(field)) || continue
-        vals[field] = deserialize_added_field(serialized[string(field)])
-    end
-    return
-end
-
-function deserialize_added_field(data::Dict)
-    type = IS.get_type_from_serialization_metadata(IS.get_serialization_metadata(data))
-    return IS.deserialize(type, data)
-end
-
-deserialize_added_field(data) = data
-
 function serialize(technology::T) where {T <: _CONTAINS_SHOULD_ENCODE}
     api_struct = serialize_openapi_struct(technology)
 
@@ -216,7 +175,6 @@ function serialize(technology::T) where {T <: _CONTAINS_SHOULD_ENCODE}
            field in (:capital_costs_energy, :capital_costs_charge, :capital_costs_discharge)
             continue
         end
-        field in removed_openapi_fields(struct_type) && continue
         if field in ENCODED_FIELDS
             value = serialize_custom_types(field, technology)
         else
@@ -239,7 +197,6 @@ function serialize(technology::T) where {T <: _CONTAINS_SHOULD_ENCODE}
         delete!(data, "outage_factor")
         data["outage_factors"] = serialize(get_outage_factors(technology))
     end
-    serialize_added_fields!(data, technology)
     # Associations and time-series metadata refer to the original component UUID.
     data["internal"] = serialize(IS.get_internal(technology))
     data["ext"] = serialize(get_ext(technology))
@@ -694,7 +651,6 @@ function build_model_struct(
             )
         end
     end
-    deserialize_added_fields!(vals, struct_type, serialized)
     if !hasfield(struct_type, :id)
         delete!(vals, :id)
     end

@@ -66,7 +66,7 @@ export NodalACTransportTechnology
 export AggregateTransportTechnology
 export NodalHVDCTransportTechnology
 export StorageTechnology
-export DemandRequirement
+export ProjectedDemand
 export DemandSideTechnology
 export RetirementPotential
 export AggregateRetirementPotential

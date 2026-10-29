@@ -205,17 +205,17 @@ add_technology!(portfolio, t_storage)
 
 # ## Add Demand Technologies
 #
-# [`DemandRequirement{T}`](@ref) represents a load node in the portfolio. Unlike supply
+# [`ProjectedDemand{T}`](@ref) represents a load node in the portfolio. Unlike supply
 # technologies, demand is not a `Requirement` — it is a `DemandTechnology` that carries
 # load profiles via time series.
 
-t_demand = DemandRequirement{PSY.PowerLoad}(;
+t_demand = ProjectedDemand{PSY.PowerLoad}(;
     name="demand_zone1",
     id=5,
     available=true,
     power_systems_type="PowerLoad",
     region=[z1],
-    unserved_demand_cost=LinearCurve(50_000.0),   # $/MWh
+    value_of_lost_load=50_000.0,   # $/MWh
 )
 
 add_technology!(portfolio, t_demand)
@@ -275,7 +275,7 @@ println("Supply technologies: ", length(supply_techs))
 storage_techs = collect(get_technologies(StorageTechnology, portfolio))
 println("Storage technologies: ", length(storage_techs))
 
-demand_techs = collect(get_technologies(DemandRequirement, portfolio))
+demand_techs = collect(get_technologies(ProjectedDemand, portfolio))
 println("Demand technologies: ", length(demand_techs))
 
 # ### Look up a technology by name

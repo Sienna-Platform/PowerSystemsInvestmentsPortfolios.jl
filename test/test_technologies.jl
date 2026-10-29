@@ -63,7 +63,7 @@
         region=[zone_a],
     )
     supply_req = Requirement[req_a, req_b]
-    supply_capital = LinearCurve(22.0)
+    supply_capital = CapitalCost(LinearCurve(22.0), 0.0)
     supply_co2 = Dict(ThermalFuels.COAL => 0.9, ThermalFuels.OTHER => 0.4)
     supply_cofire_start = Dict(
         ThermalFuels.COAL => (min=0.2, max=0.6),
@@ -139,9 +139,8 @@
         region=[zone_a],
     )
     storage_req = Requirement[req_a]
-    storage_charge_curve = LinearCurve(15.0)
-    storage_discharge_curve = LinearCurve(18.0)
-    storage_energy_curve = LinearCurve(11.0)
+    storage_capital =
+        StorageCapitalCost(LinearCurve(15.0), LinearCurve(18.0), LinearCurve(11.0), 0.0)
     storage_internal = IS.InfrastructureSystemsInternal()
     storage_ext = Dict("storage" => "meta")
     storage_regions = RegionTopology[zone_b]
@@ -158,7 +157,7 @@
     PSIP.set_storage_tech!(storage, StorageTech.LIB)
     PSIP.set_duration_limits!(storage, (min=2.0, max=12.0))
     PSIP.set_losses!(storage, 0.02)
-    PSIP.set_capital_costs_energy!(storage, storage_energy_curve)
+    PSIP.set_capital_costs_storage!(storage, storage_capital)
     PSIP.set_financial_data!(storage, tech_financial_data)
     PSIP.set_operation_costs!(storage, storage_cost)
     PSIP.set_power_systems_type!(storage, "EnergyReservoirStorageUpdated")
@@ -171,8 +170,6 @@
     PSIP.set_efficiency!(storage, (in=0.94, out=0.91))
     PSIP.set_unit_size_discharge!(storage, 8.5)
     PSIP.set_capacity_limits_discharge!(storage, (min=6.0, max=500.0))
-    PSIP.set_capital_costs_charge!(storage, storage_charge_curve)
-    PSIP.set_capital_costs_discharge!(storage, storage_discharge_curve)
 
     @test PSIP.get_requirements(storage) === storage_req
     @test PSIP.get_prime_mover_type(storage) == PrimeMovers.BT
@@ -185,7 +182,7 @@
     @test PSIP.get_storage_tech(storage) == StorageTech.LIB
     @test PSIP.get_duration_limits(storage) == (min=2.0, max=12.0)
     @test PSIP.get_losses(storage) == 0.02
-    @test PSIP.get_capital_costs_energy(storage) === storage_energy_curve
+    @test PSIP.get_capital_costs_storage(storage) === storage_capital
     @test PSIP.get_financial_data(storage) === tech_financial_data
     @test PSIP.get_operation_costs(storage) === storage_cost
     @test PSIP.get_power_systems_type(storage) == "EnergyReservoirStorageUpdated"
@@ -198,18 +195,14 @@
     @test PSIP.get_efficiency(storage) == (in=0.94, out=0.91)
     @test PSIP.get_unit_size_discharge(storage) == 8.5
     @test PSIP.get_capacity_limits_discharge(storage) == (min=6.0, max=500.0)
-    @test PSIP.get_capital_costs_charge(storage) === storage_charge_curve
-    @test PSIP.get_capital_costs_discharge(storage) === storage_discharge_curve
 
     # Also test optional fields can be set back to nothing.
     PSIP.set_capacity_limits_charge!(storage, nothing)
     PSIP.set_unit_size_charge!(storage, nothing)
-    PSIP.set_capital_costs_charge!(storage, nothing)
     @test isnothing(PSIP.get_capacity_limits_charge(storage))
     @test isnothing(PSIP.get_unit_size_charge(storage))
-    @test isnothing(PSIP.get_capital_costs_charge(storage))
 
-    demand_requirement = DemandRequirement{PSY.PowerLoad}(
+    demand_requirement = ProjectedDemand{PSY.PowerLoad}(
         name="demand_requirement",
         id=30,
         power_systems_type="PowerLoad",
@@ -217,12 +210,14 @@
         region=[zone_a],
     )
     demand_req_requirements = Requirement[req_b]
-    demand_req_curve = LinearCurve(65.0)
+    demand_req_curtailment =
+        PiecewiseIncrementalCurve(0.0, [0.0, 0.05, 0.1], [200.0, 500.0])
+    demand_req_shift_cost = LinearCurve(4.5)
     demand_req_internal = IS.InfrastructureSystemsInternal()
     demand_req_ext = Dict("demand_requirement" => "meta")
     demand_req_regions = RegionTopology[node_b]
 
-    # DemandRequirement: all fields
+    # ProjectedDemand: all fields
     PSIP.set_requirements!(demand_requirement, demand_req_requirements)
     PSIP.set_name!(demand_requirement, "demand_requirement_updated")
     PSIP.set_id!(demand_requirement, 130)
@@ -233,7 +228,14 @@
     PSIP.set_internal!(demand_requirement, demand_req_internal)
     PSIP.set_ext!(demand_requirement, demand_req_ext)
     PSIP.set_region!(demand_requirement, demand_req_regions)
-    PSIP.set_unserved_demand_cost!(demand_requirement, demand_req_curve)
+    PSIP.set_max_demand_curtailment!(demand_requirement, 0.1)
+    PSIP.set_curtailment_cost!(demand_requirement, demand_req_curtailment)
+    PSIP.set_value_of_lost_load!(demand_requirement, 9_000.0)
+    PSIP.set_flexible_fraction!(demand_requirement, 0.3)
+    PSIP.set_max_demand_delay!(demand_requirement, 8.0)
+    PSIP.set_max_demand_advance!(demand_requirement, 6.0)
+    PSIP.set_shift_efficiency!(demand_requirement, 0.92)
+    PSIP.set_shift_cost!(demand_requirement, demand_req_shift_cost)
     PSIP.set_construction_year!(demand_requirement, 2035)
     PSIP.set_peak_demand_mw!(demand_requirement, 25.0)
 
@@ -247,7 +249,14 @@
     @test PSIP.get_internal(demand_requirement) === demand_req_internal
     @test PSIP.get_ext(demand_requirement) === demand_req_ext
     @test PSIP.get_region(demand_requirement) === demand_req_regions
-    @test PSIP.get_unserved_demand_cost(demand_requirement) === demand_req_curve
+    @test PSIP.get_max_demand_curtailment(demand_requirement) == 0.1
+    @test PSIP.get_curtailment_cost(demand_requirement) === demand_req_curtailment
+    @test PSIP.get_value_of_lost_load(demand_requirement) == 9_000.0
+    @test PSIP.get_flexible_fraction(demand_requirement) == 0.3
+    @test PSIP.get_max_demand_delay(demand_requirement) == 8.0
+    @test PSIP.get_max_demand_advance(demand_requirement) == 6.0
+    @test PSIP.get_shift_efficiency(demand_requirement) == 0.92
+    @test PSIP.get_shift_cost(demand_requirement) === demand_req_shift_cost
     @test PSIP.get_construction_year(demand_requirement) == 2035
     @test PSIP.get_peak_demand_mw(demand_requirement) == 25.0
 
@@ -257,11 +266,12 @@
         power_systems_type="PowerLoad",
         available=true,
         region=[zone_a],
+        financial_data=tech_financial_data,
     )
     demand_side_requirements = Requirement[req_a, req_b]
     demand_side_price = LinearCurve(120.0)
-    demand_side_shift_cost = LinearCurve(4.5)
-    demand_side_curtailment = LinearCurve(350.0)
+    demand_side_capital = CapitalCost(LinearCurve(900.0), 0.0)
+    demand_side_operation = PSY.LoadCost(CostCurve(LinearCurve(2.0)), 15.0)
     demand_side_internal = IS.InfrastructureSystemsInternal()
     demand_side_ext = Dict("demand_side" => "meta")
     demand_side_regions = RegionTopology[node_a, zone_b]
@@ -272,38 +282,37 @@
     PSIP.set_name!(demand_side, "demand_side_updated")
     PSIP.set_id!(demand_side, 140)
     PSIP.set_available!(demand_side, false)
-    PSIP.set_shift_variable_cost!(demand_side, demand_side_shift_cost)
-    PSIP.set_curtailment_cost!(demand_side, demand_side_curtailment)
     PSIP.set_technology_efficiency!(demand_side, 0.75)
-    PSIP.set_max_demand_advance!(demand_side, 6.0)
-    PSIP.set_demand_energy_efficiency!(demand_side, 0.92)
-    PSIP.set_max_demand_curtailment!(demand_side, 0.2)
-    PSIP.set_max_demand_delay!(demand_side, 8.0)
+    PSIP.set_capacity_limits!(demand_side, (min=0.0, max=200.0))
+    PSIP.set_unit_size!(demand_side, 20.0)
+    PSIP.set_capital_costs!(demand_side, demand_side_capital)
+    PSIP.set_operation_costs!(demand_side, demand_side_operation)
+    PSIP.set_ramp_limits!(demand_side, (up=0.5, down=0.5))
+    PSIP.set_lifetime!(demand_side, 25)
     PSIP.set_power_systems_type!(demand_side, "PowerLoadUpdated")
     PSIP.set_internal!(demand_side, demand_side_internal)
     PSIP.set_ext!(demand_side, demand_side_ext)
     PSIP.set_region!(demand_side, demand_side_regions)
     PSIP.set_min_power!(demand_side, 0.1)
-    PSIP.set_peak_demand_mw!(demand_side, 50.0)
 
     @test PSIP.get_requirements(demand_side) === demand_side_requirements
     @test PSIP.get_price_per_unit(demand_side) === demand_side_price
     @test PSIP.get_name(demand_side) == "demand_side_updated"
     @test PSIP.get_id(demand_side) == 140
     @test !PSIP.get_available(demand_side)
-    @test PSIP.get_shift_variable_cost(demand_side) === demand_side_shift_cost
-    @test PSIP.get_curtailment_cost(demand_side) === demand_side_curtailment
     @test PSIP.get_technology_efficiency(demand_side) == 0.75
-    @test PSIP.get_max_demand_advance(demand_side) == 6.0
-    @test PSIP.get_demand_energy_efficiency(demand_side) == 0.92
-    @test PSIP.get_max_demand_curtailment(demand_side) == 0.2
-    @test PSIP.get_max_demand_delay(demand_side) == 8.0
+    @test PSIP.get_capacity_limits(demand_side) == (min=0.0, max=200.0)
+    @test PSIP.get_unit_size(demand_side) == 20.0
+    @test PSIP.get_capital_costs(demand_side) === demand_side_capital
+    @test PSIP.get_operation_costs(demand_side) === demand_side_operation
+    @test PSIP.get_ramp_limits(demand_side) == (up=0.5, down=0.5)
+    @test PSIP.get_lifetime(demand_side) == 25
+    @test PSIP.get_financial_data(demand_side) === tech_financial_data
     @test PSIP.get_power_systems_type(demand_side) == "PowerLoadUpdated"
     @test PSIP.get_internal(demand_side) === demand_side_internal
     @test PSIP.get_ext(demand_side) === demand_side_ext
     @test PSIP.get_region(demand_side) === demand_side_regions
     @test PSIP.get_min_power(demand_side) == 0.1
-    @test PSIP.get_peak_demand_mw(demand_side) == 50.0
 
     aggregate_transport = AggregateTransportTechnology{PSY.ACBranch}(
         name="aggregate_transport",
@@ -315,7 +324,7 @@
         available=true,
     )
     aggregate_requirements = Requirement[req_a]
-    aggregate_capital = LinearCurve(700.0)
+    aggregate_capital = CapitalCost(LinearCurve(700.0), 0.0)
     aggregate_internal = IS.InfrastructureSystemsInternal()
     aggregate_ext = Dict("aggregate_transport" => "meta")
 
@@ -360,7 +369,7 @@
         available=true,
     )
     nodal_ac_requirements = Requirement[req_b]
-    nodal_ac_capital = LinearCurve(900.0)
+    nodal_ac_capital = CapitalCost(LinearCurve(900.0), 0.0)
     nodal_ac_internal = IS.InfrastructureSystemsInternal()
     nodal_ac_ext = Dict("nodal_ac_transport" => "meta")
 
@@ -409,7 +418,7 @@
         available=true,
     )
     nodal_hvdc_requirements = Requirement[req_a, req_b]
-    nodal_hvdc_capital = LinearCurve(1200.0)
+    nodal_hvdc_capital = CapitalCost(LinearCurve(1200.0), 0.0)
     nodal_hvdc_internal = IS.InfrastructureSystemsInternal()
     nodal_hvdc_ext = Dict("nodal_hvdc_transport" => "meta")
     nodal_hvdc_line_loss = LinearCurve(0.06)

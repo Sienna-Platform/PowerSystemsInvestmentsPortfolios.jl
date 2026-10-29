@@ -78,10 +78,10 @@
                 "$ref": "#/components/schemas/AggregateTransportTechnology"
             }
         },
-        "DemandRequirements": {
+        "ProjectedDemands": {
             "type": "array",
             "items": {
-                "$ref": "#/components/schemas/DemandRequirement"
+                "$ref": "#/components/schemas/ProjectedDemand"
             }
         },
         "CarbonCaps": {
@@ -647,7 +647,7 @@
                 "available",
                 "power_systems_type"
             ],
-            "docstring": "Represents demand side technologies such as electric vehicles or hydrogen electrolyzers.",
+            "docstring": "An end-use technology that consumes electricity and can be built, such as hydrogen electrolyzers, direct air capture or industrial heat pumps. Its consumption is a decision, valued by what it produces.",
             "properties": {
                 "name": {
                     "type": "String",
@@ -670,60 +670,54 @@
                     "description": "Location where technology is operated",
                     "default": "Vector()"
                 },
-                "technology_efficiency": {
-                    "type": "Float64",
-                    "description": "MWh of electricity per unit of output. Ex: MWh per ton of hydrogen for electrolyzers",
-                    "default": "1.0"
+                "capacity_limits": {
+                    "type": "MinMax",
+                    "description": "Minimum and maximum allowable installed capacity for a technology (MW)",
+                    "default": "(min=0, max=1e8)"
                 },
-                "price_per_unit": {
-                    "type": "PSY.ValueCurve",
-                    "description": "Price or value per unit of output. Ex: USD per ton of hydrogen for electrolyzers",
-                    "default": "LinearCurve(0.0)"
-                },
-                "min_power": {
+                "unit_size": {
                     "type": "Float64",
-                    "description": "Minimum operation of demandside unit as a fraction of peak demand",
+                    "description": "Used for discrete investment decisions. Size of each unit being built (MW)",
                     "default": "0.0"
-                },
-                "peak_demand_mw": {
-                    "type": "Float64",
-                    "description": "Peak demand value in MW",
-                    "default": "0.0"
-                },
-                "curtailment_cost": {
-                    "type": "PSY.ValueCurve", 
-                    "description": "Energy cost of curtailed demand, USD per Mwh",
-                    "default": "LinearCurve(0.0)"
-                },
-                "max_demand_curtailment": {
-                    "type": "Float64", 
-                    "description": "Maximum fraction of demand that can be curtailed",
-                    "default": "0.0"
-                },
-                "max_demand_delay": {
-                    "type": "Float64",
-                    "description": "Maximum number of hours that demand can be deferred or delayed (hours).",
-                    "default": "0.0"
-                },
-                "max_demand_advance": {
-                    "type": "Float64",
-                    "description": "Maximum number of hours that demand can be scheduled in advance of the original schedule (hours).",
-                    "default": "0.0"
-                },
-                "demand_energy_efficiency": {
-                    "type": "Float64",
-                    "description": "Energy efficiency associated with time shifting demand. Represents energy losses due to time shifting",
-                    "default": "1.0"
-                },
-                "shift_variable_cost": {
-                    "type": "PSY.ValueCurve",
-                    "description": "Variable operation and maintenance costs associated with flexible demand deferral/advancement",
-                    "default": "LinearCurve(0.0)"
                 },
                 "capital_costs": {
                     "type": "CapitalCost",
                     "description": "Capital costs for investing in a demand side technology. (USD/MW)",
                     "default": "CapitalCost(nothing)"
+                },
+                "operation_costs": {
+                    "type": "PSY.LoadCost",
+                    "description": "Fixed (USD/MW-year) and variable (USD/MWh consumed) O&M costs",
+                    "default": "PSY.LoadCost(nothing)"
+                },
+                "min_power": {
+                    "type": "Float64",
+                    "description": "Minimum consumption as a fraction of installed capacity",
+                    "default": "0.0"
+                },
+                "ramp_limits": {
+                    "type": "UpDown",
+                    "description": "Maximum decrease and increase in consumption between operation periods. Fraction of installed capacity per hour",
+                    "default": "(up=1.0, down=1.0)"
+                },
+                "technology_efficiency": {
+                    "type": "Float64",
+                    "description": "MWh of electricity per unit of product. Ex: MWh per tonne of hydrogen for electrolyzers",
+                    "default": "1.0"
+                },
+                "price_per_unit": {
+                    "type": "PSY.ValueCurve",
+                    "description": "Price or value per unit of product. Ex: USD per tonne of hydrogen for electrolyzers",
+                    "default": "LinearCurve(0.0)"
+                },
+                "lifetime": {
+                    "type": "Int",
+                    "description": "Maximum number of years a technology can be active once installed (years)",
+                    "default": "100"
+                },
+                "financial_data": {
+                    "type": "TechnologyFinancialData",
+                    "description": "Struct containing relevant financial information for a technology"
                 },
                 "requirements": {
                     "type": "Vector{Requirement}",
@@ -741,8 +735,8 @@
                     "description": "(**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference"
                 }
             },
-            "supertype":"DemandTechnology",
-            "parametric":"PSY.StaticInjection"
+            "supertype": "DemandTechnology",
+            "parametric": "PSY.StaticInjection"
         },
         "NodalHVDCTransportTechnology": {
             "type": "object",
@@ -979,14 +973,14 @@
             "supertype":"TransmissionTechnology",
             "parametric":"PSY.Device"
         },
-        "DemandRequirement": {
+        "ProjectedDemand": {
             "type": "object",
             "required": [
                 "name",
                 "available",
                 "power_systems_type"
             ],
-            "docstring": "Demand requirements for a region.",
+            "docstring": "A projected demand in a region: an exogenous load profile that must be served, with optional voluntary curtailment and time shifting. Its peak comes from its existing loads in the base system or, for a new demand, from peak_demand_mw.",
             "properties": {
                 "name": {
                     "type": "String",
@@ -999,11 +993,16 @@
                 },
                 "id": {
                     "type": "Int64",
-                    "description": "ID for individual demand requirement"
+                    "description": "ID for individual projected demand"
                 },
                 "power_systems_type": {
                     "type": "String",
                     "description": "Corresponding type in PowerSystems.jl to be used in PCM modeling"
+                },
+                "region": {
+                    "type": "Vector{RegionTopology}",
+                    "description": "Zone or node where the demand is located",
+                    "default": "Vector()"
                 },
                 "peak_demand_mw": {
                     "type": "Float64",
@@ -1012,28 +1011,58 @@
                 },
                 "construction_year": {
                     "type": "Int64",
-                    "description": "The year in which the new demand requirement will be installed. Should only be used for new demand requirements.",
+                    "description": "The year in which a new demand starts. Should only be used for new demands.",
                     "default": "2020"
                 },
                 "growth_rate": {
                     "type": "Float64",
-                    "description": "The annual growth rate of the demand requirement, used to scale present-day loads into future projections. Should only be used for conforming loads",
+                    "description": "The annual growth rate of the demand, used to scale present-day loads into future projections. Only used for conforming loads",
                     "default": "0.0"
                 },
                 "conformity": {
                     "type": "PSY.LoadConformity",
-                    "description": "Indicator of how the demand requirement should conform to the load profile of existing technologies in the system. Should only be used for new demand requirements.",
+                    "description": "Whether the demand is conforming (grows by growth_rate) or non-conforming (does not grow). Must be set for new demands.",
                     "default": "PSY.LoadConformity.UNDEFINED"
                 },
-                "unserved_demand_cost": {
-                    "type": "PSY.ValueCurve",
-                    "description": "Cost of unserved demand (USD/MWh). A LinearCurve is a single price for all unserved demand. A PiecewiseIncrementalCurve gives segments of unserved demand whose x coordinates are fractions of demand and whose slopes are prices (USD/MWh)",
-                    "default": "PiecewiseIncrementalCurve(0.0, [0.0, 1.0], [1e8])"
+                "max_demand_curtailment": {
+                    "type": "Float64",
+                    "description": "Maximum fraction of demand that can be curtailed voluntarily",
+                    "default": "0.0"
                 },
-                "region": {
-                    "type": "Vector{RegionTopology}",
-                    "description": "Zone or node where the demand requirement is located",
-                    "default": "Vector()"
+                "curtailment_cost": {
+                    "type": "PSY.ValueCurve",
+                    "description": "Cost of voluntary curtailment (USD/MWh). A LinearCurve is a single price for all curtailable demand. A PiecewiseIncrementalCurve gives tiers whose x coordinates are fractions of demand, from 0 to max_demand_curtailment, and whose slopes are prices (USD/MWh)",
+                    "default": "LinearCurve(0.0)"
+                },
+                "value_of_lost_load": {
+                    "type": "Float64",
+                    "description": "Cost of involuntary shedding of the demand that cannot be curtailed (USD/MWh)",
+                    "default": "1e8"
+                },
+                "flexible_fraction": {
+                    "type": "Float64",
+                    "description": "Fraction of demand that can be shifted in time",
+                    "default": "0.0"
+                },
+                "max_demand_delay": {
+                    "type": "Float64",
+                    "description": "Maximum number of hours that flexible demand can be delayed (hours)",
+                    "default": "0.0"
+                },
+                "max_demand_advance": {
+                    "type": "Float64",
+                    "description": "Maximum number of hours that flexible demand can be served in advance (hours)",
+                    "default": "0.0"
+                },
+                "shift_efficiency": {
+                    "type": "Float64",
+                    "description": "Fraction of shifted energy that is kept. Represents energy losses due to time shifting",
+                    "default": "1.0"
+                },
+                "shift_cost": {
+                    "type": "PSY.ValueCurve",
+                    "description": "Cost of shifting demand (USD/MWh shifted)",
+                    "default": "LinearCurve(0.0)"
                 },
                 "requirements": {
                     "type": "Vector{Requirement}",
@@ -1051,8 +1080,8 @@
                     "description": "(**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference"
                 }
             },
-            "supertype":"DemandTechnology",
-            "parametric":"PSY.StaticInjection"
+            "supertype": "DemandTechnology",
+            "parametric": "PSY.StaticInjection"
         },
         "CarbonCaps": {
             "type": "object",

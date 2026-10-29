@@ -2,7 +2,7 @@ include("Node.jl")
 include("Zone.jl")
 include("MinimumCapacityRequirements.jl")
 include("SupplyTechnology.jl")
-include("DemandRequirement.jl")
+include("ProjectedDemand.jl")
 include("NodalACTransportTechnology.jl")
 include("RetirementPotential.jl")
 include("AggregateRetrofitPotential.jl")
@@ -46,7 +46,6 @@ export get_cofire_start_limits
 export get_conformity
 export get_construction_year
 export get_curtailment_cost
-export get_demand_energy_efficiency
 export get_duration_limits
 export get_efficiency
 export get_efficiency_storage
@@ -56,6 +55,7 @@ export get_end_region
 export get_existing_devices
 export get_ext
 export get_financial_data
+export get_flexible_fraction
 export get_fuel
 export get_generation_fraction_requirement
 export get_growth_rate
@@ -102,7 +102,8 @@ export get_retirement_potential
 export get_retrofit_fraction
 export get_retrofit_id
 export get_retrofit_potential
-export get_shift_variable_cost
+export get_shift_cost
+export get_shift_efficiency
 export get_start_fuel_mmbtu_per_mw
 export get_start_node
 export get_start_region
@@ -115,7 +116,7 @@ export get_unit_size
 export get_unit_size_charge
 export get_unit_size_discharge
 export get_unit_size_energy
-export get_unserved_demand_cost
+export get_value_of_lost_load
 export get_voltage
 export set_available!
 export set_build_year!
@@ -141,7 +142,6 @@ export set_cofire_start_limits!
 export set_conformity!
 export set_construction_year!
 export set_curtailment_cost!
-export set_demand_energy_efficiency!
 export set_duration_limits!
 export set_efficiency!
 export set_efficiency_storage!
@@ -151,6 +151,7 @@ export set_end_region!
 export set_existing_devices!
 export set_ext!
 export set_financial_data!
+export set_flexible_fraction!
 export set_fuel!
 export set_generation_fraction_requirement!
 export set_growth_rate!
@@ -197,7 +198,8 @@ export set_retirement_potential!
 export set_retrofit_fraction!
 export set_retrofit_id!
 export set_retrofit_potential!
-export set_shift_variable_cost!
+export set_shift_cost!
+export set_shift_efficiency!
 export set_start_fuel_mmbtu_per_mw!
 export set_start_node!
 export set_start_region!
@@ -210,5 +212,5 @@ export set_unit_size!
 export set_unit_size_charge!
 export set_unit_size_discharge!
 export set_unit_size_energy!
-export set_unserved_demand_cost!
+export set_value_of_lost_load!
 export set_voltage!

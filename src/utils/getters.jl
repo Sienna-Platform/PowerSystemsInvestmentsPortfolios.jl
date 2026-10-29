@@ -32,8 +32,8 @@ get_parameter_type(t::NodalACTransportTechnology{T}) where {T} = T
 get_parameter_type(::Type{NodalACTransportTechnology{T}}) where {T} = T
 get_parameter_type(t::NodalHVDCTransportTechnology{T}) where {T} = T
 get_parameter_type(::Type{NodalHVDCTransportTechnology{T}}) where {T} = T
-get_parameter_type(t::DemandRequirement{T}) where {T} = T
-get_parameter_type(::Type{DemandRequirement{T}}) where {T} = T
+get_parameter_type(t::ProjectedDemand{T}) where {T} = T
+get_parameter_type(::Type{ProjectedDemand{T}}) where {T} = T
 get_parameter_type(t::DemandSideTechnology{T}) where {T} = T
 get_parameter_type(::Type{DemandSideTechnology{T}}) where {T} = T
 
@@ -148,9 +148,9 @@ time step. A technology without ExistingDevices returns its `peak_demand_mw`.
 # Arguments
 
   - `p::Portfolio`: The portfolio containing the base system and technology
-  - `t::DemandTechnology`: The technology to get peak demand
+  - `t::ProjectedDemand`: The demand to get peak demand
 """
-function get_peak_demand_mw(p::Portfolio, t::DemandTechnology)
+function get_peak_demand_mw(p::Portfolio, t::ProjectedDemand)
     is_new(t) && return get_peak_demand_mw(t)
     attr = IS.get_supplemental_attributes(ExistingDevices, t)
     if length(attr) > 1
@@ -181,7 +181,7 @@ end
 
 const LOAD_PROFILE_NAME = "max_active_power"
 
-function _coincident_peak_demand(t::DemandTechnology, loads::Vector)
+function _coincident_peak_demand(t::ProjectedDemand, loads::Vector)
     with_profile = filter(_has_load_profile, loads)
     without_profile = filter(!_has_load_profile, loads)
     if !isempty(without_profile)
@@ -242,7 +242,7 @@ function _load_profile(load)
     return vcat(windows...)
 end
 
-function scale_conforming_load(t::DemandTechnology, p::Portfolio, year::Int64)
+function scale_conforming_load(t::ProjectedDemand, p::Portfolio, year::Int64)
     if get_conformity(t) == PSY.LoadConformity.NON_CONFORMING
         @warn "Load is not conforming, returning original peak demand without scaling."
         return get_peak_demand_mw(p, t)
@@ -316,9 +316,9 @@ get_fixed_cost_discharge(t::StorageTechnology) = PSY.get_proportional_term(
 )
 
 """
-Get the base year for a DemandRequirement, which is the same as the base year for the portfolio it belongs to.
+Get the base year for a ProjectedDemand, which is the same as the base year for the portfolio it belongs to.
 """
-get_base_year_for_load(t::DemandRequirement, p::Portfolio) = get_base_year(p)
+get_base_year_for_load(t::ProjectedDemand, p::Portfolio) = get_base_year(p)
 
 """
 Calculate the weighted average cost of capital (WACC) for a Technology based on its TechnologyFinancialData.

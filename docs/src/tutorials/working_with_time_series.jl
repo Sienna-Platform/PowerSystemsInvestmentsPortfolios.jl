@@ -81,13 +81,13 @@ t_wind = SupplyTechnology{PSY.RenewableDispatch}(;
 )
 add_technology!(portfolio, t_wind)
 
-t_demand = DemandRequirement{PSY.PowerLoad}(;
+t_demand = ProjectedDemand{PSY.PowerLoad}(;
     name="demand_zone1",
     id=3,
     available=true,
     power_systems_type="PowerLoad",
     region=[z1],
-    unserved_demand_cost=LinearCurve(50_000.0),
+    value_of_lost_load=50_000.0,
 )
 add_technology!(portfolio, t_demand)
 
@@ -299,7 +299,7 @@ println("\nOperational capacity factor series count: ", length(wind_series))
 # |-------------|-----------|-----------------|
 # | `"inv_capex"` | Investment | `SupplyTechnology`, `StorageTechnology`, `TransmissionTechnology` |
 # | `"ops_variable_cap_factor"` | Operational | `SupplyTechnology`, `StorageTechnology`, `TransmissionTechnology` |
-# | `"ops_peak_load"` | Operational | `DemandRequirement` |
+# | `"ops_peak_load"` | Operational | `ProjectedDemand` |
 #
 # Names are conventions understood by `PowerSystemsInvestments.jl`. Using non-standard
 # names will cause the optimizer to ignore the data unless it is explicitly referenced in
