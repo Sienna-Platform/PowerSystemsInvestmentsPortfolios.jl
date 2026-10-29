@@ -1570,7 +1570,7 @@
                 "min_inverter_capacity": {
                     "type": "Float64",
                     "description": "Minimum inverter capacity (MW)",
-                    "default": "1e8"
+                    "default": "0.0"
                 },
                 "capital_costs_inverter": {
                     "type": "CapitalCost",
