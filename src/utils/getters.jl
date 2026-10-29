@@ -48,7 +48,8 @@ _existing_capacity(c::PSY.Branch) = PSY.get_rating(c)
 Calculates the amount of existing capacity (in MW) associated with a given Technology in the Portfolio.
 Technology must have an ExistingDevices supplemental attribute attached to it to be non-zero.
 This attribute contains a list of names of existing assets in the base system that correspond to this technology.
-For generators this is the maximum active power, not the MVA rating. For StorageTechnology,
+For generators and the loads of a DemandSideTechnology this is the maximum active power, not
+the MVA rating. For StorageTechnology,
 this function returns existing discharge capacity in MW; see
 [`get_existing_capacity_mwh`](@ref) for existing energy capacity in MWh. For
 TransmissionTechnology it is the thermal rating.
@@ -56,11 +57,11 @@ TransmissionTechnology it is the thermal rating.
 # Arguments
 
   - `p::Portfolio`: The portfolio containing the base system and technology
-  - `t::Union{ResourceTechnology, TransmissionTechnology}`: The technology to get existing capacity
+  - `t::Union{ResourceTechnology, TransmissionTechnology, DemandSideTechnology}`: The technology to get existing capacity
 """
 function get_existing_capacity_mw(
     p::Portfolio,
-    t::Union{ResourceTechnology, TransmissionTechnology},
+    t::Union{ResourceTechnology, TransmissionTechnology, DemandSideTechnology},
 )
     if typeof(t) <: ColocatedSupplyStorageTechnology
         @warn "Co-located technologies are not supported for ExistingDevices, assuming an existing capacity of 0"

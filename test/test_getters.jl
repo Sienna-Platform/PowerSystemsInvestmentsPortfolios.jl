@@ -62,6 +62,20 @@ end
     # new technology → 0
     @test get_existing_capacity_mw(p_5bus, renewable) == 0.0
     @test get_existing_capacity_mw(p_5bus, storage) == 0.0
+
+    # A demand side technology takes the maximum active power of its existing loads
+    demand_side = get_technology(DemandSideTechnology{PowerLoad}, p_5bus, "test_demand")
+    @test get_existing_capacity_mw(p_5bus, demand_side) == 0.0
+    load = first(get_components(PowerLoad, get_base_system(p_5bus)))
+    PSIP.add_supplemental_attribute!(
+        p_5bus,
+        demand_side,
+        ExistingDevices(; existing_devices=[PSY.get_name(load)]),
+    )
+    expected = with_units_base(get_base_system(p_5bus), "NATURAL_UNITS") do
+        get_max_active_power(load)
+    end
+    @test get_existing_capacity_mw(p_5bus, demand_side) == expected
 end
 
 @testset "get_existing_capacity_mwh" begin
