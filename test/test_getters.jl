@@ -57,7 +57,8 @@ end
     renewable = get_technology(SupplyTechnology{RenewableDispatch}, p_5bus, "wind")
     storage = get_technology(StorageTechnology, p_5bus, "test_storage")
 
-    @test get_existing_capacity_mw(p_5bus, thermal) == 791.25
+    # sum of the existing units' maximum active power (their MVA ratings sum to 791.25)
+    @test get_existing_capacity_mw(p_5bus, thermal) == 730.0
     # new technology → 0
     @test get_existing_capacity_mw(p_5bus, renewable) == 0.0
     @test get_existing_capacity_mw(p_5bus, storage) == 0.0
