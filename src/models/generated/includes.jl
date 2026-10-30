@@ -99,6 +99,7 @@ export get_region
 export get_requirements
 export get_resistance
 export get_retirement_potential
+export get_retrofit_efficiency
 export get_retrofit_fraction
 export get_retrofit_id
 export get_retrofit_potential
@@ -195,6 +196,7 @@ export set_region!
 export set_requirements!
 export set_resistance!
 export set_retirement_potential!
+export set_retrofit_efficiency!
 export set_retrofit_fraction!
 export set_retrofit_id!
 export set_retrofit_potential!

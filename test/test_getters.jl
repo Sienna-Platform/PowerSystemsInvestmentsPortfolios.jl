@@ -78,6 +78,21 @@ end
     @test get_existing_capacity_mw(p_5bus, demand_side) == expected
 end
 
+@testset "Retrofit getters" begin
+    p_5bus = build_portfolio()
+    source = get_technology(SupplyTechnology{ThermalStandard}, p_5bus, "cheap_thermal")
+    retrofit = only(PSIP.get_supplemental_attributes(RetrofitPotential, source))
+
+    # The attribute is shared by the source and its retrofit option
+    @test Set(PSIP.get_name.(get_associated_technologies(p_5bus, retrofit))) ==
+          Set(["cheap_thermal", "expensive_thermal"])
+    @test get_retrofit_efficiency(retrofit) == 0.9
+    # The eligible units are the source's existing units
+    @test get_retrofit_capacity_mw(p_5bus, source, retrofit) == 730.0
+    PSIP.set_eligible_generators!(retrofit, ["missing_unit"])
+    @test_throws r"missing_unit" get_retrofit_capacity_mw(p_5bus, source, retrofit)
+end
+
 @testset "get_existing_capacity_mwh" begin
     p_5bus = build_portfolio()
     storage = get_technology(StorageTechnology, p_5bus, "test_storage")

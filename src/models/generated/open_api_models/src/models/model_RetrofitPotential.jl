@@ -6,17 +6,20 @@
     RetrofitPotential(;
         id=nothing,
         eligible_generators=nothing,
+        retrofit_efficiency=1.0,
     )
 
     - id::Int64
     - eligible_generators::Vector{String}
+    - retrofit_efficiency::Float64
 """
 Base.@kwdef mutable struct RetrofitPotential <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing
     eligible_generators::Union{Nothing, Vector{String}} = nothing
+    retrofit_efficiency::Union{Nothing, Float64} = 1.0
 
-    function RetrofitPotential(id, eligible_generators)
-        o = new(id, eligible_generators)
+    function RetrofitPotential(id, eligible_generators, retrofit_efficiency)
+        o = new(id, eligible_generators, retrofit_efficiency)
         OpenAPI.validate_properties(o)
         return o
     end
@@ -25,6 +28,7 @@ end # type RetrofitPotential
 const _property_types_RetrofitPotential = Dict{Symbol, String}(
     Symbol("id") => "Int64",
     Symbol("eligible_generators") => "Vector{String}",
+    Symbol("retrofit_efficiency") => "Float64",
 )
 OpenAPI.property_type(::Type{RetrofitPotential}, name::Symbol) =
     Union{Nothing, eval(Base.Meta.parse(_property_types_RetrofitPotential[name]))}
@@ -41,6 +45,11 @@ function OpenAPI.validate_properties(o::RetrofitPotential)
         RetrofitPotential,
         Symbol("eligible_generators"),
         o.eligible_generators,
+    )
+    OpenAPI.validate_property(
+        RetrofitPotential,
+        Symbol("retrofit_efficiency"),
+        o.retrofit_efficiency,
     )
 end
 

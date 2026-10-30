@@ -12,6 +12,16 @@
     end
 end
 
+@testset "Test serialization of a shared retrofit attribute" begin
+    portfolio = build_portfolio()
+    portfolio2 = validate_serialization(portfolio; time_series_read_only=true)
+    source = get_technology(SupplyTechnology{ThermalStandard}, portfolio2, "cheap_thermal")
+    retrofit = only(PSIP.get_supplemental_attributes(RetrofitPotential, source))
+    @test get_retrofit_efficiency(retrofit) == 0.9
+    @test Set(PSIP.get_name.(get_associated_technologies(portfolio2, retrofit))) ==
+          Set(["cheap_thermal", "expensive_thermal"])
+end
+
 @testset "Test serialization of regions" begin
     portfolio = build_portfolio()
     portfolio2 = validate_serialization(portfolio; time_series_read_only=true)

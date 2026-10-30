@@ -376,12 +376,17 @@
             "required": [
                 "retrofit_potential"
             ],
-            "docstring": "Supplemental attribute used to define what existing generators are eligible for retrofit for a SupplyTechnology",
+            "docstring": "Supplemental attribute linking a retrofit: existing generators of a source SupplyTechnology that can be converted into a retrofit option SupplyTechnology. Attach the same attribute to both the source and the option, one attribute per source and option pair.",
             "properties": {
                 "eligible_generators": {
                     "type": "Vector{String}",
-                    "description": "Names of individual generation units mapped to this technology that can be retrofitted",
+                    "description": "Names of the existing generation units of the source technology that can be retrofitted into the option technology",
                     "default": "Vector()"
+                },
+                "retrofit_efficiency": {
+                    "type": "Float64",
+                    "description": "Capacity of the option technology obtained per unit of source capacity retrofitted (MW/MW), e.g. below 1 when a retrofit derates the plant",
+                    "default": "1.0"
                 },
                 "ext": {
                     "type": "Dict",

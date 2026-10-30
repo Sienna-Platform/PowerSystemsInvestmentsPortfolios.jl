@@ -100,6 +100,36 @@ function get_existing_capacity_mw(
 end
 
 """
+Capacity (MW) of the existing units of a source technology that a RetrofitPotential lists as
+eligible for retrofit: their maximum active power, as [`get_existing_capacity_mw`](@ref) counts
+them. Errors if a listed unit isn't in the base system.
+
+# Arguments
+
+  - `p::Portfolio`: The portfolio containing the base system
+  - `source::SupplyTechnology`: The technology whose units are retrofitted
+  - `attribute::RetrofitPotential`: The retrofit, listing the eligible units
+"""
+function get_retrofit_capacity_mw(
+    p::Portfolio,
+    source::SupplyTechnology,
+    attribute::RetrofitPotential,
+)
+    names = get_eligible_generators(attribute)
+    units = PSY.get_component.(get_parameter_type(source), Ref(get_base_system(p)), names)
+    missing_units = names[isnothing.(units)]
+    if !isempty(missing_units)
+        error(
+            "Retrofit units $(join(missing_units, ", ")) of $(get_name(source)) are not " *
+            "in the base system.",
+        )
+    end
+    return with_units_base(get_base_system(p), "NATURAL_UNITS") do
+        sum(_existing_capacity(u) for u in units; init=0.0)
+    end
+end
+
+"""
 Calculates the amount of existing energy capacity (in MWh) associated with a given StorageTechnology.
 Technology must have an ExistingDevices supplemental attribute attached to it to be non-zero.
 This attribute contains a list of names of existing assets in the base system that correspond to this technology.

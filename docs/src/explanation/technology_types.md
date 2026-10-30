@@ -76,7 +76,7 @@ Several types that describe existing capacity or retirement and retrofit potenti
 | [`ExistingDevices`](@ref)      | Records existing devices associated with a technology candidate |
 | `RetirementPotential`          | Marks a technology as having retirable existing capacity        |
 | `AggregateRetirementPotential` | Aggregated retirement potential across a region                 |
-| `RetrofitPotential`            | Marks a technology as having retrofittable existing capacity    |
+| `RetrofitPotential`            | Links a source technology's retrofittable units to a retrofit option; attached to both |
 | `AggregateRetrofitPotential`   | Aggregated retrofit potential across a region                   |
 
 These are attached via `add_supplemental_attribute!`, not `add_technology!`:

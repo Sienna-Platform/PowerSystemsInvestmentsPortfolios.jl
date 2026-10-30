@@ -5,6 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **`eligible_generators`** | **`Vector{String}`** |  | [optional] [default to nothing]
+**`retrofit_efficiency`** | **`Float64`** |  | [optional] [default to 1.0]
 **`uuid`** | **`String`** |  | [optional] [default to nothing]
 
 

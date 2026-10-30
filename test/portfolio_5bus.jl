@@ -277,7 +277,10 @@ function build_portfolio()
 
     retire1 = AggregateRetirementPotential(retirement_potential=100.0)
 
-    retro2 = RetrofitPotential(eligible_generators=[PSY.get_name(t) for t in thermal[1:3]])
+    retro2 = RetrofitPotential(
+        eligible_generators=[PSY.get_name(t) for t in thermal[1:3]],
+        retrofit_efficiency=0.9,
+    )
 
     retire2 =
         RetirementPotential(eligible_generators=[PSY.get_name(t) for t in thermal[4:5]])
@@ -539,7 +542,9 @@ function build_portfolio()
     #Supplemental attributes
     PSIP.add_supplemental_attribute!(p_5bus, t_th_exp, retro1)
     PSIP.add_supplemental_attribute!(p_5bus, t_th_exp, retire1)
+    # cheap_thermal (the source) can be retrofitted into expensive_thermal (the option)
     PSIP.add_supplemental_attribute!(p_5bus, t_th, retro2)
+    PSIP.add_supplemental_attribute!(p_5bus, t_th_exp, retro2)
     PSIP.add_supplemental_attribute!(p_5bus, t_th, retire2)
     PSIP.add_supplemental_attribute!(p_5bus, t_th, existing)
     PSIP.add_supplemental_attribute!(p_5bus, t_th_exp, existing2)
