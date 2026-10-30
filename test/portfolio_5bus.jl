@@ -278,6 +278,7 @@ function build_portfolio()
     retire1 = AggregateRetirementPotential(id=51, retirement_potential=100.0)
 
     retro2 = RetrofitPotential(
+        id=52,
         eligible_generators=[PSY.get_name(t) for t in thermal[1:3]],
         retrofit_efficiency=0.9,
     )

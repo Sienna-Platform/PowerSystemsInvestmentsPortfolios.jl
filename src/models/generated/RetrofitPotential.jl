@@ -36,18 +36,8 @@ mutable struct RetrofitPotential <: IS.SupplementalAttribute
 end
 
 
-function RetrofitPotential(; retrofit_efficiency=1.0, eligible_generators=Vector(), internal=InfrastructureSystemsInternal(), ext=Dict(), )
-    RetrofitPotential(retrofit_efficiency, eligible_generators, internal, ext, )
-end
-
-# Constructor for demo purposes; non-functional.
-function RetrofitPotential(::Nothing)
-    RetrofitPotential(;
-        retrofit_efficiency=Dict(),
-        eligible_generators=Dict(),
-        internal=Dict(),
-        ext=Dict(),
-    )
+function RetrofitPotential(; retrofit_efficiency=1.0, eligible_generators=Vector(), internal=InfrastructureSystemsInternal(), id, ext=Dict(), )
+    RetrofitPotential(retrofit_efficiency, eligible_generators, internal, id, ext, )
 end
 
 """Get [`RetrofitPotential`](@ref) `retrofit_efficiency`."""

@@ -70,7 +70,7 @@ end
     PSIP.add_supplemental_attribute!(
         p_5bus,
         demand_side,
-        ExistingDevices(; existing_devices=[PSY.get_name(load)]),
+        ExistingDevices(; id=60, existing_devices=[PSY.get_name(load)]),
     )
     expected = with_units_base(get_base_system(p_5bus), "NATURAL_UNITS") do
         get_max_active_power(load)
@@ -137,7 +137,7 @@ function peak_demand_portfolio(loads, existing_names)
     PSIP.add_supplemental_attribute!(
         port,
         demand,
-        ExistingDevices(; existing_devices=existing_names),
+        ExistingDevices(; id=61, existing_devices=existing_names),
     )
     return port, demand
 end
