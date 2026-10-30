@@ -2,6 +2,7 @@
 # Do not modify this file directly. Modify the OpenAPI specification instead.
 
 @doc raw"""ValueCurve
+Loss model coefficients. Accepts a linear model with a constant loss and a proportional loss rate, or a Piecewise loss with N segments for different proportional losses. All terms are defined as fraction of installed nameplate capacity. Units: 1.
 
     ValueCurve(; value=nothing)
 """

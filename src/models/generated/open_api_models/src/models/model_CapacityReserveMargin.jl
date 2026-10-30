@@ -11,11 +11,11 @@
         capacity_reserve_fraction=0.0,
     )
 
-    - id::Int64
-    - name::String
-    - available::Bool
-    - target_year::Int64
-    - capacity_reserve_fraction::Float64
+    - id::Int64 : ID for individual component.
+    - name::String : Name of the component.
+    - available::Bool : Indicator of whether the component is connected and online (&#x60;true&#x60;) or disconnected, offline, or down (&#x60;false&#x60;).
+    - target_year::Int64 : Year in which this requirement is applied.
+    - capacity_reserve_fraction::Float64 : Capacity reserve requirements, represented as a fraction of peak demand in a region. Units: 1.
 """
 Base.@kwdef mutable struct CapacityReserveMargin <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing
@@ -51,7 +51,6 @@ function OpenAPI.check_required(o::CapacityReserveMargin)
     o.id === nothing && (return false)
     o.name === nothing && (return false)
     o.available === nothing && (return false)
-    o.target_year === nothing && (return false)
     true
 end
 

@@ -10,6 +10,7 @@ This file is auto-generated. Do not edit.
         retrofit_fraction::Float64
         internal::InfrastructureSystemsInternal
         retrofit_potential::Float64
+        id::Int64
         ext::Dict
     end
 
@@ -20,6 +21,7 @@ Supplemental attribute used to define a total amount of capacity that can be ret
 - `retrofit_fraction::Float64`: (default: `0.0`) Fraction of existing capacity that is eligible for retrofits. Alternative to retrofit_potential
 - `internal::InfrastructureSystemsInternal`: (default: `InfrastructureSystemsInternal()`) (**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference
 - `retrofit_potential::Float64`: (default: `0.0`) Amount of existing capacity for technology that can be retrofitted
+- `id::Int64`: ID for individual component
 - `ext::Dict`: (default: `Dict()`) Optional dictionary to provide additional data
 """
 mutable struct AggregateRetrofitPotential <: IS.SupplementalAttribute
@@ -31,24 +33,15 @@ mutable struct AggregateRetrofitPotential <: IS.SupplementalAttribute
     internal::InfrastructureSystemsInternal
     "Amount of existing capacity for technology that can be retrofitted"
     retrofit_potential::Float64
+    "ID for individual component"
+    id::Int64
     "Optional dictionary to provide additional data"
     ext::Dict
 end
 
 
-function AggregateRetrofitPotential(; retrofit_id=0, retrofit_fraction=0.0, internal=InfrastructureSystemsInternal(), retrofit_potential=0.0, ext=Dict(), )
-    AggregateRetrofitPotential(retrofit_id, retrofit_fraction, internal, retrofit_potential, ext, )
-end
-
-# Constructor for demo purposes; non-functional.
-function AggregateRetrofitPotential(::Nothing)
-    AggregateRetrofitPotential(;
-        retrofit_id=Dict(),
-        retrofit_fraction=Dict(),
-        internal=Dict(),
-        retrofit_potential=Dict(),
-        ext=Dict(),
-    )
+function AggregateRetrofitPotential(; retrofit_id=0, retrofit_fraction=0.0, internal=InfrastructureSystemsInternal(), retrofit_potential=0.0, id, ext=Dict(), )
+    AggregateRetrofitPotential(retrofit_id, retrofit_fraction, internal, retrofit_potential, id, ext, )
 end
 
 """Get [`AggregateRetrofitPotential`](@ref) `retrofit_id`."""
@@ -59,6 +52,8 @@ get_retrofit_fraction(value::AggregateRetrofitPotential) = value.retrofit_fracti
 get_internal(value::AggregateRetrofitPotential) = value.internal
 """Get [`AggregateRetrofitPotential`](@ref) `retrofit_potential`."""
 get_retrofit_potential(value::AggregateRetrofitPotential) = value.retrofit_potential
+"""Get [`AggregateRetrofitPotential`](@ref) `id`."""
+get_id(value::AggregateRetrofitPotential) = value.id
 """Get [`AggregateRetrofitPotential`](@ref) `ext`."""
 get_ext(value::AggregateRetrofitPotential) = value.ext
 
@@ -70,6 +65,8 @@ set_retrofit_fraction!(value::AggregateRetrofitPotential, val) = value.retrofit_
 set_internal!(value::AggregateRetrofitPotential, val) = value.internal = val
 """Set [`AggregateRetrofitPotential`](@ref) `retrofit_potential`."""
 set_retrofit_potential!(value::AggregateRetrofitPotential, val) = value.retrofit_potential = val
+"""Set [`AggregateRetrofitPotential`](@ref) `id`."""
+set_id!(value::AggregateRetrofitPotential, val) = value.id = val
 """Set [`AggregateRetrofitPotential`](@ref) `ext`."""
 set_ext!(value::AggregateRetrofitPotential, val) = value.ext = val
 

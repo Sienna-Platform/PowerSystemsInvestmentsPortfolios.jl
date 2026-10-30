@@ -12,12 +12,12 @@
         max_mtons=nothing,
     )
 
-    - id::Int64
-    - name::String
-    - available::Bool
-    - target_year::Int64
-    - max_tons_mwh::Float64
-    - max_mtons::Float64
+    - id::Int64 : ID for individual component.
+    - name::String : Name of the component.
+    - available::Bool : Indicator of whether the component is connected and online (&#x60;true&#x60;) or disconnected, offline, or down (&#x60;false&#x60;).
+    - target_year::Int64 : Year in which this requirement is applied.
+    - max_tons_mwh::Float64 : Emission limit in terms of rate. Units: Mt/MWh.
+    - max_mtons::Float64 : Emission limit in absolute values (million tonnes). Units: Mt.
 """
 Base.@kwdef mutable struct CarbonCaps <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing
@@ -49,8 +49,6 @@ function OpenAPI.check_required(o::CarbonCaps)
     o.id === nothing && (return false)
     o.name === nothing && (return false)
     o.available === nothing && (return false)
-    o.target_year === nothing && (return false)
-    o.max_mtons === nothing && (return false)
     true
 end
 

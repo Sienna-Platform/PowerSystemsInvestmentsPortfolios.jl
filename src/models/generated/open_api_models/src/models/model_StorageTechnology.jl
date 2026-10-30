@@ -30,29 +30,29 @@
         financial_data=nothing,
     )
 
-    - id::Int64
-    - name::String
-    - available::Bool
-    - region::Vector{Int64}
-    - power_systems_type::String
-    - min_discharge_fraction::Float64
-    - prime_mover_type::String
-    - storage_tech::String : defines the storage technology used in an energy Storage system, based on the options in EIA form 923.
+    - id::Int64 : ID for individual component.
+    - name::String : Name of the component.
+    - available::Bool : Indicator of whether the component is connected and online (&#x60;true&#x60;) or disconnected, offline, or down (&#x60;false&#x60;).
+    - region::Vector{Int64} : Location where the component applies. Can be a zone or node.
+    - power_systems_type::String : Corresponding type to be used in PCM modeling.
+    - min_discharge_fraction::Float64 : Minimum discharge as a fraction of total discharge capacity. Units: 1.
+    - prime_mover_type::String : Prime mover for generator.
+    - storage_tech::String : Storage Technology Type.
     - capital_costs_energy::ValueCurve
     - capital_costs_charge::ValueCurve
     - capital_costs_discharge::ValueCurve
     - operation_costs::StorageCost
-    - unit_size_discharge::Float64
-    - unit_size_charge::Float64
-    - unit_size_energy::Float64
+    - unit_size_discharge::Float64 : Used for discrete investment decisions. Size of each unit of discharging capacity being built. Units: MW.
+    - unit_size_charge::Float64 : Used for discrete investment decisions. Unit size of charging capacity. Units: MW.
+    - unit_size_energy::Float64 : Used for discrete investment decisions. Size of each unit of energy capacity being built. Units: MWh.
     - capacity_limits_charge::MinMax
     - capacity_limits_discharge::MinMax
     - capacity_limits_energy::MinMax
     - duration_limits::MinMax
     - efficiency::InOut
-    - losses::Float64
-    - lifetime::Int64
-    - requirements::Vector{Int64}
+    - losses::Float64 : Self-discharge of storage (fraction of energy stored per hour). Units: 1.
+    - lifetime::Int64 : Maximum number of years a technology can be active once installed. Units: yr.
+    - requirements::Vector{Int64} : List of requirement IDs associated with the component.
     - financial_data::TechnologyFinancialData
 """
 Base.@kwdef mutable struct StorageTechnology <: OpenAPI.APIModel
@@ -171,18 +171,8 @@ function OpenAPI.check_required(o::StorageTechnology)
     o.id === nothing && (return false)
     o.name === nothing && (return false)
     o.available === nothing && (return false)
-    o.region === nothing && (return false)
     o.power_systems_type === nothing && (return false)
     o.storage_tech === nothing && (return false)
-    o.capital_costs_energy === nothing && (return false)
-    o.capital_costs_charge === nothing && (return false)
-    o.capital_costs_discharge === nothing && (return false)
-    o.operation_costs === nothing && (return false)
-    o.capacity_limits_charge === nothing && (return false)
-    o.capacity_limits_discharge === nothing && (return false)
-    o.capacity_limits_energy === nothing && (return false)
-    o.duration_limits === nothing && (return false)
-    o.efficiency === nothing && (return false)
     o.financial_data === nothing && (return false)
     true
 end

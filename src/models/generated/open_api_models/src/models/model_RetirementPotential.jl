@@ -10,10 +10,10 @@
         build_year=nothing,
     )
 
-    - id::Int64
-    - eligible_generators::Vector{String}
-    - planned_retirement_year::Dict{String, Int64}
-    - build_year::Dict{String, Int64}
+    - id::Int64 : ID for individual component.
+    - eligible_generators::Vector{String} : Names of individual generation units mapped to a technology that are eligible for retirement.
+    - planned_retirement_year::Dict{String, Int64} : Optional dictionary to indicate the year in which the forced/planned retirement will occur.
+    - build_year::Dict{String, Int64} : Optional dictionary to indicate the year in which existing generators in the base system were built.
 """
 Base.@kwdef mutable struct RetirementPotential <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing
@@ -44,9 +44,6 @@ OpenAPI.property_type(::Type{RetirementPotential}, name::Symbol) =
 
 function OpenAPI.check_required(o::RetirementPotential)
     o.id === nothing && (return false)
-    o.eligible_generators === nothing && (return false)
-    o.planned_retirement_year === nothing && (return false)
-    o.build_year === nothing && (return false)
     true
 end
 

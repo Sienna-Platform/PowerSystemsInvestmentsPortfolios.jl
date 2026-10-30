@@ -10,10 +10,10 @@
         retrofit_fraction=nothing,
     )
 
-    - id::Int64
-    - retrofit_id::Int64
-    - retrofit_potential::Float64
-    - retrofit_fraction::Float64
+    - id::Int64 : ID for individual component.
+    - retrofit_id::Int64 : Unique identifier to group retrofittable source technologies with retrofit options inside the same zone.
+    - retrofit_potential::Float64 : Amount of existing capacity for technology that can be retrofitted. Units: MW.
+    - retrofit_fraction::Float64 : Fraction of existing capacity that is eligible for retrofits. Alternative to retrofit_potential. Units: 1.
 """
 Base.@kwdef mutable struct AggregateRetrofitPotential <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing
@@ -44,8 +44,6 @@ OpenAPI.property_type(::Type{AggregateRetrofitPotential}, name::Symbol) =
 
 function OpenAPI.check_required(o::AggregateRetrofitPotential)
     o.id === nothing && (return false)
-    o.retrofit_id === nothing && (return false)
-    o.retrofit_fraction === nothing && (return false)
     true
 end
 

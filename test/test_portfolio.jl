@@ -268,7 +268,7 @@ end
     port = build_portfolio()
     zone = first(get_regions(Zone, port))
 
-    attr = TopologyMapping(buses=["b1", "b2"])
+    attr = TopologyMapping(id=2, buses=["b1", "b2"])
     PSIP.add_supplemental_attribute!(port, zone, attr)
 
     attrs_on_component = PSIP.get_supplemental_attributes(TopologyMapping, zone)
@@ -284,7 +284,7 @@ end
     PSIP.remove_supplemental_attribute!(port, zone, attr)
     @test isempty(PSIP.get_supplemental_attributes(TopologyMapping, zone))
 
-    attr3 = TopologyMapping(buses=["b4"])
+    attr3 = TopologyMapping(id=4, buses=["b4"])
     PSIP.add_supplemental_attribute!(port, zone, attr3)
     PSIP.remove_supplemental_attributes!(TopologyMapping, port)
     @test isempty(PSIP.get_supplemental_attributes(TopologyMapping, port))

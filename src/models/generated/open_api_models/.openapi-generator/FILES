@@ -1,4 +1,3 @@
-.openapi-generator-ignore
 README.md
 docs/AggregateRetirementPotential.md
 docs/AggregateRetrofitPotential.md
@@ -16,14 +15,14 @@ docs/EnergyShareRequirements.md
 docs/ExistingDevices.md
 docs/FuelCurve.md
 docs/FuelCurveFuelCost.md
+docs/GenericOperationCost.md
 docs/HourlyMatching.md
+docs/HydroGenerationCost.md
 docs/InOut.md
 docs/IncrementalCurve.md
 docs/IncrementalCurveFunctionData.md
 docs/InputOutputCurve.md
 docs/InputOutputCurveFunctionData.md
-docs/InvestmentScheduleResults.md
-docs/InvestmentScheduleResultsResultsInner.md
 docs/LinearFunctionData.md
 docs/MaximumCapacityRequirements.md
 docs/MinMax.md
@@ -48,7 +47,6 @@ docs/SupplyTechnology.md
 docs/TechnologyFinancialData.md
 docs/ThermalGenerationCost.md
 docs/ThermalGenerationCostStartUp.md
-docs/ThermalRenewableGenerationCost.md
 docs/TopologyMapping.md
 docs/UpDown.md
 docs/ValueCurve.md
@@ -72,14 +70,14 @@ src/models/model_EnergyShareRequirements.jl
 src/models/model_ExistingDevices.jl
 src/models/model_FuelCurve.jl
 src/models/model_FuelCurveFuelCost.jl
+src/models/model_GenericOperationCost.jl
 src/models/model_HourlyMatching.jl
+src/models/model_HydroGenerationCost.jl
 src/models/model_InOut.jl
 src/models/model_IncrementalCurve.jl
 src/models/model_IncrementalCurveFunctionData.jl
 src/models/model_InputOutputCurve.jl
 src/models/model_InputOutputCurveFunctionData.jl
-src/models/model_InvestmentScheduleResults.jl
-src/models/model_InvestmentScheduleResultsResultsInner.jl
 src/models/model_LinearFunctionData.jl
 src/models/model_MaximumCapacityRequirements.jl
 src/models/model_MinMax.jl
@@ -104,7 +102,6 @@ src/models/model_SupplyTechnology.jl
 src/models/model_TechnologyFinancialData.jl
 src/models/model_ThermalGenerationCost.jl
 src/models/model_ThermalGenerationCostStartUp.jl
-src/models/model_ThermalRenewableGenerationCost.jl
 src/models/model_TopologyMapping.jl
 src/models/model_UpDown.jl
 src/models/model_ValueCurve.jl

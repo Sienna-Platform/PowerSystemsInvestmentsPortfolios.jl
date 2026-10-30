@@ -2,6 +2,7 @@
 # Do not modify this file directly. Modify the OpenAPI specification instead.
 
 @doc raw"""TechnologyFinancialData
+Struct containing relevant financial information for a technology.
 
     TechnologyFinancialData(;
         capital_recovery_period=nothing,

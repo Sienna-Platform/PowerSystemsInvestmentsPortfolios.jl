@@ -8,8 +8,8 @@
         existing_devices=nothing,
     )
 
-    - id::Int64
-    - existing_devices::Vector{String}
+    - id::Int64 : ID for individual component.
+    - existing_devices::Vector{String} : List of individual existing devices to map to a specific technology in the portfolio.
 """
 Base.@kwdef mutable struct ExistingDevices <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing
@@ -31,7 +31,6 @@ OpenAPI.property_type(::Type{ExistingDevices}, name::Symbol) =
 
 function OpenAPI.check_required(o::ExistingDevices)
     o.id === nothing && (return false)
-    o.existing_devices === nothing && (return false)
     true
 end
 

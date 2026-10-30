@@ -8,8 +8,8 @@
         retirement_potential=0.0,
     )
 
-    - id::Int64
-    - retirement_potential::Float64
+    - id::Int64 : ID for individual component.
+    - retirement_potential::Float64 : Amount of pre-existing capacity for a technology that is eligible for retirement. Units: MW.
 """
 Base.@kwdef mutable struct AggregateRetirementPotential <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing

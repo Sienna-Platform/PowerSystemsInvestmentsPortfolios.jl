@@ -2,6 +2,7 @@
 # Do not modify this file directly. Modify the OpenAPI specification instead.
 
 @doc raw"""InOut
+Efficiency of charging storage, fraction of total charge (in) and discharge (out) capacity. Units: 1.
 
     InOut(;
         in=nothing,

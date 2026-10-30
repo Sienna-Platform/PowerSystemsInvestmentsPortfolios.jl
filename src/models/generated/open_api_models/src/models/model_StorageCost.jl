@@ -2,7 +2,7 @@
 # Do not modify this file directly. Modify the OpenAPI specification instead.
 
 @doc raw"""StorageCost
-Cost representation for storage units
+Fixed and variable O&amp;M costs for the storage energy component. Units: USD/MWh.
 
     StorageCost(;
         cost_type="STORAGE",

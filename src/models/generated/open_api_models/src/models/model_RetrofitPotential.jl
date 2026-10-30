@@ -35,7 +35,6 @@ OpenAPI.property_type(::Type{RetrofitPotential}, name::Symbol) =
 
 function OpenAPI.check_required(o::RetrofitPotential)
     o.id === nothing && (return false)
-    o.eligible_generators === nothing && (return false)
     true
 end
 

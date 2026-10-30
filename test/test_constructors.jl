@@ -127,12 +127,12 @@
           ColocatedSupplyStorageTechnology{PSY.RenewableDispatch}
     @test colocated_supply_storage isa ResourceTechnology
 
-    retirement_potential = RetirementPotential()
-    aggregate_retirement_potential = AggregateRetirementPotential()
-    retrofit_potential = RetrofitPotential()
-    aggregate_retrofit_potential = AggregateRetrofitPotential()
-    existing_devices = ExistingDevices()
-    topology_mapping = TopologyMapping()
+    retirement_potential = RetirementPotential(id=20)
+    aggregate_retirement_potential = AggregateRetirementPotential(id=21)
+    retrofit_potential = RetrofitPotential(id=22)
+    aggregate_retrofit_potential = AggregateRetrofitPotential(id=23)
+    existing_devices = ExistingDevices(id=24)
+    topology_mapping = TopologyMapping(id=25)
 
     @test retirement_potential isa RetirementPotential
     @test retirement_potential isa IS.SupplementalAttribute

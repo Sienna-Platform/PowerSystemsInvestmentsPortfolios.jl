@@ -147,17 +147,11 @@ function serialize(schedule::InvestmentScheduleResults)
         end
         push!(capacity_data, installation_list)
     end
-    openapi_schedule = APIServer.InvestmentScheduleResults(
-        start_dates=start_dates,
-        end_dates=end_dates,
-        results=capacity_data,
+    return Dict{String, Any}(
+        "start_dates" => start_dates,
+        "end_dates" => end_dates,
+        "results" => capacity_data,
     )
-    data = Dict{String, Any}(
-        string(name) => serialize(getproperty(openapi_schedule, name)) for
-        name in fieldnames(typeof(openapi_schedule))
-    )
-
-    return data
 end
 
 function serialize(technology::T) where {T <: _CONTAINS_SHOULD_ENCODE}
@@ -451,15 +445,13 @@ function deserialize(
 end
 
 function deserialize(::Type{InvestmentScheduleResults}, raw::Dict)
-    openapi_schedule = IS.deserialize_struct(APIServer.InvestmentScheduleResults, raw)
-
     schedule = Dict()
-    for (i, start_date) in enumerate(openapi_schedule.start_dates)
-        end_date = openapi_schedule.end_dates[i]
+    for (i, start_date) in enumerate(raw["start_dates"])
+        end_date = raw["end_dates"][i]
         period_tuple = (Dates.Date(start_date), Dates.Date(end_date))
 
         schedule[period_tuple] = Dict()
-        for capacity in openapi_schedule.results[i]
+        for capacity in raw["results"][i]
             technology_type = getproperty(
                 PowerSystemsInvestmentsPortfolios,
                 Symbol(capacity["technology"]),
@@ -528,9 +520,10 @@ end
 
 function deserialize_components!(portfolio::Portfolio, raw)
     # Convert the array of components into type-specific arrays to allow addition by type.
-    # Need to maintain an order here and deserialize regions first so they can
-    # be referenced when deserializing technologies
+    # Maintain dependency order so referenced components exist before technologies
+    # are constructed. Technologies may reference both regions and requirements.
     technologies = OrderedDict{Type, Vector{Dict}}()
+    requirements = OrderedDict{Type, Vector{Dict}}()
     regions = OrderedDict{Type, Vector{Dict}}()
     for component in raw["components"]
         type = IS.get_type_from_serialization_data(component)
@@ -539,6 +532,12 @@ function deserialize_components!(portfolio::Portfolio, raw)
             if components === nothing
                 components = Vector{Dict}()
                 regions[type] = components
+            end
+        elseif type <: Requirement
+            components = get(requirements, type, nothing)
+            if components === nothing
+                components = Vector{Dict}()
+                requirements[type] = components
             end
         else
             components = get(technologies, type, nothing)
@@ -549,7 +548,7 @@ function deserialize_components!(portfolio::Portfolio, raw)
         end
         push!(components, component)
     end
-    data = merge(regions, technologies)
+    data = merge(regions, requirements, technologies)
 
     # Add each type to this as we parse.
     parsed_types = Set()

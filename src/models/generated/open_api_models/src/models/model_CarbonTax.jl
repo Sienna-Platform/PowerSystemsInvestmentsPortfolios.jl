@@ -11,11 +11,11 @@
         tax_dollars_per_ton=0.0,
     )
 
-    - id::Int64
-    - name::String
-    - available::Bool
-    - target_year::Int64
-    - tax_dollars_per_ton::Float64
+    - id::Int64 : ID for individual component.
+    - name::String : Name of the component.
+    - available::Bool : Indicator of whether the component is connected and online (&#x60;true&#x60;) or disconnected, offline, or down (&#x60;false&#x60;).
+    - target_year::Int64 : Year in which this requirement is applied.
+    - tax_dollars_per_ton::Float64 : Cost penalty per ton of CO2 emitted by technologies in the eligible regions during the target year. Units: USD/t.
 """
 Base.@kwdef mutable struct CarbonTax <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing
@@ -45,7 +45,6 @@ function OpenAPI.check_required(o::CarbonTax)
     o.id === nothing && (return false)
     o.name === nothing && (return false)
     o.available === nothing && (return false)
-    o.target_year === nothing && (return false)
     true
 end
 

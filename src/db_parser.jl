@@ -889,7 +889,7 @@ function add_generation_units!(
                 co2=Dict(fuel => 0.0),
             )
             add_technology!(portfolio, technology)
-            existing = ExistingDevices(; existing_devices=[rec.name])
+            existing = ExistingDevices(id=rec.id, existing_devices=[rec.name])
             add_supplemental_attribute!(portfolio, technology, existing)
 
             set_capacity_limits!(
@@ -1012,7 +1012,7 @@ function add_storage_units!(
             capacity_limits_energy=(min=0, max=component_attr["storage_capacity"]),
         )
         add_technology!(portfolio, storage)
-        existing = ExistingDevices(; existing_devices=[rec.name])
+        existing = ExistingDevices(id=rec.id, existing_devices=[rec.name])
         add_supplemental_attribute!(portfolio, storage, existing)
     end
 end
@@ -1310,7 +1310,7 @@ function add_system_lines!(
                 capital_costs=LinearCurve(1e5),
             )
             add_technology!(portfolio, transport)
-            existing = ExistingDevices(; existing_devices=[rec.name])
+            existing = ExistingDevices(; id=rec.id, existing_devices=[rec.name])
             add_supplemental_attribute!(portfolio, transport, existing)
             set_capacity_limits!(
                 transport,
@@ -1356,8 +1356,9 @@ function add_system_lines!(
             )
             id += 1
             add_technology!(portfolio, transport)
-            existing = ExistingDevices(; existing_devices=lines)
+            existing = ExistingDevices(id=id, existing_devices=lines)
             add_supplemental_attribute!(portfolio, transport, existing)
+            id += 1
         end
     end
 end

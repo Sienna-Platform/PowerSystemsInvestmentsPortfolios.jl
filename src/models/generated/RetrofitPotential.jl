@@ -9,6 +9,7 @@ This file is auto-generated. Do not edit.
         retrofit_efficiency::Float64
         eligible_generators::Vector{String}
         internal::InfrastructureSystemsInternal
+        id::Int64
         ext::Dict
     end
 
@@ -18,6 +19,7 @@ Supplemental attribute linking a retrofit: existing generators of a source Suppl
 - `retrofit_efficiency::Float64`: (default: `1.0`) Capacity of the option technology obtained per unit of source capacity retrofitted (MW/MW), e.g. below 1 when a retrofit derates the plant
 - `eligible_generators::Vector{String}`: (default: `Vector()`) Names of the existing generation units of the source technology that can be retrofitted into the option technology
 - `internal::InfrastructureSystemsInternal`: (default: `InfrastructureSystemsInternal()`) (**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference
+- `id::Int64`: ID for individual component
 - `ext::Dict`: (default: `Dict()`) Optional dictionary to provide additional data
 """
 mutable struct RetrofitPotential <: IS.SupplementalAttribute
@@ -27,6 +29,8 @@ mutable struct RetrofitPotential <: IS.SupplementalAttribute
     eligible_generators::Vector{String}
     "(**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference"
     internal::InfrastructureSystemsInternal
+    "ID for individual component"
+    id::Int64
     "Optional dictionary to provide additional data"
     ext::Dict
 end
@@ -52,6 +56,8 @@ get_retrofit_efficiency(value::RetrofitPotential) = value.retrofit_efficiency
 get_eligible_generators(value::RetrofitPotential) = value.eligible_generators
 """Get [`RetrofitPotential`](@ref) `internal`."""
 get_internal(value::RetrofitPotential) = value.internal
+"""Get [`RetrofitPotential`](@ref) `id`."""
+get_id(value::RetrofitPotential) = value.id
 """Get [`RetrofitPotential`](@ref) `ext`."""
 get_ext(value::RetrofitPotential) = value.ext
 
@@ -61,6 +67,8 @@ set_retrofit_efficiency!(value::RetrofitPotential, val) = value.retrofit_efficie
 set_eligible_generators!(value::RetrofitPotential, val) = value.eligible_generators = val
 """Set [`RetrofitPotential`](@ref) `internal`."""
 set_internal!(value::RetrofitPotential, val) = value.internal = val
+"""Set [`RetrofitPotential`](@ref) `id`."""
+set_id!(value::RetrofitPotential, val) = value.id = val
 """Set [`RetrofitPotential`](@ref) `ext`."""
 set_ext!(value::RetrofitPotential, val) = value.ext = val
 
