@@ -1046,7 +1046,7 @@ function add_demand_requirements!(
                 ).area
         end
 
-        demand = DemandRequirement{component_type}(;
+        demand = ProjectedDemand{component_type}(;
             name=rec.name,
             id=rec.id,
             new_demand_mw=component_attr["active_power"], #TODO: Change to "max_active_power" later when DB is fixed
@@ -1506,7 +1506,7 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
     end
 
     #Duplicate hourly demand profile on the portfolio level
-    demands = get_technologies(DemandRequirement, portfolio)
+    demands = get_technologies(ProjectedDemand, portfolio)
     for demand in demands
         unit = first(
             IS.get_components(

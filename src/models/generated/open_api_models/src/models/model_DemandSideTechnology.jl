@@ -7,90 +7,90 @@
         id=nothing,
         name=nothing,
         available=nothing,
-        region=nothing,
         power_systems_type=nothing,
-        technology_efficiency=0.0,
-        price_per_unit=nothing,
+        region=nothing,
+        capacity_limits=nothing,
+        unit_size=0.0,
+        capital_costs=nothing,
+        operation_costs=nothing,
         min_power=0.0,
-        peak_demand_mw=0.0,
-        max_demand_delay=nothing,
-        max_demand_advance=nothing,
-        demand_energy_efficiency=nothing,
-        shift_variable_cost=nothing,
-        curtailment_cost=nothing,
-        max_demand_curtailment=nothing,
+        ramp_limits=nothing,
+        technology_efficiency=1.0,
+        price_per_unit=nothing,
+        lifetime=100,
+        financial_data=nothing,
         requirements=nothing,
     )
 
-    - id::Int64 : ID for individual component.
-    - name::String : Name of the component.
-    - available::Bool : Indicator of whether the component is connected and online (&#x60;true&#x60;) or disconnected, offline, or down (&#x60;false&#x60;).
-    - region::Vector{Int64} : Location where the component applies. Can be a zone or node.
-    - power_systems_type::String : Corresponding type to be used in PCM modeling.
-    - technology_efficiency::Float64 : MWh of electricity per unit of output. Ex: MWh per ton of hydrogen for electrolyzers. Units: 1.
+    - id::Int64
+    - name::String
+    - available::Bool
+    - power_systems_type::String
+    - region::Vector{Int64}
+    - capacity_limits::MinMax
+    - unit_size::Float64
+    - capital_costs::ValueCurve
+    - operation_costs::LoadCost
+    - min_power::Float64
+    - ramp_limits::UpDown
+    - technology_efficiency::Float64
     - price_per_unit::ValueCurve
-    - min_power::Float64 : Minimum operation of demandside unit as a fraction of peak demand. Units: 1.
-    - peak_demand_mw::Float64 : Peak demand value in MW. Units: MW.
-    - max_demand_delay::Float64 : Maximum number of hours that demand can be deferred or delayed (hours). Units: h.
-    - max_demand_advance::Float64 : Maximum number of hours that demand can be scheduled in advance of the original schedule (hours). Units: h.
-    - demand_energy_efficiency::Float64 : Energy efficiency associated with time shifting demand. Represents energy losses due to time shifting. Units: 1.
-    - shift_variable_cost::ValueCurve
-    - curtailment_cost::ValueCurve
-    - max_demand_curtailment::Float64 : Maximum fraction of demand that can be curtailed. Units: 1.
-    - requirements::Vector{Int64} : List of requirement IDs associated with the component.
+    - lifetime::Int64
+    - financial_data::TechnologyFinancialData
+    - requirements::Vector{Int64}
 """
 Base.@kwdef mutable struct DemandSideTechnology <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing
     name::Union{Nothing, String} = nothing
     available::Union{Nothing, Bool} = nothing
-    region::Union{Nothing, Vector{Int64}} = nothing
     power_systems_type::Union{Nothing, String} = nothing
-    technology_efficiency::Union{Nothing, Float64} = 0.0
-    price_per_unit = nothing # spec type: Union{ Nothing, ValueCurve }
+    region::Union{Nothing, Vector{Int64}} = nothing
+    capacity_limits = nothing # spec type: Union{ Nothing, MinMax }
+    unit_size::Union{Nothing, Float64} = 0.0
+    capital_costs = nothing # spec type: Union{ Nothing, ValueCurve }
+    operation_costs = nothing # spec type: Union{ Nothing, LoadCost }
     min_power::Union{Nothing, Float64} = 0.0
-    peak_demand_mw::Union{Nothing, Float64} = 0.0
-    max_demand_delay::Union{Nothing, Float64} = nothing
-    max_demand_advance::Union{Nothing, Float64} = nothing
-    demand_energy_efficiency::Union{Nothing, Float64} = nothing
-    shift_variable_cost = nothing # spec type: Union{ Nothing, ValueCurve }
-    curtailment_cost = nothing # spec type: Union{ Nothing, ValueCurve }
-    max_demand_curtailment::Union{Nothing, Float64} = nothing
+    ramp_limits = nothing # spec type: Union{ Nothing, UpDown }
+    technology_efficiency::Union{Nothing, Float64} = 1.0
+    price_per_unit = nothing # spec type: Union{ Nothing, ValueCurve }
+    lifetime::Union{Nothing, Int64} = 100
+    financial_data = nothing # spec type: Union{ Nothing, TechnologyFinancialData }
     requirements::Union{Nothing, Vector{Int64}} = nothing
 
     function DemandSideTechnology(
         id,
         name,
         available,
-        region,
         power_systems_type,
+        region,
+        capacity_limits,
+        unit_size,
+        capital_costs,
+        operation_costs,
+        min_power,
+        ramp_limits,
         technology_efficiency,
         price_per_unit,
-        min_power,
-        peak_demand_mw,
-        max_demand_delay,
-        max_demand_advance,
-        demand_energy_efficiency,
-        shift_variable_cost,
-        curtailment_cost,
-        max_demand_curtailment,
+        lifetime,
+        financial_data,
         requirements,
     )
         o = new(
             id,
             name,
             available,
-            region,
             power_systems_type,
+            region,
+            capacity_limits,
+            unit_size,
+            capital_costs,
+            operation_costs,
+            min_power,
+            ramp_limits,
             technology_efficiency,
             price_per_unit,
-            min_power,
-            peak_demand_mw,
-            max_demand_delay,
-            max_demand_advance,
-            demand_energy_efficiency,
-            shift_variable_cost,
-            curtailment_cost,
-            max_demand_curtailment,
+            lifetime,
+            financial_data,
             requirements,
         )
         OpenAPI.validate_properties(o)
@@ -102,25 +102,24 @@ const _property_types_DemandSideTechnology = Dict{Symbol, String}(
     Symbol("id") => "Int64",
     Symbol("name") => "String",
     Symbol("available") => "Bool",
-    Symbol("region") => "Vector{Int64}",
     Symbol("power_systems_type") => "String",
+    Symbol("region") => "Vector{Int64}",
+    Symbol("capacity_limits") => "MinMax",
+    Symbol("unit_size") => "Float64",
+    Symbol("capital_costs") => "ValueCurve",
+    Symbol("operation_costs") => "LoadCost",
+    Symbol("min_power") => "Float64",
+    Symbol("ramp_limits") => "UpDown",
     Symbol("technology_efficiency") => "Float64",
     Symbol("price_per_unit") => "ValueCurve",
-    Symbol("min_power") => "Float64",
-    Symbol("peak_demand_mw") => "Float64",
-    Symbol("max_demand_delay") => "Float64",
-    Symbol("max_demand_advance") => "Float64",
-    Symbol("demand_energy_efficiency") => "Float64",
-    Symbol("shift_variable_cost") => "ValueCurve",
-    Symbol("curtailment_cost") => "ValueCurve",
-    Symbol("max_demand_curtailment") => "Float64",
+    Symbol("lifetime") => "Int64",
+    Symbol("financial_data") => "TechnologyFinancialData",
     Symbol("requirements") => "Vector{Int64}",
 )
 OpenAPI.property_type(::Type{DemandSideTechnology}, name::Symbol) =
     Union{Nothing, eval(Base.Meta.parse(_property_types_DemandSideTechnology[name]))}
 
 function OpenAPI.check_required(o::DemandSideTechnology)
-    o.id === nothing && (return false)
     o.name === nothing && (return false)
     o.available === nothing && (return false)
     o.power_systems_type === nothing && (return false)
@@ -131,12 +130,30 @@ function OpenAPI.validate_properties(o::DemandSideTechnology)
     OpenAPI.validate_property(DemandSideTechnology, Symbol("id"), o.id)
     OpenAPI.validate_property(DemandSideTechnology, Symbol("name"), o.name)
     OpenAPI.validate_property(DemandSideTechnology, Symbol("available"), o.available)
-    OpenAPI.validate_property(DemandSideTechnology, Symbol("region"), o.region)
     OpenAPI.validate_property(
         DemandSideTechnology,
         Symbol("power_systems_type"),
         o.power_systems_type,
     )
+    OpenAPI.validate_property(DemandSideTechnology, Symbol("region"), o.region)
+    OpenAPI.validate_property(
+        DemandSideTechnology,
+        Symbol("capacity_limits"),
+        o.capacity_limits,
+    )
+    OpenAPI.validate_property(DemandSideTechnology, Symbol("unit_size"), o.unit_size)
+    OpenAPI.validate_property(
+        DemandSideTechnology,
+        Symbol("capital_costs"),
+        o.capital_costs,
+    )
+    OpenAPI.validate_property(
+        DemandSideTechnology,
+        Symbol("operation_costs"),
+        o.operation_costs,
+    )
+    OpenAPI.validate_property(DemandSideTechnology, Symbol("min_power"), o.min_power)
+    OpenAPI.validate_property(DemandSideTechnology, Symbol("ramp_limits"), o.ramp_limits)
     OpenAPI.validate_property(
         DemandSideTechnology,
         Symbol("technology_efficiency"),
@@ -147,41 +164,11 @@ function OpenAPI.validate_properties(o::DemandSideTechnology)
         Symbol("price_per_unit"),
         o.price_per_unit,
     )
-    OpenAPI.validate_property(DemandSideTechnology, Symbol("min_power"), o.min_power)
+    OpenAPI.validate_property(DemandSideTechnology, Symbol("lifetime"), o.lifetime)
     OpenAPI.validate_property(
         DemandSideTechnology,
-        Symbol("peak_demand_mw"),
-        o.peak_demand_mw,
-    )
-    OpenAPI.validate_property(
-        DemandSideTechnology,
-        Symbol("max_demand_delay"),
-        o.max_demand_delay,
-    )
-    OpenAPI.validate_property(
-        DemandSideTechnology,
-        Symbol("max_demand_advance"),
-        o.max_demand_advance,
-    )
-    OpenAPI.validate_property(
-        DemandSideTechnology,
-        Symbol("demand_energy_efficiency"),
-        o.demand_energy_efficiency,
-    )
-    OpenAPI.validate_property(
-        DemandSideTechnology,
-        Symbol("shift_variable_cost"),
-        o.shift_variable_cost,
-    )
-    OpenAPI.validate_property(
-        DemandSideTechnology,
-        Symbol("curtailment_cost"),
-        o.curtailment_cost,
-    )
-    OpenAPI.validate_property(
-        DemandSideTechnology,
-        Symbol("max_demand_curtailment"),
-        o.max_demand_curtailment,
+        Symbol("financial_data"),
+        o.financial_data,
     )
     OpenAPI.validate_property(DemandSideTechnology, Symbol("requirements"), o.requirements)
 end

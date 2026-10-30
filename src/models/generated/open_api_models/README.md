@@ -57,7 +57,7 @@ Class | Method | HTTP request | Description
  - [CarbonTax](docs/CarbonTax.md)
  - [ColocatedSupplyStorageTechnology](docs/ColocatedSupplyStorageTechnology.md)
  - [CostCurve](docs/CostCurve.md)
- - [DemandRequirement](docs/DemandRequirement.md)
+ - [ProjectedDemand](docs/ProjectedDemand.md)
  - [DemandSideTechnology](docs/DemandSideTechnology.md)
  - [EnergyShareRequirements](docs/EnergyShareRequirements.md)
  - [ExistingDevices](docs/ExistingDevices.md)

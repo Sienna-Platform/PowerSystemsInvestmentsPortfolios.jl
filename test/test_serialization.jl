@@ -12,20 +12,14 @@
     end
 end
 
-@testset "Test serialization of technology requirement references" begin
+@testset "Test serialization of a shared retrofit attribute" begin
     portfolio = build_portfolio()
-    requirement = PSIP.get_requirement(EnergyShareRequirements, portfolio, "test_esr")
-    storage = first(get_technologies(StorageTechnology, portfolio))
-    set_requirements!(storage, [requirement])
-
     portfolio2 = validate_serialization(portfolio; time_series_read_only=true)
-    storage2 = get_technology(typeof(storage), portfolio2, PSIP.get_name(storage))
-    @test storage2 !== nothing
-    result = IS.compare_values(storage, storage2; compare_uuids=false)
-    @test result
-
-    requirement2 = PSIP.get_requirement(EnergyShareRequirements, portfolio2, "test_esr")
-    @test has_requirement(storage2, requirement2)
+    source = get_technology(SupplyTechnology{ThermalStandard}, portfolio2, "cheap_thermal")
+    retrofit = only(PSIP.get_supplemental_attributes(RetrofitPotential, source))
+    @test get_retrofit_efficiency(retrofit) == 0.9
+    @test Set(PSIP.get_name.(get_associated_technologies(portfolio2, retrofit))) ==
+          Set(["cheap_thermal", "expensive_thermal"])
 end
 
 @testset "Test serialization of regions" begin

@@ -19,7 +19,7 @@ Technology (abstract) <: IS.InfrastructureSystemsComponent
 │   ├── NodalACTransportTechnology{T <: PSY.Device}
 │   └── NodalHVDCTransportTechnology{T <: PSY.Device}
 └── DemandTechnology (abstract)
-    ├── DemandRequirement{T <: PSY.StaticInjection}
+    ├── ProjectedDemand{T <: PSY.StaticInjection}
     └── DemandSideTechnology{T <: PSY.StaticInjection}
 ```
 

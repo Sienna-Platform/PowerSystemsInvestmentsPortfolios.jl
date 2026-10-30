@@ -32,8 +32,8 @@ get_parameter_type(t::NodalACTransportTechnology{T}) where {T} = T
 get_parameter_type(::Type{NodalACTransportTechnology{T}}) where {T} = T
 get_parameter_type(t::NodalHVDCTransportTechnology{T}) where {T} = T
 get_parameter_type(::Type{NodalHVDCTransportTechnology{T}}) where {T} = T
-get_parameter_type(t::DemandRequirement{T}) where {T} = T
-get_parameter_type(::Type{DemandRequirement{T}}) where {T} = T
+get_parameter_type(t::ProjectedDemand{T}) where {T} = T
+get_parameter_type(::Type{ProjectedDemand{T}}) where {T} = T
 get_parameter_type(t::DemandSideTechnology{T}) where {T} = T
 get_parameter_type(::Type{DemandSideTechnology{T}}) where {T} = T
 
@@ -48,7 +48,8 @@ _existing_capacity(c::PSY.Branch) = PSY.get_rating(c)
 Calculates the amount of existing capacity (in MW) associated with a given Technology in the Portfolio.
 Technology must have an ExistingDevices supplemental attribute attached to it to be non-zero.
 This attribute contains a list of names of existing assets in the base system that correspond to this technology.
-For generators this is the maximum active power, not the MVA rating. For StorageTechnology,
+For generators and the loads of a DemandSideTechnology this is the maximum active power, not
+the MVA rating. For StorageTechnology,
 this function returns existing discharge capacity in MW; see
 [`get_existing_capacity_mwh`](@ref) for existing energy capacity in MWh. For
 TransmissionTechnology it is the thermal rating.
@@ -56,11 +57,11 @@ TransmissionTechnology it is the thermal rating.
 # Arguments
 
   - `p::Portfolio`: The portfolio containing the base system and technology
-  - `t::Union{ResourceTechnology, TransmissionTechnology}`: The technology to get existing capacity
+  - `t::Union{ResourceTechnology, TransmissionTechnology, DemandSideTechnology}`: The technology to get existing capacity
 """
 function get_existing_capacity_mw(
     p::Portfolio,
-    t::Union{ResourceTechnology, TransmissionTechnology},
+    t::Union{ResourceTechnology, TransmissionTechnology, DemandSideTechnology},
 )
     if typeof(t) <: ColocatedSupplyStorageTechnology
         @warn "Co-located technologies are not supported for ExistingDevices, assuming an existing capacity of 0"
@@ -95,6 +96,36 @@ function get_existing_capacity_mw(
         return existing_capacity
     else
         return 0.0
+    end
+end
+
+"""
+Capacity (MW) of the existing units of a source technology that a RetrofitPotential lists as
+eligible for retrofit: their maximum active power, as [`get_existing_capacity_mw`](@ref) counts
+them. Errors if a listed unit isn't in the base system.
+
+# Arguments
+
+  - `p::Portfolio`: The portfolio containing the base system
+  - `source::SupplyTechnology`: The technology whose units are retrofitted
+  - `attribute::RetrofitPotential`: The retrofit, listing the eligible units
+"""
+function get_retrofit_capacity_mw(
+    p::Portfolio,
+    source::SupplyTechnology,
+    attribute::RetrofitPotential,
+)
+    names = get_eligible_generators(attribute)
+    units = PSY.get_component.(get_parameter_type(source), Ref(get_base_system(p)), names)
+    missing_units = names[isnothing.(units)]
+    if !isempty(missing_units)
+        error(
+            "Retrofit units $(join(missing_units, ", ")) of $(get_name(source)) are not " *
+            "in the base system.",
+        )
+    end
+    return with_units_base(get_base_system(p), "NATURAL_UNITS") do
+        sum(_existing_capacity(u) for u in units; init=0.0)
     end
 end
 
@@ -137,48 +168,112 @@ end
 
 """
 Calculates the peak demand (in MW) associated with a given Technology in the Portfolio.
-Technology must have an ExistingDevices supplemental attribute attached to it to be non-zero.
-This attribute contains a list of names of existing assets in the base system that correspond to this technology.
+
+A technology with an ExistingDevices supplemental attribute takes its peak demand from the
+existing loads it lists in the base system: the maximum over time of their summed
+`"max_active_power"` profiles, each scaled by the load's maximum active power. The loads
+do not peak at the same time, so this is at most the sum of their maximum active power. A
+load without a `"max_active_power"` time series counts at its maximum active power in every
+time step. A technology without ExistingDevices returns its `peak_demand_mw`.
 
 # Arguments
 
   - `p::Portfolio`: The portfolio containing the base system and technology
-  - `t::DemandTechnology`: The technology to get peak demand
+  - `t::ProjectedDemand`: The demand to get peak demand
 """
-function get_peak_demand_mw(p::Portfolio, t::DemandTechnology)
-    if !is_new(t)
-        attr = IS.get_supplemental_attributes(ExistingDevices, t)
-        if length(attr) > 1
-            @warn "Multiple ExistingDevices attributes are attached to this technology, assuming a peak demand of 0.0"
-            return 0.0
-        end
-
-        gen_names = get_existing_devices(only(attr))
-        if length(gen_names) == 0
-            @warn "No names listed in ExistingDevices attribute, returning peak demand of 0.0."
-            return 0.0
-        end
-
-        comp = PSY.get_component.(get_parameter_type(t), Ref(p.base_system), gen_names)
-
-        # Check if any of the components returned nothing
-        filtered_comp = filter(x -> !isnothing(x), comp)
-        if length(filtered_comp) != length(gen_names)
-            @error "Not all names in ExistingDevices matched generators in the base system"
-        end
-
-        existing_capacity = with_units_base(get_base_system(p), "NATURAL_UNITS") do
-            sum(PSY.get_max_active_power(t) for t in comp)
-        end
-
-        return existing_capacity
-    else
-        @warn "Demand technology has no existing loads attached, returning a peak demand of 0.0. If this technology is meant to represent existing demand, please attach an ExistingDevices supplemental attribute with the names of the corresponding loads in the base system."
+function get_peak_demand_mw(p::Portfolio, t::ProjectedDemand)
+    is_new(t) && return get_peak_demand_mw(t)
+    attr = IS.get_supplemental_attributes(ExistingDevices, t)
+    if length(attr) > 1
+        @warn "Multiple ExistingDevices attributes are attached to this technology, assuming a peak demand of 0.0"
         return 0.0
+    end
+
+    load_names = get_existing_devices(only(attr))
+    if length(load_names) == 0
+        @warn "No names listed in ExistingDevices attribute, returning peak demand of 0.0."
+        return 0.0
+    end
+
+    base_system = get_base_system(p)
+    loads = PSY.get_component.(get_parameter_type(t), Ref(base_system), load_names)
+    missing_names = load_names[isnothing.(loads)]
+    if !isempty(missing_names)
+        error(
+            "ExistingDevices of $(get_name(t)) lists $(join(missing_names, ", ")), which " *
+            "are not $(get_parameter_type(t)) components of the base system",
+        )
+    end
+
+    return with_units_base(base_system, "NATURAL_UNITS") do
+        _coincident_peak_demand(t, loads)
     end
 end
 
-function scale_conforming_load(t::DemandTechnology, p::Portfolio, year::Int64)
+const LOAD_PROFILE_NAME = "max_active_power"
+
+function _coincident_peak_demand(t::ProjectedDemand, loads::Vector)
+    with_profile = filter(_has_load_profile, loads)
+    without_profile = filter(!_has_load_profile, loads)
+    if !isempty(without_profile)
+        @warn "Existing loads $(join(PSY.get_name.(without_profile), ", ")) of " *
+              "$(get_name(t)) have no \"$(LOAD_PROFILE_NAME)\" time series and are " *
+              "counted at their maximum active power in every time step."
+    end
+    constant = sum(PSY.get_max_active_power, without_profile; init=0.0)
+    isempty(with_profile) && return constant
+
+    profiles = _load_profile.(with_profile)
+    time_stamps = TimeSeries.timestamp(first(profiles))
+    for (load, profile) in zip(with_profile, profiles)
+        if TimeSeries.timestamp(profile) != time_stamps
+            error(
+                "The \"$(LOAD_PROFILE_NAME)\" time series of $(PSY.get_name(load)) does " *
+                "not have the same time stamps as $(PSY.get_name(first(with_profile))), " *
+                "so the peak demand of $(get_name(t)) cannot be computed",
+            )
+        end
+    end
+    total = sum(
+        PSY.get_max_active_power(load) .* TimeSeries.values(profile) for
+        (load, profile) in zip(with_profile, profiles)
+    )
+    return maximum(total) + constant
+end
+
+_has_load_profile(load) =
+    IS.has_time_series(load, PSY.SingleTimeSeries, LOAD_PROFILE_NAME) ||
+    IS.has_time_series(load, PSY.Deterministic, LOAD_PROFILE_NAME)
+
+# Normalized profile of a load: its SingleTimeSeries, or else its forecast windows in order
+function _load_profile(load)
+    if IS.has_time_series(load, PSY.SingleTimeSeries, LOAD_PROFILE_NAME)
+        return IS.get_time_series_array(
+            PSY.SingleTimeSeries,
+            load,
+            LOAD_PROFILE_NAME;
+            ignore_scaling_factors=true,
+        )
+    end
+    forecast = IS.get_time_series(PSY.Deterministic, load, LOAD_PROFILE_NAME)
+    if IS.get_interval(forecast) < IS.get_horizon(forecast)
+        error(
+            "The \"$(LOAD_PROFILE_NAME)\" forecast of $(PSY.get_name(load)) has " *
+            "overlapping windows, so it cannot be used as a load profile",
+        )
+    end
+    windows = [
+        IS.get_time_series_array(
+            load,
+            forecast;
+            start_time=initial_time,
+            ignore_scaling_factors=true,
+        ) for initial_time in IS.get_initial_times(forecast)
+    ]
+    return vcat(windows...)
+end
+
+function scale_conforming_load(t::ProjectedDemand, p::Portfolio, year::Int64)
     if get_conformity(t) == PSY.LoadConformity.NON_CONFORMING
         @warn "Load is not conforming, returning original peak demand without scaling."
         return get_peak_demand_mw(p, t)
@@ -186,7 +281,7 @@ function scale_conforming_load(t::DemandTechnology, p::Portfolio, year::Int64)
         peak_demand = get_peak_demand_mw(p, t)
         growth_rate = get_growth_rate(t)
         if is_new(t)
-            reference_year = get_new_construction_year(t)
+            reference_year = get_construction_year(t)
         else
             reference_year = get_base_year_for_load(t, p)
         end
@@ -252,9 +347,9 @@ get_fixed_cost_discharge(t::StorageTechnology) = PSY.get_proportional_term(
 )
 
 """
-Get the base year for a DemandRequirement, which is the same as the base year for the portfolio it belongs to.
+Get the base year for a ProjectedDemand, which is the same as the base year for the portfolio it belongs to.
 """
-get_base_year_for_load(t::DemandRequirement, p::Portfolio) = get_base_year(p)
+get_base_year_for_load(t::ProjectedDemand, p::Portfolio) = get_base_year(p)
 
 """
 Calculate the weighted average cost of capital (WACC) for a Technology based on its TechnologyFinancialData.

@@ -136,7 +136,7 @@ end
         inverter_efficiency=0.96,
         power_systems_type="RenewableDispatch",
         inverter_supply_ratio=1.0,
-        capital_costs_inverter=LinearCurve(0.0),
+        capital_costs_inverter=CapitalCost(LinearCurve(0.0), 0.0),
         available=true,
         region=RegionTopology[attached_region],
     )
@@ -168,7 +168,7 @@ end
     add_region!(port, attached_region)
     add_region!(port, second_region)
 
-    valid_demand = DemandRequirement{PSY.PowerLoad}(;
+    valid_demand = ProjectedDemand{PSY.PowerLoad}(;
         available=true,
         name="valid_demand",
         id=10,
@@ -179,7 +179,7 @@ end
     add_technology!(port, valid_demand)
     @test get_technology(typeof(valid_demand), port, "valid_demand") === valid_demand
 
-    duplicate_region_demand = DemandRequirement{PSY.PowerLoad}(;
+    duplicate_region_demand = ProjectedDemand{PSY.PowerLoad}(;
         available=true,
         name="duplicate_region_demand",
         id=11,
@@ -196,7 +196,7 @@ end
         get_technology(typeof(duplicate_region_demand), port, "duplicate_region_demand"),
     )
 
-    invalid_demand = DemandRequirement{PSY.PowerLoad}(;
+    invalid_demand = ProjectedDemand{PSY.PowerLoad}(;
         available=true,
         name="invalid_demand",
         id=12,

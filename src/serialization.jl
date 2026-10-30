@@ -182,7 +182,8 @@ function serialize(technology::T) where {T <: _CONTAINS_SHOULD_ENCODE}
         name in fieldnames(typeof(api_struct))
     )
     if technology isa StorageTechnology
-        for field in ("capital_costs_energy", "capital_costs_charge", "capital_costs_discharge")
+        for field in
+            ("capital_costs_energy", "capital_costs_charge", "capital_costs_discharge")
             delete!(data, field)
         end
         data["capital_costs_storage"] = serialize(get_capital_costs_storage(technology))
@@ -500,7 +501,10 @@ function deserialize_attributes(
 
         api_attr = deserialize_openapi_struct(type, attr_dict)
         attr = build_model_struct(
-            api_attr, portfolio, attr_dict["__metadata__"]; serialized=attr_dict,
+            api_attr,
+            portfolio,
+            attr_dict["__metadata__"];
+            serialized=attr_dict,
         )
 
         uuid = IS.get_uuid(attr)
@@ -570,11 +574,12 @@ function deserialize_components!(portfolio::Portfolio, raw)
                 handle_deserialization_special_cases!(component, type)
                 #TODO: See if component cache is needed
                 api_component = deserialize_openapi_struct(type, component)
-                model_component =
-                    build_model_struct(
-                        api_component, portfolio, component["__metadata__"];
-                        serialized=component,
-                    )
+                model_component = build_model_struct(
+                    api_component,
+                    portfolio,
+                    component["__metadata__"];
+                    serialized=component,
+                )
 
                 #TODO: skip_validation currently set to true, review the IS validation
                 IS.add_component!(portfolio.data, model_component; skip_validation=true)
@@ -591,7 +596,9 @@ function deserialize_components!(portfolio::Portfolio, raw)
 end
 
 function build_model_struct(
-    base_struct, portfolio::Portfolio, metadata::Dict{String, Any};
+    base_struct,
+    portfolio::Portfolio,
+    metadata::Dict{String, Any};
     serialized=nothing,
 )
     vals = Dict{Symbol, Any}()
@@ -622,7 +629,8 @@ function build_model_struct(
         serialized !== nothing && haskey(serialized, "outage_factors") ||
             error("SupplyTechnology requires explicit planned/forced outage_factors")
         vals[:outage_factors] = IS.deserialize(
-            fieldtype(struct_type, :outage_factors), serialized["outage_factors"],
+            fieldtype(struct_type, :outage_factors),
+            serialized["outage_factors"],
         )
     end
     # The generated OpenAPI storage schema predates StorageCapitalCost.
