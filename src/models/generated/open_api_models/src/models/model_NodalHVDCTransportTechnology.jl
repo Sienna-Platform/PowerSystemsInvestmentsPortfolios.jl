@@ -18,17 +18,17 @@
         financial_data=nothing,
     )
 
-    - id::Int64
-    - name::String
-    - available::Bool
-    - power_systems_type::String
-    - start_node::Int64
-    - end_node::Int64
+    - id::Int64 : ID for individual component.
+    - name::String : Name of the component.
+    - available::Bool : Indicator of whether the component is connected and online (&#x60;true&#x60;) or disconnected, offline, or down (&#x60;false&#x60;).
+    - power_systems_type::String : Corresponding type to be used in PCM modeling.
+    - start_node::Int64 : Start node for transport technology.
+    - end_node::Int64 : End node for transport technology.
     - capacity_limits::MinMax
     - capital_costs::ValueCurve
     - line_loss::ValueCurve
-    - unit_size::Float64
-    - requirements::Vector{Int64}
+    - unit_size::Float64 : Used for integer investment decisions. Represents the rating capacity of individual new lines. Units: MW.
+    - requirements::Vector{Int64} : List of requirement IDs associated with the component.
     - financial_data::TechnologyFinancialData
 """
 Base.@kwdef mutable struct NodalHVDCTransportTechnology <: OpenAPI.APIModel
@@ -104,10 +104,6 @@ function OpenAPI.check_required(o::NodalHVDCTransportTechnology)
     o.power_systems_type === nothing && (return false)
     o.start_node === nothing && (return false)
     o.end_node === nothing && (return false)
-    o.capacity_limits === nothing && (return false)
-    o.capital_costs === nothing && (return false)
-    o.line_loss === nothing && (return false)
-    o.unit_size === nothing && (return false)
     o.financial_data === nothing && (return false)
     true
 end

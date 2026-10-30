@@ -18,18 +18,18 @@
         requirements=nothing,
     )
 
-    - id::Int64
-    - name::String
-    - available::Bool
-    - power_systems_type::String
-    - conformity::String
-    - growth_rate::Float64
-    - new_demand_mw::Float64
-    - new_construction_year::Int64
-    - region::Vector{Int64}
-    - value_of_lost_load::Float64
+    - id::Int64 : ID for individual component.
+    - name::String : Name of the component.
+    - available::Bool : Indicator of whether the component is connected and online (&#x60;true&#x60;) or disconnected, offline, or down (&#x60;false&#x60;).
+    - power_systems_type::String : Corresponding type to be used in PCM modeling.
+    - conformity::String : Indicator of how the demand requirement should conform to the load profile of existing technologies in the system. Should only be used for new demand requirements.
+    - growth_rate::Float64 : The annual growth rate of the demand requirement, used to scale present-day loads into future projections. Should only be used for conforming loads. Units: 1.
+    - new_demand_mw::Float64 : The value of the peak demand to be used for new DemandRequirements. Units: MW.
+    - new_construction_year::Int64 : The year in which the new demand requirement will be installed. Should only be used for new demand requirements.
+    - region::Vector{Int64} : Location where the component applies. Can be a zone or node.
+    - value_of_lost_load::Float64 : Value of unserved load. Units: USD/MWh.
     - unserved_demand_curve::ValueCurve
-    - requirements::Vector{Int64}
+    - requirements::Vector{Int64} : List of requirement IDs associated with the component.
 """
 Base.@kwdef mutable struct DemandRequirement <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing
@@ -99,9 +99,7 @@ function OpenAPI.check_required(o::DemandRequirement)
     o.id === nothing && (return false)
     o.name === nothing && (return false)
     o.power_systems_type === nothing && (return false)
-    o.region === nothing && (return false)
     o.value_of_lost_load === nothing && (return false)
-    o.unserved_demand_curve === nothing && (return false)
     true
 end
 

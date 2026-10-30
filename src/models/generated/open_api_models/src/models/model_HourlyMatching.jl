@@ -9,9 +9,9 @@
         available=nothing,
     )
 
-    - id::Int64
-    - name::String
-    - available::Bool
+    - id::Int64 : ID for individual component.
+    - name::String : Name of the component.
+    - available::Bool : Indicator of whether the component is connected and online (&#x60;true&#x60;) or disconnected, offline, or down (&#x60;false&#x60;).
 """
 Base.@kwdef mutable struct HourlyMatching <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing

@@ -11,11 +11,11 @@
         base_year=nothing,
     )
 
-    - id::Int64
-    - discount_rate::Float64
-    - inflation_rate::Float64
-    - interest_rate::Float64
-    - base_year::Int64
+    - id::Int64 : ID for individual component.
+    - discount_rate::Float64 : Discount rate for financial calculations. Units: 1.
+    - inflation_rate::Float64 : Inflation rate for cost adjustments. Units: 1.
+    - interest_rate::Float64 : Interest rate for financing calculations. Units: 1.
+    - base_year::Int64 : Base economic year. All costs will be converted to a net present value in this year.
 """
 Base.@kwdef mutable struct PortfolioFinancialData <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing
@@ -49,6 +49,9 @@ OpenAPI.property_type(::Type{PortfolioFinancialData}, name::Symbol) =
 
 function OpenAPI.check_required(o::PortfolioFinancialData)
     o.id === nothing && (return false)
+    o.discount_rate === nothing && (return false)
+    o.inflation_rate === nothing && (return false)
+    o.interest_rate === nothing && (return false)
     o.base_year === nothing && (return false)
     true
 end

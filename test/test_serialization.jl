@@ -12,6 +12,22 @@
     end
 end
 
+@testset "Test serialization of technology requirement references" begin
+    portfolio = build_portfolio()
+    requirement = PSIP.get_requirement(EnergyShareRequirements, portfolio, "test_esr")
+    storage = first(get_technologies(StorageTechnology, portfolio))
+    set_requirements!(storage, [requirement])
+
+    portfolio2 = validate_serialization(portfolio; time_series_read_only=true)
+    storage2 = get_technology(typeof(storage), portfolio2, PSIP.get_name(storage))
+    @test storage2 !== nothing
+    result = IS.compare_values(storage, storage2; compare_uuids=false)
+    @test result
+
+    requirement2 = PSIP.get_requirement(EnergyShareRequirements, portfolio2, "test_esr")
+    @test has_requirement(storage2, requirement2)
+end
+
 @testset "Test serialization of regions" begin
     portfolio = build_portfolio()
     portfolio2 = validate_serialization(portfolio; time_series_read_only=true)
@@ -128,5 +144,40 @@ end
                 @test schedule.results[key][key2] == schedule2.results[key][key2]
             end
         end
+    end
+end
+
+@testset "Test deserialization of component dependency order" begin
+    portfolio = build_portfolio()
+    requirement = PSIP.get_requirement(EnergyShareRequirements, portfolio, "test_esr")
+    storage = first(get_technologies(StorageTechnology, portfolio))
+    set_requirements!(storage, [requirement])
+
+    mktempdir() do test_dir
+        path = joinpath(test_dir, "test_requirement_serialization.json")
+        PSIP.to_json(portfolio, path; force=true)
+        data = open(path, "r") do io
+            JSON3.read(io, Dict)
+        end
+        component_type_order = ["StorageTechnology", "EnergyShareRequirements", "Zone"]
+        type_rank = Dict(type => rank for (rank, type) in enumerate(component_type_order))
+        components = data["data"]["components"]
+        sort!(
+            components;
+            by=x ->
+                get(type_rank, x["__metadata__"]["type"], length(component_type_order) + 1),
+        )
+        open(path, "w") do io
+            JSON3.pretty(io, data)
+        end
+
+        portfolio2 = Portfolio(path)
+        storage2 = get_technology(typeof(storage), portfolio2, PSIP.get_name(storage))
+        @test storage2 !== nothing
+        result = IS.compare_values(storage, storage2; compare_uuids=false)
+        @test result
+
+        requirement2 = PSIP.get_requirement(EnergyShareRequirements, portfolio2, "test_esr")
+        @test has_requirement(storage2, requirement2)
     end
 end

@@ -8,8 +8,8 @@
         buses=nothing,
     )
 
-    - id::Int64
-    - buses::Vector{String}
+    - id::Int64 : ID for individual component.
+    - buses::Vector{String} : List of buses in the base system that are associated with a zone.
 """
 Base.@kwdef mutable struct TopologyMapping <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing
@@ -29,7 +29,6 @@ OpenAPI.property_type(::Type{TopologyMapping}, name::Symbol) =
 
 function OpenAPI.check_required(o::TopologyMapping)
     o.id === nothing && (return false)
-    o.buses === nothing && (return false)
     true
 end
 

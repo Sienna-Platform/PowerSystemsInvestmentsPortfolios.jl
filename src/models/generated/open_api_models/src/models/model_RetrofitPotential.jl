@@ -8,8 +8,8 @@
         eligible_generators=nothing,
     )
 
-    - id::Int64
-    - eligible_generators::Vector{String}
+    - id::Int64 : ID for individual component.
+    - eligible_generators::Vector{String} : Names of individual generation units mapped to this technology that can be retrofitted.
 """
 Base.@kwdef mutable struct RetrofitPotential <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing
@@ -31,7 +31,6 @@ OpenAPI.property_type(::Type{RetrofitPotential}, name::Symbol) =
 
 function OpenAPI.check_required(o::RetrofitPotential)
     o.id === nothing && (return false)
-    o.eligible_generators === nothing && (return false)
     true
 end
 

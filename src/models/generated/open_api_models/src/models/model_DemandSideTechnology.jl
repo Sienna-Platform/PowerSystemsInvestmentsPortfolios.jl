@@ -22,22 +22,22 @@
         requirements=nothing,
     )
 
-    - id::Int64
-    - name::String
-    - available::Bool
-    - region::Vector{Int64}
-    - power_systems_type::String
-    - technology_efficiency::Float64
+    - id::Int64 : ID for individual component.
+    - name::String : Name of the component.
+    - available::Bool : Indicator of whether the component is connected and online (&#x60;true&#x60;) or disconnected, offline, or down (&#x60;false&#x60;).
+    - region::Vector{Int64} : Location where the component applies. Can be a zone or node.
+    - power_systems_type::String : Corresponding type to be used in PCM modeling.
+    - technology_efficiency::Float64 : MWh of electricity per unit of output. Ex: MWh per ton of hydrogen for electrolyzers. Units: 1.
     - price_per_unit::ValueCurve
-    - min_power::Float64
-    - peak_demand_mw::Float64
-    - max_demand_delay::Float64
-    - max_demand_advance::Float64
-    - demand_energy_efficiency::Float64
+    - min_power::Float64 : Minimum operation of demandside unit as a fraction of peak demand. Units: 1.
+    - peak_demand_mw::Float64 : Peak demand value in MW. Units: MW.
+    - max_demand_delay::Float64 : Maximum number of hours that demand can be deferred or delayed (hours). Units: h.
+    - max_demand_advance::Float64 : Maximum number of hours that demand can be scheduled in advance of the original schedule (hours). Units: h.
+    - demand_energy_efficiency::Float64 : Energy efficiency associated with time shifting demand. Represents energy losses due to time shifting. Units: 1.
     - shift_variable_cost::ValueCurve
     - curtailment_cost::ValueCurve
-    - max_demand_curtailment::Float64
-    - requirements::Vector{Int64}
+    - max_demand_curtailment::Float64 : Maximum fraction of demand that can be curtailed. Units: 1.
+    - requirements::Vector{Int64} : List of requirement IDs associated with the component.
 """
 Base.@kwdef mutable struct DemandSideTechnology <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing
@@ -123,15 +123,7 @@ function OpenAPI.check_required(o::DemandSideTechnology)
     o.id === nothing && (return false)
     o.name === nothing && (return false)
     o.available === nothing && (return false)
-    o.region === nothing && (return false)
     o.power_systems_type === nothing && (return false)
-    o.price_per_unit === nothing && (return false)
-    o.max_demand_delay === nothing && (return false)
-    o.max_demand_advance === nothing && (return false)
-    o.demand_energy_efficiency === nothing && (return false)
-    o.shift_variable_cost === nothing && (return false)
-    o.curtailment_cost === nothing && (return false)
-    o.max_demand_curtailment === nothing && (return false)
     true
 end
 

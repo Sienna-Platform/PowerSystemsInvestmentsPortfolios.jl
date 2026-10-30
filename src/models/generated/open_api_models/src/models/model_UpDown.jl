@@ -2,6 +2,7 @@
 # Do not modify this file directly. Modify the OpenAPI specification instead.
 
 @doc raw"""UpDown
+Minimum amount of time a resource has to stay in the committed or shutdown state (hours). Units: h.
 
     UpDown(;
         down=nothing,

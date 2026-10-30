@@ -8,8 +8,8 @@
         name=nothing,
     )
 
-    - id::Int64
-    - name::String
+    - id::Int64 : ID for individual component.
+    - name::String : Name of the component.
 """
 Base.@kwdef mutable struct Zone <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing

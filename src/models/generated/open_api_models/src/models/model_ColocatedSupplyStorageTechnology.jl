@@ -37,20 +37,20 @@
         requirements=nothing,
     )
 
-    - id::Int64
-    - name::String
-    - available::Bool
-    - power_systems_type::String
-    - region::Vector{Int64}
+    - id::Int64 : ID for individual component.
+    - name::String : Name of the component.
+    - available::Bool : Indicator of whether the component is connected and online (&#x60;true&#x60;) or disconnected, offline, or down (&#x60;false&#x60;).
+    - power_systems_type::String : Corresponding type to be used in PCM modeling.
+    - region::Vector{Int64} : Location where the component applies. Can be a zone or node.
     - financial_data::TechnologyFinancialData
     - capital_costs_solar::ValueCurve
     - operation_costs_solar::RenewableGenerationCost
     - capacity_limits_solar::MinMax
-    - lifetime_solar::Int64
+    - lifetime_solar::Int64 : Maximum number of years the solar component can be active once installed. Units: yr.
     - capital_costs_wind::ValueCurve
     - operation_costs_wind::RenewableGenerationCost
     - capacity_limits_wind::MinMax
-    - lifetime_wind::Int64
+    - lifetime_wind::Int64 : Maximum number of years the wind component can be active once installed. Units: yr.
     - capital_costs_energy::ValueCurve
     - capital_costs_power::ValueCurve
     - operation_costs_energy::StorageCost
@@ -59,15 +59,15 @@
     - capacity_energy_limits::MinMax
     - duration_limits::MinMax
     - efficiency_storage::InOut
-    - losses_storage::Float64
-    - lifetime_storage::Int64
-    - max_inverter_capacity::Float64
-    - min_inverter_capacity::Float64
+    - losses_storage::Float64 : Self-discharge of storage (fraction of stored energy per hour). Units: 1.
+    - lifetime_storage::Int64 : Maximum number of years the storage component can be active once installed. Units: yr.
+    - max_inverter_capacity::Float64 : Limit on inverter capacity. Units: MW.
+    - min_inverter_capacity::Float64 : Minimum inverter capacity. Units: MW.
     - capital_costs_inverter::ValueCurve
     - operation_costs_inverter::ProductionVariableCostCurve
-    - inverter_efficiency::Float64
-    - inverter_supply_ratio::Float64
-    - requirements::Vector{Int64}
+    - inverter_efficiency::Float64 : Efficiency of AC to DC conversion of inverter. Units: 1.
+    - inverter_supply_ratio::Float64 : Ratio of generation capacity to grid connection capacity. Units: 1.
+    - requirements::Vector{Int64} : List of requirement IDs associated with the component.
 """
 Base.@kwdef mutable struct ColocatedSupplyStorageTechnology <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing
@@ -214,28 +214,8 @@ OpenAPI.property_type(::Type{ColocatedSupplyStorageTechnology}, name::Symbol) = 
 function OpenAPI.check_required(o::ColocatedSupplyStorageTechnology)
     o.id === nothing && (return false)
     o.name === nothing && (return false)
-    o.available === nothing && (return false)
     o.power_systems_type === nothing && (return false)
-    o.region === nothing && (return false)
     o.financial_data === nothing && (return false)
-    o.capital_costs_solar === nothing && (return false)
-    o.operation_costs_solar === nothing && (return false)
-    o.capacity_limits_solar === nothing && (return false)
-    o.lifetime_solar === nothing && (return false)
-    o.capital_costs_wind === nothing && (return false)
-    o.operation_costs_wind === nothing && (return false)
-    o.capacity_limits_wind === nothing && (return false)
-    o.lifetime_wind === nothing && (return false)
-    o.capital_costs_energy === nothing && (return false)
-    o.capital_costs_power === nothing && (return false)
-    o.operation_costs_energy === nothing && (return false)
-    o.operation_costs_power === nothing && (return false)
-    o.capacity_power_limits === nothing && (return false)
-    o.capacity_energy_limits === nothing && (return false)
-    o.duration_limits === nothing && (return false)
-    o.efficiency_storage === nothing && (return false)
-    o.max_inverter_capacity === nothing && (return false)
-    o.min_inverter_capacity === nothing && (return false)
     o.capital_costs_inverter === nothing && (return false)
     o.operation_costs_inverter === nothing && (return false)
     o.inverter_efficiency === nothing && (return false)

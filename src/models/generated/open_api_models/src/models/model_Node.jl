@@ -9,9 +9,9 @@
         bus_type="PQ",
     )
 
-    - id::Int64
-    - name::String
-    - bus_type::String
+    - id::Int64 : ID for individual component.
+    - name::String : Name of the component.
+    - bus_type::String : AC Bus Type for a node.
 """
 Base.@kwdef mutable struct Node <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing

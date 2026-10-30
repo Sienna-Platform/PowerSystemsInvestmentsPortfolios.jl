@@ -11,11 +11,11 @@
         max_capacity_mw=nothing,
     )
 
-    - id::Int64
-    - name::String
-    - available::Bool
-    - target_year::Int64
-    - max_capacity_mw::Float64
+    - id::Int64 : ID for individual component.
+    - name::String : Name of the component.
+    - available::Bool : Indicator of whether the component is connected and online (&#x60;true&#x60;) or disconnected, offline, or down (&#x60;false&#x60;).
+    - target_year::Int64 : Year in which this requirement is applied.
+    - max_capacity_mw::Float64 : Maximum total capacity across all eligible resources. Units: MW.
 """
 Base.@kwdef mutable struct MaximumCapacityRequirements <: OpenAPI.APIModel
     id::Union{Nothing, Int64} = nothing
@@ -45,8 +45,6 @@ function OpenAPI.check_required(o::MaximumCapacityRequirements)
     o.id === nothing && (return false)
     o.name === nothing && (return false)
     o.available === nothing && (return false)
-    o.target_year === nothing && (return false)
-    o.max_capacity_mw === nothing && (return false)
     true
 end
 

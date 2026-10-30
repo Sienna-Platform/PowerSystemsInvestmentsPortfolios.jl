@@ -1,6 +1,6 @@
 # PowerSystemsInvestmentsPortfolios.jl — Claude Guide
 
-Platform-wide Sienna conventions (performance, type stability, formatter, environments, code style) live in `.claude/Sienna.md` — read it too. This file is repo-specific and does not restate them.
+Platform-wide Sienna conventions (performance, type stability, formatter, environments, code style) live in the `sienna-psy6` skill — invoke it. This file is repo-specific and does not restate them.
 
 ## Purpose & place in the stack
 
@@ -39,15 +39,13 @@ To change a generated component's fields/defaults/docstring: edit the spec and r
 
 ## Main public API
 
-- `Portfolio` (+ empty/kwarg constructors), `get_base_system`, `get_investment_schedule` / `set_investment_schedule!`, `get_financial_data`, financial accessors (`get_base_year`, `get_discount_rate`, `get_inflation_rate`, `get_interest_rate`) and their setters.
-- Component management: `add_technology!` / `add_technologies!`, `add_region!`, `add_requirement!`, `get_technology` / `get_technologies` / `get_available_technologies` / `get_technologies_by_name`, `get_requirements`, `add_time_series!` / `clear_time_series!`, supplemental-attribute accessors.
-- Technology types (concrete, generated): `SupplyTechnology`, `StorageTechnology`, `ColocatedSupplyStorageTechnology`, `DemandSideTechnology`, transport technologies, retirement/retrofit potentials, requirements (`CarbonCaps`, `CarbonTax`, `CapacityReserveMargin`, etc.), `Node`, `Zone`.
-- Serialization: `to_json` / `from_json`, `read_json_data`. Parsing: `database_to_portfolio`. Results: `update_system_with_nodal_results!`. Time: `TimeMapping`.
+The export list in `src/PowerSystemsInvestmentsPortfolios.jl` is authoritative. `Portfolio` is the
+container (the analogue of PSY's `System`); technology types are concrete and **generated**.
 
 ## Conventions & gotchas
 
 - Exports are centralized in the module file; generated accessors/setters are exported from the generated `includes.jl`. Add new exports in the right place per include order.
-- Use `get_*` accessors, not dot access, in user-facing code (see Sienna.md / global prefs). Note the explicit `# TODO` in the module file warning that some IS re-exports may collide with PowerSystems names — be careful adding re-exports.
+- Use `get_*` accessors, not dot access, in user-facing code (see the `sienna-psy6` skill / global prefs). Note the explicit `# TODO` in the module file warning that some IS re-exports may collide with PowerSystems names — be careful adding re-exports.
 - Several existing fields use `Union{Nothing, T}` (e.g. `investment_schedule`, `financial_data`, metadata fields). This predates the prefer-predicate guidance; do not propagate the pattern into new code, and prefer a `Bool` predicate + concrete accessor for new optional values.
 
 ## Cross-package coupling

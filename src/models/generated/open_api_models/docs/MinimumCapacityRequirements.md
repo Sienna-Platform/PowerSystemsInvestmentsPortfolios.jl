@@ -4,12 +4,11 @@
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**`name`** | **`String`** |  | [default to nothing]
-**`id`** | **`Int64`** |  | [optional] [default to nothing]
-**`available`** | **`Bool`** |  | [default to nothing]
-**`target_year`** | **`Int64`** |  | [optional] [default to nothing]
-**`eligible_resources`** | **`Vector{Int64}`** |  | [default to nothing]
-**`min_capacity_mw`** | **`Float64`** |  | [optional] [default to nothing]
+**`id`** | **`Int64`** | ID for individual component. | [default to nothing]
+**`name`** | **`String`** | Name of the component. | [default to nothing]
+**`available`** | **`Bool`** | Indicator of whether the component is connected and online (&#x60;true&#x60;) or disconnected, offline, or down (&#x60;false&#x60;). | [default to nothing]
+**`target_year`** | **`Int64`** | Year in which this requirement is applied. | [optional] [default to nothing]
+**`min_capacity_mw`** | **`Float64`** | Minimum total capacity across all eligible resources. Units: MW. | [optional] [default to nothing]
 
 
 [[Back to Model list]](../README.md#models) [[Back to API list]](../README.md#api-endpoints) [[Back to README]](../README.md)

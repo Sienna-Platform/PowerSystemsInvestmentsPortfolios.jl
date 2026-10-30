@@ -273,17 +273,23 @@ function build_portfolio()
 
     thermal = collect(IS.get_components(ThermalStandard, sys))
 
-    retro1 = AggregateRetrofitPotential(retrofit_id=1, retrofit_fraction=0.5)
+    retro1 = AggregateRetrofitPotential(id=50, retrofit_id=1, retrofit_fraction=0.5)
 
-    retire1 = AggregateRetirementPotential(retirement_potential=100.0)
+    retire1 = AggregateRetirementPotential(id=51, retirement_potential=100.0)
 
-    retro2 = RetrofitPotential(eligible_generators=[PSY.get_name(t) for t in thermal[1:3]])
+    retro2 = RetrofitPotential(
+        id=52,
+        eligible_generators=[PSY.get_name(t) for t in thermal[1:3]],
+    )
 
-    retire2 =
-        RetirementPotential(eligible_generators=[PSY.get_name(t) for t in thermal[4:5]])
+    retire2 = RetirementPotential(
+        id=53,
+        eligible_generators=[PSY.get_name(t) for t in thermal[4:5]],
+    )
 
-    existing = ExistingDevices(existing_devices=[PSY.get_name(t) for t in thermal[1:3]])
-    existing2 = ExistingDevices(existing_devices=["Solitude", "dummy name", "Alta"])
+    existing =
+        ExistingDevices(id=54, existing_devices=[PSY.get_name(t) for t in thermal[1:3]])
+    existing2 = ExistingDevices(id=55, existing_devices=["Solitude", "dummy name", "Alta"])
 
     ########################
     ######## Storage #######
