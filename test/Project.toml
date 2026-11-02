@@ -30,12 +30,12 @@ TimeSeries = "9e3dc215-6440-5c97-bce1-76c03772f85e"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [sources]
-InfrastructureSystems = {rev = "IS4", url = "https://github.com/Sienna-Platform/InfrastructureSystems.jl.git"}
-PowerFlowFileParser = {rev = "psy6", url = "https://github.com/Sienna-Platform/PowerFlowFileParser.jl.git"}
-PowerSystemCaseBuilder = {rev = "psy6", url = "https://github.com/Sienna-Platform/PowerSystemCaseBuilder.jl.git"}
-PowerSystems = {rev = "psy6", url = "https://github.com/Sienna-Platform/PowerSystems.jl.git"}
+InfrastructureSystems = {rev = "jd/sdk-0.3", url = "https://github.com/Sienna-Platform/InfrastructureSystems.jl.git"}
+PowerFlowFileParser = {rev = "jd/sdk-0.3", url = "https://github.com/Sienna-Platform/PowerFlowFileParser.jl.git"}
+PowerSystemCaseBuilder = {rev = "jd/sdk-0.3", url = "https://github.com/Sienna-Platform/PowerSystemCaseBuilder.jl.git"}
+PowerSystems = {rev = "jd/sdk-0.3", url = "https://github.com/Sienna-Platform/PowerSystems.jl.git"}
 PowerSystemsInvestmentsPortfolios = {path = ".."}
-PowerTableDataParser = {rev = "psy6", url = "https://github.com/NLR-Sienna/PowerTableDataParser.jl.git"}
+PowerTableDataParser = {rev = "jd/sdk-0.3", url = "https://github.com/NLR-Sienna/PowerTableDataParser.jl.git"}
 
 [compat]
 julia = "^1.10"

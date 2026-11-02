@@ -140,9 +140,9 @@ convert_value_curve(fd::PC.LinearFunctionData) =
 convert_value_curve(fd::PC.QuadraticFunctionData) =
     QuadraticFunctionData(fd.quadratic_term, fd.proportional_term, fd.constant_term)
 # `PiecewiseLinearData.points` is generated as a bare `Vector` (the element type is dropped
-# from `Vector{XYCoords}`); converting once restores inference for the per-point loop.
+# from `Vector{TwoDimensionalFunctionPoint}`); converting once restores inference for the per-point loop.
 function convert_value_curve(fd::PC.PiecewiseLinearData)
-    points = convert(Vector{PC.XYCoords}, fd.points)
+    points = convert(Vector{PC.TwoDimensionalFunctionPoint}, fd.points)
     return PiecewiseLinearData([(x=p.x, y=p.y) for p in points])
 end
 convert_value_curve(fd::PC.PiecewiseStepData) = PiecewiseStepData(fd.x_coords, fd.y_coords)
@@ -258,7 +258,23 @@ function convert_cost(c::PC.CostCurve)
     )
 end
 
+# The FuelCurve type records no fuel unit, so a document must state its fuel in MMBtu.
+const WIRE_FUEL_UNITS = "MMBTU"
+
+function _require_wire_fuel_units(f::PC.FuelCurve)
+    units = f.fuel_units.value
+    if units != WIRE_FUEL_UNITS
+        throw(
+            ArgumentError(
+                "convert_cost: FuelCurve.fuel_units is $units; only $WIRE_FUEL_UNITS is supported",
+            ),
+        )
+    end
+    return
+end
+
 function convert_cost(f::PC.FuelCurve)
+    _require_wire_fuel_units(f)
     return FuelCurve(;
         value_curve=convert_value_curve(_require(f.value_curve, "FuelCurve.value_curve")),
         power_units=_power_units_marker(f.power_units),
