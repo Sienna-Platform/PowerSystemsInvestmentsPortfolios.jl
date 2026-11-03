@@ -1041,7 +1041,6 @@ function add_demand_requirements!(
                 ).entity_type,
             ),
         )
-        component_attr = get(attributes, rec.id, Dict{String, Any}())
 
         if get_aggregation(portfolio) == PSY.ACBus
             area = rec.balancing_topology
@@ -1059,7 +1058,6 @@ function add_demand_requirements!(
         demand = ProjectedDemand{component_type}(;
             name=rec.name,
             id=rec.id,
-            peak_demand_mw=component_attr["active_power"], #TODO: Change to "max_active_power" later when DB is fixed
             region=collect(
                 IS.get_components(x -> get_id(x) == area, RegionTopology, portfolio.data),
             ),
@@ -1067,6 +1065,8 @@ function add_demand_requirements!(
             power_systems_type=string(nameof(component_type)),
         )
         add_technology!(portfolio, demand)
+        existing = ExistingDevices(id=rec.id, existing_devices=[rec.name])
+        add_supplemental_attribute!(portfolio, demand, existing)
     end
 end
 

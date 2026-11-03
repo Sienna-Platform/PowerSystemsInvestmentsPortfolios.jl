@@ -34,6 +34,16 @@
         @test existing == length(collect(get_components(g, base_system)))
     end
 
+    demands = collect(get_technologies(ProjectedDemand, portfolio))
+    @test count(t -> !is_new(t), demands) ==
+          length(collect(get_components(PowerLoad, base_system)))
+    demand = get_technology(ProjectedDemand{PowerLoad}, portfolio, "loadAbel")
+    existing_devices = only(PSIP.get_supplemental_attributes(ExistingDevices, demand))
+    @test get_existing_devices(existing_devices) == ["loadAbel"]
+    @test get_peak_demand_mw(portfolio, demand) ≈ 108.0
+    zero_demand = get_technology(ProjectedDemand{PowerLoad}, portfolio, "loadCurie")
+    @test get_peak_demand_mw(portfolio, zero_demand) == 0.0
+
     nuclear = get_component(ThermalStandard, base_system, "121_NUCLEAR_1")
     @test PSY.get_fuel(nuclear) == ThermalFuels.NUCLEAR
     nuclear_technology =
