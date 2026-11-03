@@ -536,6 +536,20 @@ _roundtrip_time_series(portfolio) = sort!(
     by=string,
 )
 
+# A document stores installations as an object, so the key order of a NamedTuple does not
+# survive a round trip. Compare them as Dicts.
+_roundtrip_installations(x::NamedTuple) = Dict(pairs(x))
+_roundtrip_installations(x) = x
+
+function _roundtrip_schedule(portfolio)
+    results = PSIP.get_investment_schedule(portfolio).results
+    return Dict(
+        period =>
+            Dict(key => _roundtrip_installations(value) for (key, value) in capacities) for
+        (period, capacities) in results
+    )
+end
+
 function _check_wide_roundtrip(before, after, form)
     for (T, key) in vcat(PSIP.DOCUMENT_PLAN, PSIP.SUPPLEMENTAL_ATTRIBUTE_PLAN)
         payloads = _roundtrip_payloads(before, T)
@@ -558,8 +572,7 @@ function _check_wide_roundtrip(before, after, form)
     @test _roundtrip_live_ids(after) == _roundtrip_live_ids(before)
     @test _roundtrip_memberships(after) == _roundtrip_memberships(before)
     @test _roundtrip_time_series(after) == _roundtrip_time_series(before)
-    @test PSIP.get_investment_schedule(after).results ==
-          PSIP.get_investment_schedule(before).results
+    @test _roundtrip_schedule(after) == _roundtrip_schedule(before)
     return
 end
 
