@@ -13,11 +13,12 @@ PowerTableDataParser = "2b750c0e-0bff-11f1-9200-1befd75df6be"
 TimeSeries = "9e3dc215-6440-5c97-bce1-76c03772f85e"
 
 [sources]
-InfrastructureSystems = {url = "https://github.com/Sienna-Platform/InfrastructureSystems.jl.git", rev = "IS4"}
-PowerFlowFileParser = {url = "https://github.com/Sienna-Platform/PowerFlowFileParser.jl.git", rev = "psy6"}
-PowerSystemCaseBuilder = {url = "https://github.com/Sienna-Platform/PowerSystemCaseBuilder.jl.git", rev = "psy6"}
-PowerSystems = {url = "https://github.com/Sienna-Platform/PowerSystems.jl.git", rev = "psy6"}
-PowerTableDataParser = {url = "https://github.com/NLR-Sienna/PowerTableDataParser.jl.git", rev = "psy6"}
+InfrastructureSystems = {rev = "IS4", url = "https://github.com/Sienna-Platform/InfrastructureSystems.jl.git"}
+PowerFlowFileParser = {rev = "psy6", url = "https://github.com/Sienna-Platform/PowerFlowFileParser.jl.git"}
+PowerSystemCaseBuilder = {rev = "psy6", url = "https://github.com/Sienna-Platform/PowerSystemCaseBuilder.jl.git"}
+PowerSystems = {rev = "psy6", url = "https://github.com/Sienna-Platform/PowerSystems.jl.git"}
+PowerSystemsInvestmentsPortfolios = {path = ".."}
+PowerTableDataParser = {rev = "psy6", url = "https://github.com/NLR-Sienna/PowerTableDataParser.jl.git"}
 
 [compat]
 DataStructures = "0.18, 0.19"

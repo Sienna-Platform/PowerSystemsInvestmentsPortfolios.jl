@@ -411,7 +411,7 @@ end
     @test ncc isa CostCurve
     @test ncc.value_curve.function_data.proportional_term ≈ 0.5
 
-    fc = FuelCurve(io, 100.0, LinearCurve(1.0), LinearCurve(1.0))
+    fc = FuelCurve(io, MMBtu, 100.0, LinearCurve(1.0), LinearCurve(1.0))
     nfc = PSIP._natural_unit_conversions(
         t,
         fc,
@@ -440,7 +440,7 @@ end
     @test ngc.fixed ≈ 1.0e5
 
     io = InputOutputCurve(LinearFunctionData(0.5, 10.0), 1.0)
-    fc = FuelCurve(io, 100.0, LinearCurve(1.0), LinearCurve(1.0))
+    fc = FuelCurve(io, MMBtu, 100.0, LinearCurve(1.0), LinearCurve(1.0))
     gfc = ThermalGenerationCost(fc, 100.0, (hot=100.0, warm=50.0, cold=10.0), 0.0)
     ngfc = PSIP._natural_unit_conversions(
         t,

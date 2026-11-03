@@ -213,6 +213,7 @@ function _natural_unit_conversions(
             from_fuel_consumption,
             to_fuel_consumption,
         ),
+        to.fuel_unit,
         isa(v.fuel_cost, Float64) ?
         IS._strip_units(
             _natural_unit_conversions(base, v.fuel_cost, from_fuel_cost, to_fuel_cost),

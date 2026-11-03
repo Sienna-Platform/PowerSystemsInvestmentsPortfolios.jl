@@ -285,7 +285,7 @@ function _build_wide_roundtrip_portfolio()
         cofire_level_limits=Dict(ThermalFuels.COAL => (min=0.0, max=0.5)),
         capital_costs=PSIP.CapitalCost(LinearCurve(1200.0), 35.0),
         operation_costs=ThermalGenerationCost(;
-            variable_operation_cost=FuelCurve(LinearCurve(9.5), 3.25),
+            variable_operation_cost=FuelCurve(LinearCurve(9.5), MMBtu, 3.25),
             fixed=4.0,
             start_up=(hot=1.0, warm=2.0, cold=3.0),
             shut_down=1.5,
@@ -536,6 +536,20 @@ _roundtrip_time_series(portfolio) = sort!(
     by=string,
 )
 
+# A document stores installations as an object, so the key order of a NamedTuple does not
+# survive a round trip. Compare them as Dicts.
+_roundtrip_installations(x::NamedTuple) = Dict(pairs(x))
+_roundtrip_installations(x) = x
+
+function _roundtrip_schedule(portfolio)
+    results = PSIP.get_investment_schedule(portfolio).results
+    return Dict(
+        period =>
+            Dict(key => _roundtrip_installations(value) for (key, value) in capacities) for
+        (period, capacities) in results
+    )
+end
+
 function _check_wide_roundtrip(before, after, form)
     for (T, key) in vcat(PSIP.DOCUMENT_PLAN, PSIP.SUPPLEMENTAL_ATTRIBUTE_PLAN)
         payloads = _roundtrip_payloads(before, T)
@@ -558,8 +572,7 @@ function _check_wide_roundtrip(before, after, form)
     @test _roundtrip_live_ids(after) == _roundtrip_live_ids(before)
     @test _roundtrip_memberships(after) == _roundtrip_memberships(before)
     @test _roundtrip_time_series(after) == _roundtrip_time_series(before)
-    @test PSIP.get_investment_schedule(after).results ==
-          PSIP.get_investment_schedule(before).results
+    @test _roundtrip_schedule(after) == _roundtrip_schedule(before)
     return
 end
 

@@ -392,6 +392,7 @@ function parse_thermal_cost(ops_cost::Dict{String, Any})
         shut_down=ops_cost["shut_down"],
         fixed=ops_cost["fixed"],
         variable_operation_cost=FuelCurve(;
+            fuel_units=MMBtu,
             fuel_cost=variable_dict["fuel_cost"],
             value_curve=IncrementalCurve(
                 PiecewiseStepData(
@@ -1493,6 +1494,7 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
                 opex = ThermalGenerationCost(
                     variable_operation_cost=FuelCurve(
                         heat_rate,
+                        MMBtu,
                         cost_data["fuel_price"],
                         LinearCurve(0.0),
                         LinearCurve(cost_data["vom"]),
@@ -1534,6 +1536,7 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
                     ops,
                     FuelCurve(
                         get_value_curve(get_variable_operation_cost(ops)),
+                        MMBtu,
                         get_fuel_cost(tech, units),
                         IS.get_startup_fuel_offtake(get_variable_operation_cost(ops)),
                         vom,

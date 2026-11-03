@@ -111,7 +111,7 @@ end
 
 function convert_cost_to_openapi(fd::PiecewiseLinearData)
     return IC.PiecewiseLinearData(;
-        points=[IC.XYCoords(; x=p.x, y=p.y) for p in get_points(fd)],
+        points=[IC.TwoDimensionalFunctionPoint(; x=p.x, y=p.y) for p in get_points(fd)],
     )
 end
 
@@ -240,6 +240,7 @@ function convert_cost_to_openapi(cost::FuelCurve)
         power_units=_power_units_to_string(get_power_units(cost), cost),
         value_curve=PC.ValueCurve(convert_cost_to_openapi(get_value_curve(cost))),
         fuel_cost=IS.get_fuel_cost(cost),
+        fuel_units=PC.FuelUnit(WIRE_FUEL_UNITS),
         fuel_cost_time_series=_fuel_cost_time_series_id(IS.get_fuel_cost_time_series(cost)),
         vom_cost=convert_cost_to_openapi(get_vom_cost(cost)),
     )

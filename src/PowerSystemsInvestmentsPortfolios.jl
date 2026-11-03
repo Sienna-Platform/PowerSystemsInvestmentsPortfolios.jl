@@ -61,7 +61,7 @@ const PTS = InfrastructureTimeSeriesOpenAPIModels
 import StringEncodings
 import Tables
 import Unitful
-using Unitful: @dimension, @u_str, @refunit, @unit, Quantity, Units, uconvert, ustrip, unit
+using Unitful: @u_str, @unit, Quantity, Units, uconvert, ustrip, unit
 using DocStringExtensions
 
 export Portfolio
