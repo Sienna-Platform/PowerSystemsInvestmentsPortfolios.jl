@@ -285,7 +285,7 @@ function _build_wide_roundtrip_portfolio()
         cofire_level_limits=Dict(ThermalFuels.COAL => (min=0.0, max=0.5)),
         capital_costs=PSIP.CapitalCost(LinearCurve(1200.0), 35.0),
         operation_costs=ThermalGenerationCost(;
-            variable_operation_cost=FuelCurve(LinearCurve(9.5), 3.25),
+            variable_operation_cost=FuelCurve(LinearCurve(9.5), MMBtu, 3.25),
             fixed=4.0,
             start_up=(hot=1.0, warm=2.0, cold=3.0),
             shut_down=1.5,

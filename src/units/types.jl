@@ -1,9 +1,7 @@
-# Monetary Units
-@dimension Money "Money" Currency
-@refunit USD "USD" Currency Money false
+# USD and MMBtu come from InfrastructureSystems, which defines them for CostCurve and FuelCurve.
+using InfrastructureSystems.CommodityUnits: USD, MMBtu
 
-# Fuel and emissions units
-@unit MMBtu "MMBtu" MMBtu 1e6u"btu" false
+# Emissions units
 @unit tonne "tonne" tonne 1e3u"kg" false
 @unit Mt "Mt" Mt 1e6 * tonne false
 

@@ -129,7 +129,7 @@ function build_portfolio()
         fuel=[ThermalFuels.COAL],
         power_systems_type="ThermalStandard",
         operation_costs=ThermalGenerationCost(
-            variable_operation_cost=FuelCurve(LinearCurve(cheap_th_var_cost), 1.12),
+            variable_operation_cost=FuelCurve(LinearCurve(cheap_th_var_cost), MMBtu, 1.12),
             fixed=0.0,
             start_up=0.0,
             shut_down=0.0,

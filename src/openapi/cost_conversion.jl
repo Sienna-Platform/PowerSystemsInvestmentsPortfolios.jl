@@ -258,7 +258,7 @@ function convert_cost(c::PC.CostCurve)
     )
 end
 
-# The FuelCurve type records no fuel unit, so a document must state its fuel in MMBtu.
+# convert_cost builds the FuelCurve in MMBtu, so a document must state its fuel in MMBtu.
 const WIRE_FUEL_UNITS = "MMBTU"
 
 function _require_wire_fuel_units(f::PC.FuelCurve)
@@ -278,6 +278,7 @@ function convert_cost(f::PC.FuelCurve)
     return FuelCurve(;
         value_curve=convert_value_curve(_require(f.value_curve, "FuelCurve.value_curve")),
         power_units=_power_units_marker(f.power_units),
+        fuel_units=MMBtu,
         fuel_cost=convert_cost(_require(f.fuel_cost, "FuelCurve.fuel_cost")),
         startup_fuel_offtake=_startup_fuel_offtake(f.startup_fuel_offtake),
         vom_cost=_vom_cost(f.vom_cost),
