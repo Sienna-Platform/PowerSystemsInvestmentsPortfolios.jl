@@ -311,30 +311,32 @@ function build_portfolio()
     ######## Retirement, Retrofits, and Existing Capacity #######
     #############################################################
 
-    thermal = collect(get_components(ThermalStandard, sys))
+    # Named explicitly: the container iteration order is not stable across Julia versions.
+    existing_thermal = ["Park City", "Solitude", "Alta"]
+    candidate_thermal = ["Sundance", "Brighton"]
 
     retro1 = RetrofitPotential(
-        eligible_generators=[PSY.get_name(t) for t in thermal[4:5]],
+        eligible_generators=candidate_thermal,
         retrofit_fraction=0.5,
         retrofit_cost=LinearCurve(0.0),
     )
 
     retire1 = RetirementPotential(
-        eligible_generators=[PSY.get_name(t) for t in thermal[4:5]],
+        eligible_generators=candidate_thermal,
         retirement_cost=LinearCurve(0.0),
     )
 
     retro2 = RetrofitPotential(
-        eligible_generators=[PSY.get_name(t) for t in thermal[1:3]],
+        eligible_generators=existing_thermal,
         retrofit_cost=LinearCurve(0.0),
     )
 
     retire2 = RetirementPotential(
-        eligible_generators=[PSY.get_name(t) for t in thermal[4:5]],
+        eligible_generators=candidate_thermal,
         retirement_cost=LinearCurve(0.0),
     )
 
-    existing = ExistingDevices(existing_devices=[PSY.get_name(t) for t in thermal[1:3]])
+    existing = ExistingDevices(existing_devices=existing_thermal)
     existing2 = ExistingDevices(existing_devices=["Solitude", "dummy name", "Alta"])
 
     ########################
