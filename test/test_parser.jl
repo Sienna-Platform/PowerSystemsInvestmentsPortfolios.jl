@@ -34,6 +34,22 @@
         @test existing == length(collect(get_components(g, base_system)))
     end
 
+    nuclear = get_component(ThermalStandard, base_system, "121_NUCLEAR_1")
+    @test PSY.get_fuel(nuclear) == ThermalFuels.NUCLEAR
+    nuclear_technology =
+        get_technology(SupplyTechnology{ThermalStandard}, portfolio, "121_NUCLEAR_1")
+    @test PSIP.get_fuel(nuclear_technology) == [ThermalFuels.NUCLEAR]
+    @test get_fixed(get_operation_costs(nuclear_technology)) == 175000.0
+
+    storage = [t for t in get_technologies(StorageTechnology, portfolio) if is_new(t)]
+    @test length(storage) == 3
+    battery = first(storage)
+    costs = get_capital_costs_storage(battery)
+    @test PSIP.get_discharge_capital_cost(costs) == LinearCurve(311360.0)
+    @test PSIP.get_energy_capital_cost(costs) == LinearCurve(309930.0)
+    @test get_fixed(get_operation_costs(battery)) == 7780.0
+    @test has_time_series(battery, SingleTimeSeries, "fom_energy")
+
     # Check time series attachments in base system
     db = SQLite.DB(db_path)
     ts_data = DataFrame(

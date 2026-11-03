@@ -50,6 +50,7 @@ const FUEL_MAPPING = Dict(
     "NG" => ThermalFuels.NATURAL_GAS,
     "NATURAL_GAS" => ThermalFuels.NATURAL_GAS,
     "Nuclear" => ThermalFuels.NUCLEAR,
+    "NUCLEAR" => ThermalFuels.NUCLEAR,
     "Coal" => ThermalFuels.COAL,
     "COAL" => ThermalFuels.COAL,
     "Oil" => ThermalFuels.DISTILLATE_FUEL_OIL,
@@ -1379,6 +1380,42 @@ function add_demand_technologies!(
     stmts::Dict,
 ) end
 
+function deserialize_investment_timeseries!(
+    portfolio::Portfolio,
+    tech::Technology,
+    stmts::Dict,
+    ts_type::String,
+)
+    cost_data = Dict()
+    for ts_association in
+        IS.execute(stmts[:investment_timeseries], [ts_type], IS.LOG_GROUP_SERIALIZATION)
+        timestamps = [
+            Dates.DateTime(row.idx, 1, 1) for row in IS.execute(
+                stmts[:ts_data],
+                [ts_association.time_series_uuid],
+                IS.LOG_GROUP_SERIALIZATION,
+            )
+        ]
+        values = [
+            row.value for row in IS.execute(
+                stmts[:ts_data],
+                [ts_association.time_series_uuid],
+                IS.LOG_GROUP_SERIALIZATION,
+            )
+        ]
+        ts_data = TimeSeries.TimeArray(timestamps, values)
+        cost_year = get_base_year(portfolio)
+        cost_data[ts_association.name] =
+            first(TimeSeries.values(ts_data[Dates.DateTime(cost_year, 1, 1)]))
+
+        if is_new(tech)
+            ts = SingleTimeSeries(ts_association.name, ts_data; resolution=Dates.Year(1))
+            add_time_series!(portfolio, tech, ts)
+        end
+    end
+    return cost_data
+end
+
 function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
     supply_technologies = get_technologies(SupplyTechnology, portfolio)
     for tech in supply_technologies
@@ -1387,39 +1424,7 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
         ts_type = get(PRIME_MOVER_TO_TIMESERIES, [prime_mover, fuel], nothing)
         cost_data = Dict()
         if !isnothing(ts_type)
-            for ts_association in IS.execute(
-                stmts[:investment_timeseries],
-                [ts_type],
-                IS.LOG_GROUP_SERIALIZATION,
-            )
-                timestamps = [
-                    Dates.DateTime(row.idx, 1, 1) for row in IS.execute(
-                        stmts[:ts_data],
-                        [ts_association.time_series_uuid],
-                        IS.LOG_GROUP_SERIALIZATION,
-                    )
-                ]
-                values = [
-                    row.value for row in IS.execute(
-                        stmts[:ts_data],
-                        [ts_association.time_series_uuid],
-                        IS.LOG_GROUP_SERIALIZATION,
-                    )
-                ]
-                ts_data = TimeSeries.TimeArray(timestamps, values)
-                cost_year = get_base_year(portfolio)
-                cost_data[ts_association.name] =
-                    first(TimeSeries.values(ts_data[Dates.DateTime(cost_year, 1, 1)]))
-
-                if is_new(tech)
-                    ts = SingleTimeSeries(
-                        ts_association.name,
-                        ts_data;
-                        resolution=Dates.Year(1),
-                    )
-                    add_time_series!(portfolio, tech, ts)
-                end
-            end
+            cost_data = deserialize_investment_timeseries!(portfolio, tech, stmts, ts_type)
         end
         if is_new(tech)
             if haskey(cost_data, "fuel_price")
@@ -1512,6 +1517,31 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
             ts = SingleTimeSeries("capacity_factor", ts_array)
             add_time_series!(portfolio, tech, ts)
         end
+    end
+
+    for tech in get_technologies(StorageTechnology, portfolio)
+        if !is_new(tech)
+            continue
+        end
+        ts_type = get(
+            PRIME_MOVER_TO_TIMESERIES,
+            [get_prime_mover_type(tech), ThermalFuels.OTHER],
+            nothing,
+        )
+        if isnothing(ts_type)
+            continue
+        end
+        cost_data = deserialize_investment_timeseries!(portfolio, tech, stmts, ts_type)
+        capital_costs = get_capital_costs_storage(tech)
+        set_discharge_capital_cost!(
+            capital_costs,
+            LinearCurve(cost_data["capcost"] * 1000.0),
+        )
+        set_energy_capital_cost!(
+            capital_costs,
+            LinearCurve(cost_data["capcost_energy"] * 1000.0),
+        )
+        set_fixed!(get_operation_costs(tech), cost_data["fom"] * 1000.0)
     end
 
     #Duplicate hourly demand profile on the portfolio level
