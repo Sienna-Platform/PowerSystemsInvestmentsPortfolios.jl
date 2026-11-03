@@ -490,7 +490,7 @@ function add_aggregate_lines!(
                 ),
             )[1],
             capacity_limits=(min=0.0, max=max(rec.max_flow_from, rec.max_flow_to)),
-            capital_costs=LinearCurve(1e5),
+            capital_costs=CapitalCost(LinearCurve(1e5), 0.0),
         )
         add_technology!(portfolio, t)
     end
@@ -532,7 +532,7 @@ function add_nodal_lines!(
             end_node=get_region(Node, portfolio, balancing_topology_to),
             reactance=component_attr["reactance"],
             resistance=component_attr["resistance"],
-            capital_costs=LinearCurve(1e5),
+            capital_costs=CapitalCost(LinearCurve(1e5), 0.0),
             unit_size=component_attr["unit_size"],
         )
         add_technology!(portfolio, transport)
@@ -571,7 +571,12 @@ function add_technologies!(
             technology = StorageTechnology{parametric}(;
                 name=rec.prime_mover * string(rec.id),
                 id=rec.id,
-                capital_costs_discharge=LinearCurve(0.0),
+                capital_costs_storage=StorageCapitalCost(
+                    LinearCurve(0.0),
+                    LinearCurve(0.0),
+                    LinearCurve(0.0),
+                    0.0,
+                ),
                 prime_mover_type=get(PRIME_MOVER_MAPPING, rec.prime_mover, PrimeMovers.OT),
                 storage_tech=get(STORAGE_MAPPING, rec.fuel, StorageTech.OTHER_THERM),
                 region=regions,
@@ -587,7 +592,7 @@ function add_technologies!(
             technology = SupplyTechnology{parametric}(;
                 name=rec.prime_mover * string(rec.id),
                 id=rec.id,
-                capital_costs=LinearCurve(0.0),
+                capital_costs=CapitalCost(LinearCurve(0.0), 0.0),
                 prime_mover_type=get(PRIME_MOVER_MAPPING, rec.prime_mover, PrimeMovers.OT),
                 fuel=[get(FUEL_MAPPING, rec.fuel, ThermalFuels.OTHER)],
                 co2=Dict(get(FUEL_MAPPING, rec.fuel, ThermalFuels.OTHER) => 0.0),
@@ -875,7 +880,7 @@ function add_generation_units!(
             technology = SupplyTechnology{component_type}(;
                 name=rec.name,
                 id=rec.id,
-                capital_costs=LinearCurve(0.0),
+                capital_costs=CapitalCost(LinearCurve(0.0), 0.0),
                 prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers, rec.prime_mover),
                 fuel=[fuel],
                 region=regions,
@@ -999,8 +1004,12 @@ function add_storage_units!(
         storage = StorageTechnology{component_type}(;
             name=rec.name,
             id=rec.id,
-            capital_costs_discharge=LinearCurve(0.0),
-            capital_costs_energy=LinearCurve(0.0),
+            capital_costs_storage=StorageCapitalCost(
+                LinearCurve(0.0),
+                LinearCurve(0.0),
+                LinearCurve(0.0),
+                0.0,
+            ),
             prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers, rec.prime_mover),
             storage_tech=PSY.StorageTech(component_attr["storage_technology_type"]),
             region=regions,
@@ -1049,7 +1058,7 @@ function add_demand_requirements!(
         demand = ProjectedDemand{component_type}(;
             name=rec.name,
             id=rec.id,
-            new_demand_mw=component_attr["active_power"], #TODO: Change to "max_active_power" later when DB is fixed
+            peak_demand_mw=component_attr["active_power"], #TODO: Change to "max_active_power" later when DB is fixed
             region=collect(
                 IS.get_components(x -> get_id(x) == area, RegionTopology, portfolio.data),
             ),
@@ -1307,7 +1316,7 @@ function add_system_lines!(
                         balancing_topology_from,
                     ),
                 ),
-                capital_costs=LinearCurve(1e5),
+                capital_costs=CapitalCost(LinearCurve(1e5), 0.0),
             )
             add_technology!(portfolio, transport)
             existing = ExistingDevices(; id=rec.id, existing_devices=[rec.name])
@@ -1334,7 +1343,7 @@ function add_system_lines!(
                         balancing_topology_from,
                     ),
                 ),
-                capital_costs=LinearCurve(1e5),
+                capital_costs=CapitalCost(LinearCurve(1e5), 0.0),
             )
             add_technology!(portfolio, new_transport)
         end
@@ -1352,7 +1361,7 @@ function add_system_lines!(
                 financial_data=DEFAULT_FINANCIAL_DATA,
                 start_region=get_region(Zone, portfolio, area_list[1]),
                 end_region=get_region(Zone, portfolio, area_list[2]),
-                capital_costs=LinearCurve(1e5),
+                capital_costs=CapitalCost(LinearCurve(1e5), 0.0),
             )
             id += 1
             add_technology!(portfolio, transport)
@@ -1432,14 +1441,14 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
                     shut_down=0.0,
                 )
                 set_operation_costs!(tech, opex)
-                set_capital_costs!(tech, capex)
+                set_capital_cost!(get_capital_costs(tech), capex)
             else
                 capex = LinearCurve(cost_data["capcost"] * 1000.0)
                 opex = RenewableGenerationCost(
                     variable=CostCurve(LinearCurve(0.0), LinearCurve(cost_data["vom"])),
                 )
                 set_operation_costs!(tech, opex)
-                set_capital_costs!(tech, capex)
+                set_capital_cost!(get_capital_costs(tech), capex)
             end
         elseif !is_new(tech)
             ops = get_operation_costs(tech)
