@@ -1018,6 +1018,7 @@ function add_storage_units!(
             available=true,
             power_systems_type=string(nameof(component_type)),
             operation_costs=ops_cost,
+            efficiency=PSY.get_efficiency(storage_unit),
             capacity_limits_discharge=(min=0, max=rec.rating),
             capacity_limits_energy=(min=0, max=component_attr["storage_capacity"]),
         )
