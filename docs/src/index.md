@@ -9,16 +9,18 @@ CurrentModule = PowerSystemsInvestmentsPortfolios
 `PowerSystemsInvestmentsPortfolios.jl` (PSIP) is part of the National Laboratory of the
 Rockies' [Sienna ecosystem](https://www.nlr.gov/analysis/sienna.html), an open source
 framework for power systems analysis. The Sienna ecosystem can be
-[found on GitHub](https://github.com/Sienna-Platform/Sienna). It contains three
-applications:
+[found on GitHub](https://github.com/Sienna-Platform). It contains four applications:
 
-  - [Sienna\\Data](https://github.com/Sienna-Platform/Sienna?tab=readme-ov-file#siennadata)
-    enables efficient data input, analysis, and transformation
-  - [Sienna\\Ops](https://github.com/Sienna-Platform/Sienna?tab=readme-ov-file#siennaops)
-    enables system scheduling simulations by formulating and solving optimization problems
-  - [Sienna\\Dyn](https://github.com/Sienna-Platform/Sienna?tab=readme-ov-file#siennadyn)
-    enables system transient analysis including small signal stability and full dynamic
+  - [Sienna\Data](https://sienna-platform.github.io/Sienna/pages/applications/sienna_data.html) enables
+    efficient data input, analysis, and transformation
+  - [Sienna\Ops](https://sienna-platform.github.io/Sienna/pages/applications/sienna_ops.html) enables
+    system scheduling simulations by formulating and solving optimization problems
+  - [Sienna\Dyn](https://sienna-platform.github.io/Sienna/pages/applications/sienna_dyn.html) enables
+    system transient analysis including small signal stability and full system dynamic
     simulations
+  - [Sienna\Net](https://sienna-platform.github.io/Sienna/pages/applications/sienna_network.html)
+    enables power flow analysis, reactive power planning, and transmission network reductions for
+    scalable analysis.
 
 `PowerSystemsInvestmentsPortfolios.jl` lives in Sienna\\Data. It is the portfolio data
 model for capacity expansion modeling — the structured container that your optimization
