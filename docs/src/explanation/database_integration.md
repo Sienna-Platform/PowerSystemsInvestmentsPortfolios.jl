@@ -45,10 +45,9 @@ import PowerSystems as PSY
 
 portfolio = PSIP.DBParser.database_to_portfolio(
     "path/to/sienna_grid.db",   # path to the SiennaGridDB SQLite file
-    0.07,                        # discount_rate
-    0.025,                       # inflation_rate
-    0.05,                        # interest_rate
-    2030;                        # base_year
+    0.07,                        # discount_rate, applied to every technology
+    0.025,                       # inflation_rate, applied to every technology
+    0.05;                        # interest_rate, applied to every technology
     aggregation=PSY.ACBus,     # optional: spatial resolution (default PSY.Area)
     system=base_sys,           # optional: PSY.System with existing grid data
 )

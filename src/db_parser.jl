@@ -84,6 +84,7 @@ import ..PowerSystemsInvestmentsPortfolios:
     RegionTopology,
     ExistingDevices,
     TechnologyFinancialData,
+    set_base_system!,
     SupplyTechnology,
     StorageTechnology,
     DemandRequirement,
@@ -104,7 +105,8 @@ import ..PowerSystemsInvestmentsPortfolios:
     get_fixed_cost,
     get_variable_cost,
     get_operation_costs,
-    get_base_year,
+    get_technology_base_year,
+    get_financial_data,
     get_existing_capacity_mw,
     get_existing_devices,
     get_supplemental_attributes,
@@ -243,8 +245,9 @@ const PRIME_MOVER_TO_TIMESERIES = Dict(
     [PrimeMovers.CC, ThermalFuels.OTHER] => "NGCC",
 )
 
-# Remove later, or make this optional later depending on what is in the dataset
-const DEFAULT_FINANCIAL_DATA = TechnologyFinancialData(;
+# The database stores no financial data, so every technology gets these defaults plus the
+# rates the caller passes to `database_to_portfolio`.
+const DEFAULT_FINANCIAL_PARAMETERS = (
     capital_recovery_period=30,
     technology_base_year=2025,
     debt_fraction=0.5,
@@ -261,16 +264,16 @@ const PSY6_MAPPING = Dict("Transformer2W" => "TwoWindingTransformer")
 
 """
 The following function imports from the database and generates the structs for a portfolio.
-Portfolio-level financial data is not stored in the database and must be provided separately.
-See `PortfolioFinancialData`(@ref) for more details.
+Financial data is not stored in the database: every technology gets its own
+[`TechnologyFinancialData`](@ref) built from `DEFAULT_FINANCIAL_PARAMETERS` and the rates
+given here. The model base year is set on the investment model, not the portfolio.
 
 # Arguments
 
   - `database_filepath::AbstractString`: The path to the SQLite database file
-  - `discount_rate::Float64`: The discount rate for the portfolio
-  - `inflation_rate::Float64`: The inflation rate for the portfolio
-  - `interest_rate::Float64`: The interest rate for the portfolio
-  - `base_year::Int64`: The base year for the portfolio
+  - `discount_rate::Float64`: The discount rate applied to every technology
+  - `inflation_rate::Float64`: The inflation rate applied to every technology
+  - `interest_rate::Float64`: The interest rate applied to every technology
   - `aggregation::Type{<:Union{PSY.ACBus, PSY.AggregationTopology}}`: (default: `PSY.ACBus`) The aggregation level for the portfolio. Defaults to a nodal aggregation level
   - `system::PSY.System`: (default: `PSY.System(100.0)`) The base power system for the portfolio
 """
@@ -278,25 +281,26 @@ function database_to_portfolio(
     database_filepath::AbstractString,
     discount_rate::Float64,
     inflation_rate::Float64,
-    interest_rate::Float64,
-    base_year::Int64;
+    interest_rate::Float64;
     aggregation::Type{<:Union{PSY.ACBus, PSY.AggregationTopology}}=DEFAULT_AGGREGATION,
     system::PSY.System=PSY.System(100.0),
 )
-    portfolio = Portfolio(
-        aggregation,
-        base_year,
-        discount_rate,
-        inflation_rate,
-        interest_rate;
-        base_system=system,
+    portfolio = Portfolio(aggregation)
+    set_base_system!(portfolio, system)
+    financial_data = TechnologyFinancialData(;
+        DEFAULT_FINANCIAL_PARAMETERS...,
+        discount_rate=discount_rate,
+        inflation_rate=inflation_rate,
+        interest_rate=interest_rate,
     )
-    portfolio = database_to_structs(database_filepath, portfolio)
-
-    return portfolio
+    return database_to_structs(database_filepath, portfolio, financial_data)
 end
 
-function database_to_structs(db_path::AbstractString, portfolio::Portfolio)
+function database_to_structs(
+    db_path::AbstractString,
+    portfolio::Portfolio,
+    financial_data::TechnologyFinancialData,
+)
     # Connect to the SQLite database
     db = SQLite.DB(db_path)
 
@@ -314,20 +318,20 @@ function database_to_structs(db_path::AbstractString, portfolio::Portfolio)
 
     if get_aggregation(portfolio) === PSY.ACBus
         add_nodes!(portfolio, attributes, stmts)
-        add_nodal_lines!(portfolio, attributes, stmts)
+        add_nodal_lines!(portfolio, attributes, stmts, financial_data)
     else
         add_zones!(portfolio, attributes, stmts)
-        add_aggregate_lines!(portfolio, attributes, stmts, ids)
+        add_aggregate_lines!(portfolio, attributes, stmts, ids, financial_data)
     end
 
-    add_technologies!(portfolio, attributes, stmts, ids)
+    add_technologies!(portfolio, attributes, stmts, ids, financial_data)
     add_demand_requirements!(portfolio, attributes, stmts)
     add_demand_technologies!(portfolio, attributes, stmts)
 
     add_buses!(portfolio, attributes, stmts, owners)
-    add_system_lines!(portfolio, attributes, stmts, owners, ids)
-    add_generation_units!(portfolio, attributes, stmts, owners)
-    add_storage_units!(portfolio, attributes, stmts, owners)
+    add_system_lines!(portfolio, attributes, stmts, owners, ids, financial_data)
+    add_generation_units!(portfolio, attributes, stmts, owners, financial_data)
+    add_storage_units!(portfolio, attributes, stmts, owners, financial_data)
     add_loads!(portfolio, attributes, stmts, owners)
 
     deserialize_timeseries!(portfolio.base_system, db, owners)
@@ -628,6 +632,7 @@ function add_aggregate_lines!(
     attributes::Dict{Int64, Dict{String, Any}},
     stmts::Dict,
     ids::IdAllocator,
+    financial_data::TechnologyFinancialData,
 )
     for rec in DBInterface.execute(stmts[:aggregate_lines])
         component_attr = get(attributes, rec.id, Dict{String, Any}())
@@ -638,7 +643,7 @@ function add_aggregate_lines!(
             available=component_attr["available"],
             base_power=100.0,
             power_systems_type=string(nameof(ACBranch)),
-            financial_data=DEFAULT_FINANCIAL_DATA,
+            financial_data=deepcopy(financial_data),
             start_region=collect(
                 IS.get_components(
                     x -> get_id(x) == area_from_id,
@@ -666,6 +671,7 @@ function add_nodal_lines!(
     portfolio::Portfolio,
     attributes::Dict{Int64, Dict{String, Any}},
     stmts::Dict,
+    financial_data::TechnologyFinancialData,
 )
     for rec in DBInterface.execute(stmts[:new_lines])
         component_attr = get(attributes, rec.id, Dict{String, Any}())
@@ -678,7 +684,7 @@ function add_nodal_lines!(
             name=string(rec.arc_id) * "_newline",
             available=true,
             power_systems_type=string(nameof(ACBranch)),
-            financial_data=DEFAULT_FINANCIAL_DATA,
+            financial_data=deepcopy(financial_data),
             start_node=get_region(Node, portfolio, balancing_topology_from),
             end_node=get_region(Node, portfolio, balancing_topology_to),
             reactance=component_attr["reactance"],
@@ -696,6 +702,7 @@ function add_technologies!(
     attributes::Dict{Int64, Dict{String, Any}},
     stmts::Dict,
     ids::IdAllocator,
+    financial_data::TechnologyFinancialData,
 )
     for rec in DBInterface.execute(stmts[:technologies])
         parametric = get(PRIME_MOVER_TO_PARAMETRIC, rec.prime_mover, PSY.ThermalStandard)
@@ -717,7 +724,7 @@ function add_technologies!(
                 prime_mover_type=get(PRIME_MOVER_MAPPING, rec.prime_mover, PrimeMovers.OT),
                 storage_tech=get(STORAGE_MAPPING, rec.fuel, StorageTech.OTHER_THERM),
                 region=regions,
-                financial_data=DEFAULT_FINANCIAL_DATA,
+                financial_data=deepcopy(financial_data),
                 available=true,
                 power_systems_type=string(nameof(parametric)),
                 operation_costs=StorageCost(),
@@ -734,7 +741,7 @@ function add_technologies!(
                 fuel=[get(FUEL_MAPPING, rec.fuel, ThermalFuels.OTHER)],
                 co2=Dict(get(FUEL_MAPPING, rec.fuel, ThermalFuels.OTHER) => 0.0),
                 region=regions,
-                financial_data=DEFAULT_FINANCIAL_DATA,
+                financial_data=deepcopy(financial_data),
                 available=true,
                 power_systems_type=string(nameof(parametric)),
                 operation_costs=ThermalGenerationCost(
@@ -755,6 +762,7 @@ function add_generation_units!(
     attributes::Dict{Int64, Dict{String, Any}},
     stmts::Dict,
     owners::Dict{Int64, Any},
+    financial_data::TechnologyFinancialData,
 )
     for rec in DBInterface.execute(stmts[:generation_units])
         downstream = true
@@ -1009,7 +1017,7 @@ function add_generation_units!(
                 prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers.Value, rec.prime_mover),
                 fuel=[fuel],
                 region=regions,
-                financial_data=DEFAULT_FINANCIAL_DATA,
+                financial_data=deepcopy(financial_data),
                 available=true,
                 power_systems_type=string(nameof(component_type)),
                 operation_costs=ops_cost,
@@ -1038,6 +1046,7 @@ function add_storage_units!(
     attributes::Dict{Int64, Dict{String, Any}},
     stmts::Dict,
     owners::Dict{Int64, Any},
+    financial_data::TechnologyFinancialData,
 )
     for rec in DBInterface.execute(stmts[:storage_units])
         component_type = getproperty(
@@ -1122,7 +1131,7 @@ function add_storage_units!(
             prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers.Value, rec.prime_mover),
             storage_tech=PSY.StorageTech.Value(component_attr["storage_technology_type"]),
             region=regions,
-            financial_data=DEFAULT_FINANCIAL_DATA,
+            financial_data=deepcopy(financial_data),
             available=true,
             power_systems_type=string(nameof(component_type)),
             operation_costs=ops_cost,
@@ -1234,6 +1243,7 @@ function add_system_lines!(
     stmts::Dict,
     owners::Dict{Int64, Any},
     ids::IdAllocator,
+    financial_data::TechnologyFinancialData,
 )
     arc_dict = Dict()
     for rec in DBInterface.execute(stmts[:arcs])
@@ -1367,7 +1377,7 @@ function add_system_lines!(
                 name=rec.name,
                 available=true,
                 power_systems_type=string(nameof(component_type)),
-                financial_data=DEFAULT_FINANCIAL_DATA,
+                financial_data=deepcopy(financial_data),
                 start_node=get_region(Node, portfolio, balancing_topology_from),
                 end_node=get_region(Node, portfolio, balancing_topology_to),
                 reactance=component_attr["x"],
@@ -1396,7 +1406,7 @@ function add_system_lines!(
                 name=rec.name * "_new",
                 available=true,
                 power_systems_type=string(nameof(component_type)),
-                financial_data=DEFAULT_FINANCIAL_DATA,
+                financial_data=deepcopy(financial_data),
                 start_node=get_region(Node, portfolio, balancing_topology_from),
                 end_node=get_region(Node, portfolio, balancing_topology_to),
                 reactance=component_attr["x"],
@@ -1423,7 +1433,7 @@ function add_system_lines!(
                 name=string(area_list[1]) * "_" * string(area_list[2]),
                 available=true,
                 power_systems_type=string(nameof(ACBranch)),
-                financial_data=DEFAULT_FINANCIAL_DATA,
+                financial_data=deepcopy(financial_data),
                 start_region=get_region(Zone, portfolio, area_list[1]),
                 end_region=get_region(Zone, portfolio, area_list[2]),
                 capital_costs=LinearCurve(1e5),
@@ -1469,7 +1479,8 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
                     )
                 ]
                 ts_data = TimeSeries.TimeArray(timestamps, values)
-                cost_year = get_base_year(portfolio)
+                # Costs are read at the year the technology's cost data is reported in.
+                cost_year = get_technology_base_year(get_financial_data(tech))
                 cost_data[ts_association.name] =
                     first(TimeSeries.values(ts_data[Dates.DateTime(cost_year, 1, 1)]))
 

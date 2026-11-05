@@ -17,8 +17,8 @@ StorageCapitalCost
 
 ## Financial data
 
-[`TechnologyFinancialData`](@ref) describes how a technology is financed. The portfolio-wide
-parameters are in [`PortfolioFinancialData`](@ref). See [Financial Data](@ref).
+[`TechnologyFinancialData`](@ref) describes how a technology is financed and the rates that
+convert its costs to a net present value. See [Financial Data](@ref).
 
 ```@docs
 TechnologyFinancialData

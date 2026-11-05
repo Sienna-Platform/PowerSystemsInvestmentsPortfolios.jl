@@ -161,7 +161,17 @@ function get_peak_demand_mw(p::Portfolio, t::DemandTechnology)
     end
 end
 
-function scale_conforming_load(t::DemandTechnology, p::Portfolio, year::Int64)
+"""
+Scale a conforming load's peak demand to `year` by its growth rate. Existing loads grow from
+`base_year`, the model base year their peak demand is measured in; new loads grow from their
+construction year.
+"""
+function scale_conforming_load(
+    t::DemandTechnology,
+    p::Portfolio,
+    year::Int64,
+    base_year::Int64,
+)
     if get_conformity(t) == PSY.LoadConformity.NON_CONFORMING
         @warn "Load is not conforming, returning original peak demand without scaling."
         return get_peak_demand_mw(p, t)
@@ -171,7 +181,7 @@ function scale_conforming_load(t::DemandTechnology, p::Portfolio, year::Int64)
         if is_new(t)
             reference_year = get_new_construction_year(t)
         else
-            reference_year = get_base_year_for_load(t, p)
+            reference_year = base_year
         end
         scaled_demand = peak_demand * (1 + growth_rate)^(year - reference_year)
         return scaled_demand
@@ -240,11 +250,6 @@ get_fixed_cost_discharge(t::StorageTechnology, units::_UNIT_OPTIONS) =
     PSY.get_proportional_term(
         PSY.get_value_curve(PSY.get_discharge_variable_cost(get_operation_costs(t, units))),
     )
-
-"""
-Get the base year for a DemandRequirement, which is the same as the base year for the portfolio it belongs to.
-"""
-get_base_year_for_load(t::DemandRequirement, p::Portfolio) = get_base_year(p)
 
 """
 Calculate the weighted average cost of capital (WACC) for a Technology based on its TechnologyFinancialData.

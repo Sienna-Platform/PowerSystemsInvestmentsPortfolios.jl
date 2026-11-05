@@ -134,21 +134,7 @@ end
     port_base = Portfolio(base_system)
     @test PSIP.get_base_system(port_base) === base_system
 
-    port_fin = Portfolio(2025, 0.07, 0.02, 0.05)
-    @test PSIP.get_base_year(port_fin) == 2025
-    @test PSIP.get_discount_rate(port_fin) == 0.07
-    @test PSIP.get_inflation_rate(port_fin) == 0.02
-    @test PSIP.get_interest_rate(port_fin) == 0.05
-
-    PSIP.set_base_year!(port_fin, 2030)
-    PSIP.set_discount_rate!(port_fin, 0.08)
-    PSIP.set_inflation_rate!(port_fin, 0.03)
-    PSIP.set_interest_rate!(port_fin, 0.06)
-    @test PSIP.get_base_year(port_fin) == 2030
-    @test PSIP.get_discount_rate(port_fin) == 0.08
-    @test PSIP.get_inflation_rate(port_fin) == 0.03
-    @test PSIP.get_interest_rate(port_fin) == 0.06
-
+    port_fin = Portfolio()
     schedule = InvestmentScheduleResults(
         Dict{Int, Dict{Tuple{Type{<:Technology}, String}, Float64}}(),
     )
@@ -159,14 +145,8 @@ end
     PSIP.set_base_system!(port_fin, replacement_base)
     @test PSIP.get_base_system(port_fin) === replacement_base
 
-    port_full = Portfolio(PSY.LoadZone, base_system, 2024, 0.06, 0.02, 0.04)
-    @test PSIP.get_aggregation(port_full) == PSY.LoadZone
-    @test PSIP.get_base_system(port_full) === base_system
-    @test PSIP.get_base_year(port_full) == 2024
-
-    port_agg_fin = Portfolio(PSY.LoadZone, 2022, 0.05, 0.02, 0.03)
-    @test PSIP.get_aggregation(port_agg_fin) == PSY.LoadZone
-    @test PSIP.get_base_year(port_agg_fin) == 2022
+    # Financial data lives on each technology, not on the portfolio.
+    @test !hasfield(Portfolio, :financial_data)
 end
 
 @testset "Test technology attach/remove helpers" begin
