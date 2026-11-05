@@ -72,6 +72,7 @@ end
     add_technology!(port, gen)
 
     port2 = validate_serialization(port)
+    @test port2.aggregation == port.aggregation
     @test port2.financial_data.discount_rate == financial_data.discount_rate
     @test port2.financial_data.inflation_rate == financial_data.inflation_rate
     @test port2.financial_data.interest_rate == financial_data.interest_rate
