@@ -70,6 +70,36 @@ end
     @test get_existing_capacity_mwh(p_5bus, storage) == 0.0
 end
 
+@testset "existing storage capacity" begin
+    # c_sys5_bat's battery is rated 400 MW, charges and discharges at up to 200 MW and stores
+    # 400 MWh.
+    sys = build_system(PSITestSystems, "c_sys5_bat"; skip_serialization=true)
+    p = Portfolio(PSY.ACBus, sys, 2025, 0.07, 0.02, 0.05)
+    battery = only(PSY.get_components(PSY.EnergyReservoirStorage, sys))
+    storage = StorageTechnology{PSY.EnergyReservoirStorage}(;
+        name="battery",
+        power_systems_type="EnergyReservoirStorage",
+        available=true,
+        region=PSY.Topology[PSY.get_bus(battery)],
+        financial_data=TechnologyFinancialData(;
+            capital_recovery_period=30,
+            technology_base_year=2025,
+            debt_fraction=0.5,
+            debt_rate=0.07,
+            return_on_equity=0.1,
+            tax_rate=0.257,
+        ),
+    )
+    add_technology!(p, storage)
+    PSIP.add_supplemental_attribute!(
+        p,
+        storage,
+        ExistingDevices(; existing_devices=[PSY.get_name(battery)]),
+    )
+    @test get_existing_capacity_mw(p, storage) == 200.0
+    @test get_existing_capacity_mwh(p, storage) == 400.0
+end
+
 @testset "get_peak_demand_mw" begin
     p_5bus = build_portfolio()
     demand_b = get_technology(DemandRequirement{PowerLoad}, p_5bus, "demand_b")
