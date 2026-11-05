@@ -367,7 +367,6 @@ function to_openapi(
         description=get_description(portfolio),
         base_system_file=_base_system_relpath(base_system_path),
         time_series_storage_file=_sidecar_basename(time_series_storage_path),
-        financial_data=convert_nested_data_to_openapi(get_financial_data(portfolio)),
         investment_schedule=isnothing(get_investment_schedule(portfolio)) ? nothing :
                             _serialize_schedule(get_investment_schedule(portfolio)),
     )

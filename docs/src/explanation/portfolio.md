@@ -47,13 +47,15 @@ existing grid; the portfolio describes how that grid might change.
 | `base_system`           | `PSY.System`                                        | The existing grid and its topology                                          |
 | `investment_schedule`   | `Union{Nothing, InvestmentScheduleResults}`         | `nothing` until investment decisions are stored                             |
 | `time_series_directory` | `Union{Nothing, String}`                            | Optional directory for time series storage                                  |
-| `financial_data`        | `Union{Nothing, PortfolioFinancialData}`            | Portfolio-wide economic parameters; see [`PortfolioFinancialData`](@ref)    |
 | `metadata`              | `PortfolioMetadata`                                 | Name, description, and data source                                          |
 | `internal`              | `IS.InfrastructureSystemsInternal`                  | InfrastructureSystems bookkeeping                                           |
 
-Read and change these through accessors — [`get_base_system`](@ref),
-[`get_financial_data`](@ref), [`set_name!`](@ref), and so on — rather than through the
-fields.
+Read and change these through accessors — [`get_base_system`](@ref), [`set_name!`](@ref),
+and so on — rather than through the fields.
+
+A portfolio holds no financial data: each technology carries its own
+[`TechnologyFinancialData`](@ref), and the base year belongs to the investment model. See
+[Financial Data](@ref).
 
 ## The `base_system` Relationship
 
@@ -79,9 +81,7 @@ other units; see [Units and Unit Conversions](@ref).
 ```julia
 Portfolio()                                           # empty, default base system
 Portfolio(sys)                                        # with a base system
-Portfolio(sys; financial_data=PortfolioFinancialData(2030, 0.07, 0.025, 0.05))
-Portfolio(2030, 0.07, 0.025, 0.05)                    # financial data, default base system
-Portfolio(PSY.LoadZone, sys, 2030, 0.07, 0.025, 0.05) # aggregation, base system, financial data
+Portfolio(PSY.LoadZone)                               # aggregation, default base system
 ```
 
 The keywords `name`, `description`, and `data_source` set the metadata.
@@ -89,6 +89,5 @@ The keywords `name`, `description`, and `data_source` set the metadata.
 ## See Also
 
   - [`Portfolio`](@ref)
-  - [`PortfolioFinancialData`](@ref)
   - [Regions and Topology](@ref)
   - [Save and Load a Portfolio](@ref)

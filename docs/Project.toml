@@ -6,6 +6,7 @@ DocumenterTools = "35a29f4d-8980-5a13-9543-d66fff28ecb8"
 InfrastructureSystems = "2cd47ed4-ca9b-11e9-27f2-ab636a7671f1"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 PowerFlowFileParser = "bed98974-b02e-5e2f-9ee0-a103f5c450dd"
+PowerInvestmentsOpenAPIModels = "33cb4396-f4d9-4f59-8585-787ebb56cb1b"
 PowerSystemCaseBuilder = "f00506e0-b84f-492a-93c2-c0a9afc4364e"
 PowerSystems = "bcd98974-b02a-5e2f-9ee0-a103f5c450dd"
 PowerSystemsInvestmentsPortfolios = "bed98974-b02a-5e2f-9fe0-a103f8c450dd"
@@ -16,6 +17,7 @@ TimeSeries = "9e3dc215-6440-5c97-bce1-76c03772f85e"
 InfrastructureSystems = {rev = "IS4", url = "https://github.com/Sienna-Platform/InfrastructureSystems.jl.git"}
 PowerFlowFileParser = {rev = "psy6", url = "https://github.com/Sienna-Platform/PowerFlowFileParser.jl.git"}
 PowerSystemCaseBuilder = {rev = "psy6", url = "https://github.com/Sienna-Platform/PowerSystemCaseBuilder.jl.git"}
+PowerInvestmentsOpenAPIModels = {rev = "rh/remove-portfolio-financial-data", subdir = "PowerInvestmentsOpenAPIModels.jl", url = "https://github.com/Sienna-Platform/PowerOpenAPIModels.git"}
 PowerSystems = {rev = "psy6", url = "https://github.com/Sienna-Platform/PowerSystems.jl.git"}
 PowerSystemsInvestmentsPortfolios = {path = ".."}
 PowerTableDataParser = {rev = "psy6", url = "https://github.com/NLR-Sienna/PowerTableDataParser.jl.git"}

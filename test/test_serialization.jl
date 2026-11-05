@@ -2,16 +2,11 @@
 #
 # Builds a small-but-complete portfolio exercising every serialized facet — base system,
 # technology + financial_data, policy requirement + membership, supplemental attribute, time
-# series, portfolio financial_data, and investment schedule — writes it to each on-disk form
+# series, and investment schedule — writes it to each on-disk form
 # (directory, `.json` document, `.snp` archive), reads it back, and asserts each facet survives.
 
 function _build_roundtrip_portfolio()
-    financial_data = PortfolioFinancialData(2020, 0.07, 0.03, 0.05)
-    port = Portfolio(;
-        financial_data=financial_data,
-        name="roundtrip_portfolio",
-        description="round-trip case",
-    )
+    port = Portfolio(; name="roundtrip_portfolio", description="round-trip case")
 
     # Base system with a bus, so the base_system/ sidecar round-trips.
     base_sys = PSIP.get_base_system(port)
@@ -37,6 +32,9 @@ function _build_roundtrip_portfolio()
             debt_rate=0.07,
             return_on_equity=0.1,
             tax_rate=0.257,
+            discount_rate=0.07,
+            inflation_rate=0.03,
+            interest_rate=0.05,
         ),
         operation_costs=ThermalGenerationCost(;
             variable_operation_cost=zero(CostCurve),
@@ -79,14 +77,6 @@ function _build_roundtrip_portfolio()
 end
 
 function _check_roundtrip_portfolio(port2)
-    # Portfolio-level financial_data
-    fd2 = PSIP.get_financial_data(port2)
-    @test fd2 !== nothing
-    @test fd2.base_year == 2020
-    @test fd2.discount_rate == 0.07
-    @test fd2.inflation_rate == 0.03
-    @test fd2.interest_rate == 0.05
-
     # Metadata
     @test PSIP.get_name(port2) == "roundtrip_portfolio"
     @test PSIP.get_description(port2) == "round-trip case"
@@ -96,6 +86,12 @@ function _check_roundtrip_portfolio(port2)
     @test gen2 !== nothing
     @test only(PSIP.get_region(gen2)) ===
           PSY.get_component(PSY.Area, PSIP.get_base_system(port2), "zone1")
+
+    # Per-technology financial rates
+    fd2 = PSIP.get_financial_data(gen2)
+    @test PSIP.get_discount_rate(fd2) == 0.07
+    @test PSIP.get_inflation_rate(fd2) == 0.03
+    @test PSIP.get_interest_rate(fd2) == 0.05
 
     # Requirement + membership (association-table round trip)
     req2 = PSIP.get_requirement(MaximumCapacityRequirements, port2, "max_cap")
@@ -301,7 +297,18 @@ function _build_wide_roundtrip_portfolio()
         time_limits=(up=4.0, down=2.0),
         start_fuel_mmbtu_per_mw=1.7,
         lifetime=40,
-        financial_data=financial_data,
+        # Rates differ from the other technologies', so each one's own rates round trip.
+        financial_data=TechnologyFinancialData(;
+            capital_recovery_period=25,
+            technology_base_year=2023,
+            debt_fraction=0.4,
+            debt_rate=0.06,
+            return_on_equity=0.12,
+            tax_rate=0.21,
+            discount_rate=0.09,
+            inflation_rate=0.015,
+            interest_rate=0.045,
+        ),
     )
     PSIP.add_technology!(portfolio, multifuel)
 

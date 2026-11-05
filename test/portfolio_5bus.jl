@@ -91,6 +91,9 @@ function build_portfolio()
         debt_rate=0.07,
         return_on_equity=0.1,
         tax_rate=0.257,
+        discount_rate=0.07,
+        inflation_rate=0.025,
+        interest_rate=0.05,
     )
 
     thermals = collect(get_components(ThermalStandard, sys))
@@ -533,7 +536,7 @@ function build_portfolio()
     #####################
 
     # Build portfolio with base_system
-    p_5bus = Portfolio(sys; financial_data=PortfolioFinancialData(2025, 0.07, 0.05, 0.03))
+    p_5bus = Portfolio(sys)
 
     #Regions
     PSIP.add_topology!(p_5bus, z1)
