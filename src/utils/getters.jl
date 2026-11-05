@@ -39,6 +39,8 @@ get_parameter_type(::Type{DemandSideTechnology{T}}) where {T} = T
 
 """
 Calculates the amount of existing capacity (in MW) associated with a given Technology in the Portfolio.
+For generators this is the sum of the devices' maximum active power; for storage and branches
+it is the sum of their ratings.
 Technology must have an ExistingDevices supplemental attribute attached to it to be non-zero.
 This attribute contains a list of names of existing assets in the base system that correspond to this technology.
 For StorageTechnology, this function returns existing charge/discharge capacity in MW. See
@@ -79,15 +81,18 @@ function get_existing_capacity_mw(
             @error "Not all names in ExistingDevices matched generators in the base system"
         end
 
-        if isa(first(comp), PSY.TwoWindingTransformer)
-            return sum(PSY.get_rating(get_circuit(c), u"MW") for c in comp)
-        else
-            return sum(PSY.get_rating(c, u"MW") for c in comp)
-        end
+        return sum(_existing_capacity_mw(c) for c in comp)
     else
         return 0.0
     end
 end
+
+# Capacity in MW of one existing device: maximum active power for generators, the circuit
+# rating for transformers, and the rating for everything else (storage, lines).
+_existing_capacity_mw(device::PSY.Generator) = PSY.get_max_active_power(device, u"MW")
+_existing_capacity_mw(device::PSY.TwoWindingTransformer) =
+    PSY.get_rating(get_circuit(device), u"MW")
+_existing_capacity_mw(device::PSY.Device) = PSY.get_rating(device, u"MW")
 
 """
 Calculates the amount of existing energy capacity (in MWh) associated with a given StorageTechnology.
