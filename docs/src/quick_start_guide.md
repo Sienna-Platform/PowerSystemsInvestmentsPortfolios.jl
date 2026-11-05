@@ -27,7 +27,7 @@ CurrentModule = PowerSystemsInvestmentsPortfolios
 | Demand                   | [`DemandRequirement`](@ref), [`DemandSideTechnology`](@ref)                                                                                                                                                           |
 | Policy requirements      | [`CarbonCaps`](@ref), [`CarbonTax`](@ref), [`CapacityReserveMargin`](@ref), [`EnergyShareRequirements`](@ref), [`MinimumCapacityRequirements`](@ref), [`MaximumCapacityRequirements`](@ref), [`HourlyMatching`](@ref) |
 | Existing capacity        | [`ExistingDevices`](@ref), [`RetirementPotential`](@ref), [`RetrofitPotential`](@ref)                                                                                                                                 |
-| Costs and financial data | [`CapitalCost`](@ref), [`StorageCapitalCost`](@ref), [`TechnologyFinancialData`](@ref)                                                                                              |
+| Costs and financial data | [`CapitalCost`](@ref), [`StorageCapitalCost`](@ref), [`TechnologyFinancialData`](@ref)                                                                                                                                |
 
 ## Related Packages
 

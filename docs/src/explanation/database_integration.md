@@ -35,8 +35,9 @@ The database parser maps SiennaGridDB relational tables to PSIP types:
 
 The public entry point is `PowerSystemsInvestmentsPortfolios.DBParser.database_to_portfolio`.
 `db_parser.jl` is a submodule (`DBParser`), staged for later extraction into its own package,
-so it is reached through its qualified path rather than an exported name. Portfolio-level
-financial data is not stored in the database and must be provided as arguments:
+so it is reached through its qualified path rather than an exported name.
+Financial data is not stored in the database, so every technology gets its own copy of the parser's default [`TechnologyFinancialData`](@ref).
+Set per-technology values on the parsed portfolio if the defaults do not fit.
 
 ```julia
 using PowerSystemsInvestmentsPortfolios
@@ -44,10 +45,7 @@ import PowerSystemsInvestmentsPortfolios as PSIP
 import PowerSystems as PSY
 
 portfolio = PSIP.DBParser.database_to_portfolio(
-    "path/to/sienna_grid.db",   # path to the SiennaGridDB SQLite file
-    0.07,                        # discount_rate, applied to every technology
-    0.025,                       # inflation_rate, applied to every technology
-    0.05;                        # interest_rate, applied to every technology
+    "path/to/sienna_grid.db";  # path to the SiennaGridDB SQLite file
     aggregation=PSY.ACBus,     # optional: spatial resolution (default PSY.Area)
     system=base_sys,           # optional: PSY.System with existing grid data
 )

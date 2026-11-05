@@ -16,17 +16,17 @@ PSI reads it from its `DiscountedCashFlow` capital model.
 
 ### `TechnologyFinancialData` Fields
 
-| Field                     | Type      | Description                                                                                      |
-|:------------------------- |:--------- |:------------------------------------------------------------------------------------------------ |
-| `capital_recovery_period` | `Int64`   | Years over which capital cost is recovered                                                       |
+| Field                     | Type      | Description                                                                                              |
+|:------------------------- |:--------- |:-------------------------------------------------------------------------------------------------------- |
+| `capital_recovery_period` | `Int64`   | Years over which capital cost is recovered                                                               |
 | `technology_base_year`    | `Int64`   | Year in which the overnight capital cost is quoted; used for inflation adjustment to the model base year |
-| `debt_fraction`           | `Float64` | Share of capital financed by debt (0–1)                                                          |
-| `debt_rate`               | `Float64` | Nominal annual interest rate on the debt portion                                                 |
-| `return_on_equity`        | `Float64` | Required annual return on the equity portion                                                     |
-| `tax_rate`                | `Float64` | Combined marginal state and federal tax rate                                                     |
-| `discount_rate`           | `Float64` | Rate that discounts future costs to the model base year (fraction per year)                      |
-| `inflation_rate`          | `Float64` | Rate that escalates costs from `technology_base_year` to the model base year (fraction per year) |
-| `interest_rate`           | `Float64` | Nominal interest rate for financing (fraction per year)                                          |
+| `debt_fraction`           | `Float64` | Share of capital financed by debt (0–1)                                                                  |
+| `debt_rate`               | `Float64` | Nominal annual interest rate on the debt portion                                                         |
+| `return_on_equity`        | `Float64` | Required annual return on the equity portion                                                             |
+| `tax_rate`                | `Float64` | Combined marginal state and federal tax rate                                                             |
+| `discount_rate`           | `Float64` | Rate that discounts future costs to the model base year (fraction per year)                              |
+| `inflation_rate`          | `Float64` | Rate that escalates costs from `technology_base_year` to the model base year (fraction per year)         |
+| `interest_rate`           | `Float64` | Nominal interest rate for financing (fraction per year)                                                  |
 
 ## Capital Recovery Factor
 
