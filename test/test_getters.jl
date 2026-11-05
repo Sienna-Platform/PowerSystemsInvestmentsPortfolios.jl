@@ -148,6 +148,12 @@ end
     thermal = get_technology(SupplyTechnology{ThermalStandard}, p_5bus, "cheap_thermal")
     @test get_wacc(PSIP.get_financial_data(thermal)) ≈ expected
 
+    set_discount_rate!(fd, 0.05)
+    set_inflation_rate!(fd, 0.02)
+    set_interest_rate!(fd, 0.04)
+    @test (get_discount_rate(fd), get_inflation_rate(fd), get_interest_rate(fd)) ==
+          (0.05, 0.02, 0.04)
+
     # All-equity (debt_fraction = 0): WACC = Re
     fd_equity = TechnologyFinancialData(
         capital_recovery_period=20,
