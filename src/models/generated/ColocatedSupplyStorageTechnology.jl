@@ -53,7 +53,7 @@ Supply Technology that supports a StorageTechnology co-located with wind and sol
 - `capacity_energy_limits::MinMax`: (default: `(min=0,max=1e8)`) allowable installed energy capacity for a storage technology (MWh)
 - `lifetime_wind::Int`: (default: `100`) Maximum number of years a technology can be active once installed (years)
 - `duration_limits::MinMax`: (default: `(min=0,max=1000)`) Minimum required durattion for a storage technology (hours)
-- `min_inverter_capacity::Float64`: (default: `1e8`) Minimum inverter capacity (MW)
+- `min_inverter_capacity::Float64`: (default: `0.0`) Minimum inverter capacity (MW)
 - `operation_costs_inverter::PSY.OperationalCost`: Operational costs for using inverter in co-located systems
 - `id::Int64`: ID for individual generator
 - `financial_data::TechnologyFinancialData`: Struct containing relevant financial information for a technology
@@ -140,7 +140,7 @@ mutable struct ColocatedSupplyStorageTechnology{T <: PSY.Generator} <: ResourceT
 end
 
 
-function ColocatedSupplyStorageTechnology{T}(; requirements=Vector(), lifetime_storage=100, capital_costs_storage=StorageCapitalCost(nothing), available=True, operation_costs_solar=ThermalGenerationCost(nothing), capacity_limits_wind=(min=0, max=1e8), name, capacity_power_limits=(min=0,max=1e8), capacity_energy_limits=(min=0,max=1e8), lifetime_wind=100, duration_limits=(min=0,max=1000), min_inverter_capacity=1e8, operation_costs_inverter, id, financial_data, inverter_efficiency, power_systems_type, capacity_limits_solar=(min=0, max=1e8), internal=InfrastructureSystemsInternal(), operation_costs_storage=StorageCost(nothing), operation_costs_wind=ThermalGenerationCost(nothing), efficiency_storage=(in=1, out=1), ext=Dict(), region=Vector(), losses_storage=0.0, inverter_supply_ratio, capital_costs_wind=CapitalCost(nothing), lifetime_solar=100, capital_costs_inverter, max_inverter_capacity=1e8, capital_costs_solar=CapitalCost(nothing), ) where T <: PSY.Generator
+function ColocatedSupplyStorageTechnology{T}(; requirements=Vector(), lifetime_storage=100, capital_costs_storage=StorageCapitalCost(nothing), available=True, operation_costs_solar=ThermalGenerationCost(nothing), capacity_limits_wind=(min=0, max=1e8), name, capacity_power_limits=(min=0,max=1e8), capacity_energy_limits=(min=0,max=1e8), lifetime_wind=100, duration_limits=(min=0,max=1000), min_inverter_capacity=0.0, operation_costs_inverter, id, financial_data, inverter_efficiency, power_systems_type, capacity_limits_solar=(min=0, max=1e8), internal=InfrastructureSystemsInternal(), operation_costs_storage=StorageCost(nothing), operation_costs_wind=ThermalGenerationCost(nothing), efficiency_storage=(in=1, out=1), ext=Dict(), region=Vector(), losses_storage=0.0, inverter_supply_ratio, capital_costs_wind=CapitalCost(nothing), lifetime_solar=100, capital_costs_inverter, max_inverter_capacity=1e8, capital_costs_solar=CapitalCost(nothing), ) where T <: PSY.Generator
     ColocatedSupplyStorageTechnology{T}(requirements, lifetime_storage, capital_costs_storage, available, operation_costs_solar, capacity_limits_wind, name, capacity_power_limits, capacity_energy_limits, lifetime_wind, duration_limits, min_inverter_capacity, operation_costs_inverter, id, financial_data, inverter_efficiency, power_systems_type, capacity_limits_solar, internal, operation_costs_storage, operation_costs_wind, efficiency_storage, ext, region, losses_storage, inverter_supply_ratio, capital_costs_wind, lifetime_solar, capital_costs_inverter, max_inverter_capacity, capital_costs_solar, )
 end
 

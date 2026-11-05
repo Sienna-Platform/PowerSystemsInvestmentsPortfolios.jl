@@ -24,7 +24,7 @@ CurrentModule = PowerSystemsInvestmentsPortfolios
 | Storage technologies    | [`StorageTechnology`](@ref)                                                                                                                                                                                           |
 | Co-located technologies | [`ColocatedSupplyStorageTechnology`](@ref)                                                                                                                                                                            |
 | Transmission            | [`AggregateTransportTechnology`](@ref), [`NodalACTransportTechnology`](@ref)                                                                                                                                          |
-| Demand                  | [`DemandRequirement`](@ref)                                                                                                                                                                                           |
+| Demand                  | [`ProjectedDemand`](@ref)                                                                                                                                                                                             |
 | Policy requirements     | [`CarbonCaps`](@ref), [`CarbonTax`](@ref), [`CapacityReserveMargin`](@ref), [`EnergyShareRequirements`](@ref), [`MinimumCapacityRequirements`](@ref), [`MaximumCapacityRequirements`](@ref), [`HourlyMatching`](@ref) |
 | Financial data          | [`PortfolioFinancialData`](@ref), [`TechnologyFinancialData`](@ref)                                                                                                                                                   |
 
