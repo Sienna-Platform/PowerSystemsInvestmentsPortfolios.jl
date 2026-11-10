@@ -48,6 +48,33 @@ end
     @test get_fixed(round_tripped) == get_fixed(renewable)
 end
 
+@testset "cost curve units in OpenAPI documents" begin
+    # A fuel curve keeps the fuel it is given in
+    for fuel_units in (PSIP.MMBtu, u"GJ")
+        curve =
+            FuelCurve(; value_curve=LinearCurve(9.5), fuel_units=fuel_units, fuel_cost=3.0)
+        round_tripped = PSIP.convert_cost(PSIP.convert_cost_to_openapi(curve))
+        @test IS.get_fuel_units(round_tripped) == fuel_units
+        @test get_proportional_term(get_value_curve(round_tripped)) == 9.5
+        @test IS.get_fuel_cost(round_tripped) == 3.0
+    end
+    # Fuel the document cannot state, and per-unit curves, are rejected
+    litres = FuelCurve(; value_curve=LinearCurve(9.5), fuel_units=u"L", fuel_cost=3.0)
+    @test_throws ErrorException PSIP.convert_cost_to_openapi(litres)
+    for basis in (IS.SU, IS.CU)
+        @test_throws ErrorException PSIP.convert_cost_to_openapi(
+            CostCurve(LinearCurve(1.0), basis),
+        )
+    end
+    po = PSIP.convert_cost_to_openapi(CostCurve(LinearCurve(1.0)))
+    per_unit_po = PSIP.PC.CostCurve(;
+        power_units=PSIP.IC.UnitSystem("COMPONENT_BASE"),
+        value_curve=po.value_curve,
+        vom_cost=po.vom_cost,
+    )
+    @test_throws ErrorException PSIP.convert_cost(per_unit_po)
+end
+
 @testset "financial data conversion round trip" begin
     fd = TechnologyFinancialData(
         capital_recovery_period=20,

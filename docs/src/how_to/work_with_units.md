@@ -79,18 +79,20 @@ get_time_limits(supply, u"hr")       # (up = 4.0, down = 4.0)
 
 ## Cost-curve fields
 
-Operating-cost fields span two axes, so their units are given as a [`ConversionUnits`](@ref)
-`NamedTuple`. The conversion applies to the whole cost structure:
+Operating costs carry their own units: their cost and fuel curves record them, as in
+PowerSystems, and must be in natural units. Read them in natural units to get the cost as
+stored, or with a fuel unit to convert the fuel of a `FuelCurve`:
 
 ```julia
-get_operation_costs(supply, (x_unit=u"MW" * u"hr", y_unit=USD))   # USD/MWh
-get_operation_costs(supply, (x_unit=u"kW" * u"hr", y_unit=USD))   # USD/kWh
+get_operation_costs(supply, NU)       # as stored, e.g. a FuelCurve in GJ
+get_operation_costs(supply, MMBtu)    # the FuelCurve's heat rate and fuel price in MMBtu
 ```
 
-A cost built on a `FuelCurve` spans three axes and takes [`FuelCurveUnits`](@ref):
+`u"NU"` (as in PowerSystems) and `NU` both mean natural units. Other value-curve fields,
+such as `curtailment_cost`, take a [`ConversionUnits`](@ref) `NamedTuple`:
 
 ```julia
-get_operation_costs(supply, (energy_unit=u"kW" * u"hr", fuel_unit=MMBtu, currency_unit=USD))
+get_curtailment_cost(demand, (x_unit=u"kW" * u"hr", y_unit=USD))   # USD/kWh
 ```
 
 Capital costs are a [`CapitalCost`](@ref) or [`StorageCapitalCost`](@ref) whose curves are
@@ -138,4 +140,3 @@ natural_unit(OPS_TIME)   # hr
   - [Units and Unit Conversions](@ref)
   - [`natural_unit`](@ref)
   - [`ConversionUnits`](@ref)
-  - [`FuelCurveUnits`](@ref)

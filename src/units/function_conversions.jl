@@ -1,11 +1,7 @@
 #######################################################
-# Unit-aware methods for converting units for FunctionData, ValueCurves, 
-# ProductionVariableCostCurve, and OperationalCosts.
-# Convert the data from units `from` to units `to`.
-# Current design is intended to support the following function types:
-# - Cost (USD) as a function of power output and/or installed capacity (MW)
-# - Fuel consumption (MMBtu) as a function of energy production (MWh)
-# - Fuel cost (USD) as a function of fuel consumption (MMBtu)
+# Unit-aware methods for FunctionData and ValueCurves, converted from units `from` to
+# units `to`, e.g. a cost (USD) as a function of capacity (MW). Operating costs (cost and
+# fuel curves and their containers) carry their own units and are handled at the end.
 #######################################################
 
 # A `Val(:conversion_unit)` symbol maps to exactly one category (one Julia
@@ -177,240 +173,110 @@ function _natural_unit_conversions(
     )
 end
 
-# ---- CostCurve ----
-function _natural_unit_conversions(
-    base,
-    v::CostCurve,
-    from::ConversionUnits,
-    to::ConversionUnits,
-)
-    return CostCurve(
-        _natural_unit_conversions(base, v.value_curve, from, to),
-        _natural_unit_conversions(base, v.vom_cost, from, to),
+# ---- Operating costs ----
+# Cost and fuel curves carry their own units (a power basis, and a FuelCurve's fuel unit),
+# so they are not rescaled like plain value curves. A portfolio has no base power, so every
+# curve must be in natural units; the only conversion is of the fuel of a FuelCurve.
+
+_fields(cost) = (getfield(cost, f) for f in fieldnames(typeof(cost)))
+
+cost_curves(curve::IS.ProductionVariableCostCurve) = [curve]
+cost_curves(cost::PSY.OperationalCost) =
+    [x for x in _fields(cost) if x isa IS.ProductionVariableCostCurve]
+
+has_natural_power_units(cost) =
+    all(c -> IS.get_power_units(c) isa IS.NaturalUnit, cost_curves(cost))
+
+function check_natural_power_units(t, field, cost)
+    has_natural_power_units(cost) && return
+    throw(
+        IS.InvalidValue(
+            "$(val_to_string(field)) of $(summary(t)) has a curve in per-unit power; a " *
+            "portfolio has no base power, so cost curves must be in natural units.",
+        ),
     )
 end
 
-# ---- FuelCurve ----
-function _natural_unit_conversions(
-    base,
-    v::FuelCurve,
-    from::FuelCurveUnits,
-    to::FuelCurveUnits,
-)
-    # Construct conversion units for fields of FuelCurve
-    from_fuel_consumption = (x_unit=from.energy_unit, y_unit=from.fuel_unit)
-    from_vom_cost = (x_unit=from.energy_unit, y_unit=from.currency_unit)
-    from_fuel_cost = from.currency_unit / from.fuel_unit
+const _FUEL_DIMENSIONS =
+    (Unitful.dimension(u"J"), Unitful.dimension(u"m^3"), Unitful.dimension(u"kg"))
 
-    to_fuel_consumption = (x_unit=to.energy_unit, y_unit=to.fuel_unit)
-    to_vom_cost = (x_unit=to.energy_unit, y_unit=to.currency_unit)
-    to_fuel_cost = to.currency_unit / to.fuel_unit
-
-    return FuelCurve(
-        _natural_unit_conversions(
-            base,
-            v.value_curve,
-            from_fuel_consumption,
-            to_fuel_consumption,
-        ),
-        to.fuel_unit,
-        isa(v.fuel_cost, Float64) ?
-        IS._strip_units(
-            _natural_unit_conversions(base, v.fuel_cost, from_fuel_cost, to_fuel_cost),
-        ) : v.fuel_cost,
-        _natural_unit_conversions(
-            base,
-            v.startup_fuel_offtake,
-            from_fuel_consumption,
-            to_fuel_consumption,
-        ),
-        _natural_unit_conversions(base, v.vom_cost, from_vom_cost, to_vom_cost),
-    )
-end
-
-# ---- OperationalCost Structs ----
-function _natural_unit_conversions(
-    base,
-    v::ThermalGenerationCost,
-    from::FuelCurveUnits,
-    to::FuelCurveUnits,
-)
-    if isa(get_variable_operation_cost(v), CostCurve)
-        @error "Variable Cost is a CostCurve. Use ConversionUnits for conversion."
+"""
+Return an operating cost in `units`: natural units return it as stored, and a fuel unit
+(e.g. `MMBtu`) converts the fuel of its fuel curves. Cost curves have no fuel to convert.
+"""
+function cost_in_units(t, field, cost::UnitsCarryingCost, units)
+    check_natural_power_units(t, field, cost)
+    _is_natural(units) && return cost
+    if !(units isa Unitful.Units && Unitful.dimension(units) in _FUEL_DIMENSIONS)
+        throw(
+            ArgumentError(
+                "$(val_to_string(field)) takes natural units (`u\"NU\"`) or a fuel unit " *
+                "for its fuel curves (e.g. `MMBtu`); got $units.",
+            ),
+        )
     end
-    start_up = _natural_unit_conversions(
-        base,
-        get_start_up(v),
-        from.currency_unit / from.energy_unit,
-        to.currency_unit / to.energy_unit,
-    )
-    return ThermalGenerationCost(
-        _natural_unit_conversions(base, v.variable_operation_cost, from, to),
-        IS._strip_units(
-            _natural_unit_conversions(
-                base,
-                v.fixed,
-                from.currency_unit / from.energy_unit,
-                to.currency_unit / to.energy_unit,
-            ),
-        ),
-        isa(start_up, PSY.StartUpStages) ? start_up : IS._strip_units(start_up),
-        IS._strip_units(
-            _natural_unit_conversions(
-                base,
-                get_shut_down(v),
-                from.currency_unit / from.energy_unit,
-                to.currency_unit / to.energy_unit,
-            ),
-        ),
-    )
+    return convert_fuel_units(cost, units)
 end
 
-function _natural_unit_conversions(
-    base,
-    v::ThermalGenerationCost,
-    from::ConversionUnits,
-    to::ConversionUnits,
-)
-    if isa(get_variable_operation_cost(v), FuelCurve)
-        @error "Variable Cost is a FuelCurve. Use FuelCurveUnits for conversion."
+function set_cost(t, field, cost::UnitsCarryingCost, units)
+    if !_is_natural(units)
+        throw(
+            ArgumentError(
+                "$(val_to_string(field)) is set in natural units (`u\"NU\"`); its curves " *
+                "carry their own units. Got $units.",
+            ),
+        )
     end
+    check_natural_power_units(t, field, cost)
+    return cost
+end
 
-    start_up = _natural_unit_conversions(
-        base,
-        get_start_up(v),
-        from.y_unit / from.x_unit,
-        to.y_unit / to.x_unit,
-    )
-    return ThermalGenerationCost(
-        _natural_unit_conversions(base, v.variable_operation_cost, from, to),
-        IS._strip_units(
+convert_fuel_units(curve::IS.CostCurve, ::Unitful.Units) = curve
+
+function convert_fuel_units(curve::IS.FuelCurve, units::Unitful.Units)
+    from = IS.get_fuel_units(curve)
+    from == units && return curve
+    if !isnothing(IS.get_fuel_cost_time_series(curve))
+        throw(
+            ArgumentError(
+                "The fuel of a FuelCurve priced by a time series cannot be converted.",
+            ),
+        )
+    end
+    # Fuel per hour scales with the fuel unit; the energy axis does not change
+    energy = u"MW" * u"hr"
+    from_fuel = (x_unit=energy, y_unit=from)
+    to_fuel = (x_unit=energy, y_unit=units)
+    return FuelCurve(;
+        value_curve=_natural_unit_conversions(
+            nothing,
+            get_value_curve(curve),
+            from_fuel,
+            to_fuel,
+        ),
+        fuel_units=units,
+        fuel_cost=IS._strip_units(
             _natural_unit_conversions(
-                base,
-                v.fixed,
-                from.y_unit / from.x_unit,
-                to.y_unit / to.x_unit,
+                nothing,
+                IS.get_fuel_cost(curve),
+                USD / from,
+                USD / units,
             ),
         ),
-        isa(start_up, PSY.StartUpStages) ? start_up : IS._strip_units(start_up),
-        IS._strip_units(
-            _natural_unit_conversions(
-                base,
-                PSY.get_shut_down(v),
-                from.y_unit / from.x_unit,
-                to.y_unit / to.x_unit,
-            ),
+        startup_fuel_offtake=_natural_unit_conversions(
+            nothing,
+            IS.get_startup_fuel_offtake(curve),
+            (x_unit=u"MW", y_unit=from),
+            (x_unit=u"MW", y_unit=units),
         ),
+        vom_cost=IS.get_vom_cost(curve),
     )
 end
 
-function _natural_unit_conversions(
-    base,
-    v::HydroGenerationCost,
-    from::ConversionUnits,
-    to::ConversionUnits,
-)
-    return HydroGenerationCost(
-        _natural_unit_conversions(base, v.variable_operation_cost, from, to),
-        IS._strip_units(
-            _natural_unit_conversions(
-                base,
-                v.fixed,
-                from.y_unit / from.x_unit,
-                to.y_unit / to.x_unit,
-            ),
-        ),
-    )
-end
-
-function _natural_unit_conversions(
-    base,
-    v::LoadCost,
-    from::ConversionUnits,
-    to::ConversionUnits,
-)
-    return LoadCost(
-        _natural_unit_conversions(base, v.variable_operation_cost, from, to),
-        IS._strip_units(
-            _natural_unit_conversions(
-                base,
-                v.fixed,
-                from.y_unit / from.x_unit,
-                to.y_unit / to.x_unit,
-            ),
-        ),
-    )
-end
-
-function _natural_unit_conversions(
-    base,
-    v::StorageCost,
-    from::ConversionUnits,
-    to::ConversionUnits,
-)
-    start_up = IS._strip_units(
-        _natural_unit_conversions(
-            base,
-            get_start_up(v),
-            from.y_unit / from.x_unit,
-            to.y_unit / to.x_unit,
-        ),
-    )
-    return StorageCost(
-        _natural_unit_conversions(base, v.charge_variable_cost, from, to),
-        _natural_unit_conversions(base, v.discharge_variable_cost, from, to),
-        IS._strip_units(
-            _natural_unit_conversions(
-                base,
-                v.fixed,
-                from.y_unit / from.x_unit,
-                to.y_unit / to.x_unit,
-            ),
-        ),
-        isa(start_up, PSY.STORAGE_OPERATION_MODES) ? start_up : IS._strip_units(start_up),
-        IS._strip_units(
-            _natural_unit_conversions(
-                base,
-                get_shut_down(v),
-                from.y_unit / from.x_unit,
-                to.y_unit / to.x_unit,
-            ),
-        ),
-        IS._strip_units(
-            _natural_unit_conversions(
-                base,
-                get_energy_shortage_cost(v),
-                from.y_unit / from.x_unit,
-                to.y_unit / to.x_unit,
-            ),
-        ),
-        IS._strip_units(
-            _natural_unit_conversions(
-                base,
-                get_energy_surplus_cost(v),
-                from.y_unit / from.x_unit,
-                to.y_unit / to.x_unit,
-            ),
-        ),
-    )
-end
-
-function _natural_unit_conversions(
-    base,
-    v::RenewableGenerationCost,
-    from::ConversionUnits,
-    to::ConversionUnits,
-)
-    return RenewableGenerationCost(
-        _natural_unit_conversions(base, v.variable_operation_cost, from, to),
-        _natural_unit_conversions(base, v.curtailment_cost, from, to),
-        IS._strip_units(
-            _natural_unit_conversions(
-                base,
-                v.fixed,
-                from.y_unit / from.x_unit,
-                to.y_unit / to.x_unit,
-            ),
-        ),
+function convert_fuel_units(cost::PSY.OperationalCost, units::Unitful.Units)
+    needs_conversion(x) = x isa IS.FuelCurve && IS.get_fuel_units(x) != units
+    any(needs_conversion, _fields(cost)) || return cost
+    return typeof(cost)(
+        (x isa IS.FuelCurve ? convert_fuel_units(x, units) : x for x in _fields(cost))...,
     )
 end

@@ -5,10 +5,9 @@
 # PO constructors.
 #
 # PSIP carries no per-unit basis of its own, so unlike PSY's converters these take no
-# `Val{:COMPONENT_BASE}`/`Val{:NATURAL_UNITS}` argument. The one place a unit marker still
-# appears is `CostCurve`/`FuelCurve`'s own `power_units` type parameter
-# (`NaturalUnit`/`ComponentBaseUnit`/`SystemBaseUnit`) — that is intrinsic to those PSY types
-# themselves, not a PSIP concept, so it is handled exactly as PSY handles it.
+# `Val{:COMPONENT_BASE}`/`Val{:NATURAL_UNITS}` argument. A `CostCurve`/`FuelCurve` still
+# records its own `power_units`, which must be `NATURAL_UNITS`: a portfolio has no base power
+# to interpret a per-unit curve with. A `FuelCurve` also records its `fuel_units`.
 #
 # PO fields are accessed with dot notation throughout (`po.value_curve`, `po.function_data`),
 # matching the OpenAPI model convention — PO structs are `OpenAPI.jl`-generated kwarg structs,
@@ -207,10 +206,9 @@ _power_units_marker(::_NoWireValue) =
 _power_units_marker(u::PC.UnitSystem) = _power_units_marker(u.value)
 function _power_units_marker(s::AbstractString)
     s == "NATURAL_UNITS" && return NaturalUnit()
-    s == "COMPONENT_BASE" && return ComponentBaseUnit()
     return error(
-        "convert_cost: unmapped power_units \"$s\" — expected one of " *
-        "NATURAL_UNITS, COMPONENT_BASE",
+        "convert_cost: power_units \"$s\" is not supported — a portfolio has no base " *
+        "power, so its cost curves must be in NATURAL_UNITS",
     )
 end
 
@@ -258,27 +256,25 @@ function convert_cost(c::PC.CostCurve)
     )
 end
 
-# convert_cost builds the FuelCurve in MMBtu, so a document must state its fuel in MMBtu.
-const WIRE_FUEL_UNITS = "MMBTU"
+# The fuel units a document can state (the schema's `FuelUnit` enum)
+const WIRE_FUEL_UNITS = Dict("MMBTU" => MMBtu, "GJ" => u"GJ")
 
-function _require_wire_fuel_units(f::PC.FuelCurve)
+function _fuel_units(f::PC.FuelCurve)
     units = f.fuel_units.value
-    if units != WIRE_FUEL_UNITS
-        throw(
-            ArgumentError(
-                "convert_cost: FuelCurve.fuel_units is $units; only $WIRE_FUEL_UNITS is supported",
-            ),
-        )
-    end
-    return
+    haskey(WIRE_FUEL_UNITS, units) && return WIRE_FUEL_UNITS[units]
+    throw(
+        ArgumentError(
+            "convert_cost: FuelCurve.fuel_units is $units; expected one of " *
+            "$(join(sort!(collect(keys(WIRE_FUEL_UNITS))), ", "))",
+        ),
+    )
 end
 
 function convert_cost(f::PC.FuelCurve)
-    _require_wire_fuel_units(f)
     return FuelCurve(;
         value_curve=convert_value_curve(_require(f.value_curve, "FuelCurve.value_curve")),
         power_units=_power_units_marker(f.power_units),
-        fuel_units=MMBtu,
+        fuel_units=_fuel_units(f),
         fuel_cost=convert_cost(_require(f.fuel_cost, "FuelCurve.fuel_cost")),
         startup_fuel_offtake=_startup_fuel_offtake(f.startup_fuel_offtake),
         vom_cost=_vom_cost(f.vom_cost),

@@ -71,24 +71,21 @@ _optional_to_wire(v) = v
 # nothing at all where the spec type is the concrete curve (`vom_cost`).
 _power_units_to_string(::NaturalUnit, ::ProductionVariableCostCurve) =
     IC.UnitSystem("NATURAL_UNITS")
-_power_units_to_string(::ComponentBaseUnit, ::ProductionVariableCostCurve) =
-    IC.UnitSystem("COMPONENT_BASE")
 
-"""
-`CostCurve.power_units`/`FuelCurve.power_units` carry no system-base member — a curve whose
-per-unit data is on the system base is expected to record that base in the owning component's
-`base_power` and ride as `COMPONENT_BASE`. This converter is handed the curve alone (see the
-`convert_cost_to_openapi(get_operation_cost(gen))` call sites), so it can neither check that the
-component's `base_power` really is the system base nor rescale the curve's x-coordinates by
-`system_base / component_base` if it is not. Relabelling would silently corrupt magnitudes, so fail
-loudly instead (psy6 rule).
-"""
-function _power_units_to_string(::SystemBaseUnit, cost::ProductionVariableCostCurve)
-    error(
-        "cannot export $(typeof(cost)) with power_units = SystemBaseUnit(): the OpenAPI " *
-        "power_units enum accepts only COMPONENT_BASE and NATURAL_UNITS, and this converter " *
-        "has no access to the owning component's base_power to rescale the curve. Rebuild " *
-        "the curve on the component's own base (ComponentBaseUnit) or in natural units first.",
+# A portfolio has no base power, so it cannot hold a per-unit curve (validation rejects one)
+_power_units_to_string(units, cost::ProductionVariableCostCurve) = error(
+    "cannot export $(typeof(cost)) with power_units = $units: a portfolio's cost curves " *
+    "must be in natural units.",
+)
+
+function _fuel_units_to_wire(cost::FuelCurve)
+    units = IS.get_fuel_units(cost)
+    for (name, wire_units) in WIRE_FUEL_UNITS
+        wire_units == units && return PC.FuelUnit(name)
+    end
+    return error(
+        "cannot export a FuelCurve in $units: the document states fuel in " *
+        "$(join(sort!(collect(keys(WIRE_FUEL_UNITS))), " or ")).",
     )
 end
 
@@ -240,7 +237,7 @@ function convert_cost_to_openapi(cost::FuelCurve)
         power_units=_power_units_to_string(get_power_units(cost), cost),
         value_curve=PC.ValueCurve(convert_cost_to_openapi(get_value_curve(cost))),
         fuel_cost=IS.get_fuel_cost(cost),
-        fuel_units=PC.FuelUnit(WIRE_FUEL_UNITS),
+        fuel_units=_fuel_units_to_wire(cost),
         fuel_cost_time_series=_fuel_cost_time_series_id(IS.get_fuel_cost_time_series(cost)),
         vom_cost=convert_cost_to_openapi(get_vom_cost(cost)),
     )

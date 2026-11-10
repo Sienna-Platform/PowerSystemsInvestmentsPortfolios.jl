@@ -13,29 +13,20 @@ conversion between natural units and user-specified display units.
 # ============================================================
 
 """
-    FuelCurveUnits
-
-A `NamedTuple` type `(energy_unit, fuel_unit, currency_unit)` of `Unitful.Units`
-used to describe the units of a `FuelCurve`. Its natural units are
-`(energy_unit=u"MW"*u"hr", fuel_unit=MMBtu, currency_unit=USD)`.
-"""
-const FuelCurveUnits = NamedTuple{
-    (:energy_unit, :fuel_unit, :currency_unit),
-    T,
-} where {T <: Tuple{<:Unitful.Units, <:Unitful.Units, <:Unitful.Units}}
-
-"""
     ConversionUnits
 
 A `NamedTuple` type `(x_unit, y_unit)` of `Unitful.Units` used to describe the
-two axes of a cost curve or value curve — `x_unit` for the independent variable
-(e.g. power or energy) and `y_unit` for the dependent variable (e.g. cost).
+two axes of a value curve — `x_unit` for the independent variable (e.g. power or energy)
+and `y_unit` for the dependent variable (e.g. cost). Cost and fuel curves carry their own
+units and do not take it.
 """
 const ConversionUnits =
     NamedTuple{(:x_unit, :y_unit), T} where {T <: Tuple{<:Unitful.Units, <:Unitful.Units}}
 
 const _UNIT_AWARE = Union{Technology, Requirement, SupplementalAttribute}
-const _UNIT_OPTIONS = Union{Unitful.Units, ConversionUnits, FuelCurveUnits, IS.NaturalUnit}
+const _UNIT_OPTIONS = Union{Unitful.Units, ConversionUnits, IS.NaturalUnit}
+# Operating costs, whose cost and fuel curves carry their own units
+const UnitsCarryingCost = Union{PSY.OperationalCost, IS.ProductionVariableCostCurve}
 
 # Can import relevant units from PSY 
 abstract type UnitCategory end
@@ -53,7 +44,6 @@ struct EmissionsMassCategory <: UnitCategory end
 struct EmissionsCostCategory <: UnitCategory end
 struct EmissionsFuelCategory <: UnitCategory end
 struct EmissionsEnergyCategory <: UnitCategory end
-struct FuelCurveCategory <: UnitCategory end
 struct PowerCostCategory <: UnitCategory end
 struct EnergyCostCategory <: UnitCategory end
 struct EnergyCostScalarCategory <: UnitCategory end
@@ -81,7 +71,6 @@ const EMISSIONS_MASS = EmissionsMassCategory()
 const EMISSIONS_COST = EmissionsCostCategory()
 const EMISSIONS_FUEL = EmissionsFuelCategory()
 const EMISSIONS_ENERGY = EmissionsEnergyCategory()
-const FUEL_CURVE = FuelCurveCategory()
 const POWER_COST = PowerCostCategory()
 const ENERGY_COST = EnergyCostCategory()
 const ENERGY_COST_SCALAR = EnergyCostScalarCategory()
@@ -117,8 +106,6 @@ natural_unit(::EmissionsCostCategory) = USD / tonne
 natural_unit(::EmissionsFuelCategory) = tonne / MMBtu
 natural_unit(::EmissionsEnergyCategory) = Mt / (u"MW" * u"hr")
 natural_unit(::FuelCostCategory) = (x_unit=MMBtu, y_unit=USD)
-natural_unit(::FuelCurveCategory) =
-    (energy_unit=u"MW" * u"hr", fuel_unit=MMBtu, currency_unit=USD)
 
 # --- Return value with its default natural units ---
 function convert_units(c, val::Number, from::UnitCategory, to::IS.NaturalUnit)
@@ -152,9 +139,10 @@ end
 val_to_symbol(::Val{T}) where {T} = T
 val_to_string(v::Val) = String(val_to_symbol(v))
 
-# `InfrastructureSystems.NU` (natural units) passed as a `from`/`to` argument is treated
-# as equivalent to the field's assumed internal (natural) units, i.e. no conversion.
-_resolve_nu(u, natural_unit) = u isa IS.NaturalUnit ? natural_unit : u
+# Natural units, `u"NU"` as in PowerSystems or `InfrastructureSystems.NU`, passed as a
+# `from`/`to` argument are the field's internal (natural) units, i.e. no conversion.
+_is_natural(u) = u isa IS.NaturalUnit || u == u"NU"
+_resolve_nu(u, natural_unit) = _is_natural(u) ? natural_unit : u
 
 """
     get_value(t::Technology, field::Val, conversion_unit::Val, units) -> value
@@ -169,27 +157,16 @@ function get_value(
     from::Val,
     to::_UNIT_OPTIONS,
 ) where {T <: _UNIT_AWARE, U}
-    value = Base.getproperty(t, val_to_symbol(field))
+    return _get_value(t, field, Base.getproperty(t, U), from, to)
+end
+
+function _get_value(t, field, value, from::Val, to)
     base_unit = natural_unit(_unit_category(from))
     return _natural_unit_conversions(t, value, base_unit, _resolve_nu(to, base_unit))
 end
 
-# Operation costs requires special handling for SupplyTechnologies, since it can be a 
-# FuelCurve or CostCurve, and the units are different for each.
-function get_value(
-    t::SupplyTechnology,
-    field::Val{:operation_costs},
-    from::Val,
-    to::_UNIT_OPTIONS,
-)
-    value = Base.getproperty(t, val_to_symbol(field))
-    variable = get_variable_operation_cost(value)
-    if isa(variable, FuelCurve)
-        from = Val(:fuel_curve)
-    end
-    base_unit = natural_unit(_unit_category(from))
-    return _natural_unit_conversions(t, value, base_unit, _resolve_nu(to, base_unit))
-end
+_get_value(t, field, value::UnitsCarryingCost, ::Val, to) =
+    cost_in_units(t, field, value, to)
 
 """
     set_value(t::Technology, field::Val, val, conversion_unit::Val) -> value
@@ -212,23 +189,8 @@ function set_value(
     )
 end
 
-# Operation costs requires special handling for SupplyTechnologies, since it can be a 
-# FuelCurve or CostCurve, and the units are different for each.
-function set_value(
-    t::T,
-    field::Val{:operation_costs},
-    value,
-    from::_UNIT_OPTIONS,
-    to::Val,
-) where {T <: SupplyTechnology}
-    if isa(get_variable_operation_cost(value), FuelCurve)
-        to = Val(:fuel_curve)
-    end
-    base_unit = natural_unit(_unit_category(to))
-    return IS._strip_units(
-        _natural_unit_conversions(t, value, _resolve_nu(from, base_unit), base_unit),
-    )
-end
+set_value(t::_UNIT_AWARE, field, value::UnitsCarryingCost, from::_UNIT_OPTIONS, ::Val) =
+    set_cost(t, field, value, from)
 
 _natural_unit_conversions(base, value::Number, from, to) =
     convert_units(base, value, from, to)
@@ -289,7 +251,6 @@ _unit_category(::Val{:usd}) = COST
 _unit_category(::Val{:mmbtu}) = FUEL
 _unit_category(::Val{:mmbtu_per_mwh}) = FUEL_CONSUMPTION_ENERGY
 _unit_category(::Val{:mmbtu_per_mw}) = FUEL_CONSUMPTION_POWER
-_unit_category(::Val{:fuel_curve}) = FUEL_CURVE
 _unit_category(::Val{:mt}) = EMISSIONS_MASS
 _unit_category(::Val{:usd_per_t}) = EMISSIONS_COST
 _unit_category(::Val{:t_per_mmbtu}) = EMISSIONS_FUEL

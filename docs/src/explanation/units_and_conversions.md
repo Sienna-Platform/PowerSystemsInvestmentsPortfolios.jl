@@ -56,20 +56,22 @@ Cost fields carry a value along *two* axes (an independent `x` and a dependent `
 units are expressed as a `NamedTuple` rather than a single unit. The corresponding
 [`ConversionUnits`](@ref) natural units are:
 
-| Physical quantity | Natural unit                       | Example fields                                                                  |
-|:----------------- |:---------------------------------- |:------------------------------------------------------------------------------- |
-| Power cost        | `(x_unit=u"MW", y_unit=USD)`       | `retirement_cost`, `retrofit_cost`                                              |
-| Energy cost       | `(x_unit=u"MW"*u"hr", y_unit=USD)` | `operation_costs`, `operation_costs_inverter`, `curtailment_cost`, `shift_cost` |
+| Physical quantity | Natural unit                       | Example fields                    |
+|:----------------- |:---------------------------------- |:--------------------------------- |
+| Power cost        | `(x_unit=u"MW", y_unit=USD)`       | `retirement_cost`, `retrofit_cost` |
+| Energy cost       | `(x_unit=u"MW"*u"hr", y_unit=USD)` | `curtailment_cost`, `shift_cost`  |
 
 Capital costs are not unit-aware fields: [`CapitalCost`](@ref) and
 [`StorageCapitalCost`](@ref) hold curves that are always in USD/MW (USD/MWh for storage
 energy).
 
-Fuel-consumption curves (`FuelCurve`) span three axes and use the
-[`FuelCurveUnits`](@ref) form `(energy_unit=…, fuel_unit=…, currency_unit=…)`, whose
-natural units are `(energy_unit=u"MW"*u"hr", fuel_unit=MMBtu, currency_unit=USD)`. An
-`operation_costs` field whose variable cost is a `FuelCurve` takes this form instead of
-`(x_unit, y_unit)`.
+Operating costs (`operation_costs`, `operation_costs_inverter`) are different: their
+`CostCurve`s and `FuelCurve`s carry their own units, as in PowerSystems. Each records the
+basis of its power axis, which must be natural units (a portfolio has no base power, so a
+per-unit curve is an error), and a `FuelCurve` records the fuel it is in (`fuel_units`, such
+as MMBtu or GJ). Their accessors take natural units, which return the cost as stored, or a
+fuel unit, which converts the fuel of any fuel curve; the power and currency axes are not
+converted.
 
 ## The units-aware accessor pattern
 
@@ -194,4 +196,3 @@ preserving its shape.
   - [How to work with units](@ref)
   - [`natural_unit`](@ref)
   - [`ConversionUnits`](@ref)
-  - [`FuelCurveUnits`](@ref)

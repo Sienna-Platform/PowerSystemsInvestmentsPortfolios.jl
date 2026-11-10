@@ -250,7 +250,25 @@ function validate_technology(technology::AggregateTransportTechnology)
     return is_valid
 end
 
-IS.validate_struct(technology::Technology) = validate_technology(technology)
+# A portfolio has no base power, so every cost curve of a technology must be in natural units
+function _validate_natural_cost_units(technology::Technology)
+    is_valid = true
+    for field in fieldnames(typeof(technology))
+        cost = getfield(technology, field)
+        if cost isa UnitsCarryingCost && !has_natural_power_units(cost)
+            @error(
+                "Cost curves must be in natural units; a portfolio has no base power",
+                technology = get_name(technology),
+                field = field,
+            )
+            is_valid = false
+        end
+    end
+    return is_valid
+end
+
+IS.validate_struct(technology::Technology) =
+    validate_technology(technology) & _validate_natural_cost_units(technology)
 
 """
 Validate a technology using data from the portfolio.

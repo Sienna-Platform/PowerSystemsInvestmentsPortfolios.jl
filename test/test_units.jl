@@ -246,38 +246,6 @@ function check_valuecurve(get, set, nat, alt; prop, ratio)
     @test get_proportional(get(nat)) ≈ prop
 end
 
-# ThermalGenerationCost / RenewableGenerationCost field: both carry `variable` and
-# `fixed`, and both scale by `ratio`.
-function check_variable_fixed_cost(get, set, nat, alt; var_prop, fixed, ratio)
-    o = get(nat)
-    @test o.variable_operation_cost.value_curve.function_data.proportional_term ≈ var_prop
-    @test o.fixed ≈ fixed
-    o2 = get(alt)
-    @test o2.variable_operation_cost.value_curve.function_data.proportional_term ≈
-          var_prop * ratio
-    @test o2.fixed ≈ fixed * ratio
-    set(get(alt), alt)              # round trip: feed the alt-unit cost back
-    o3 = get(nat)
-    @test o3.variable_operation_cost.value_curve.function_data.proportional_term ≈ var_prop
-    @test o3.fixed ≈ fixed
-end
-
-# ProductionVariableCostCurve field: the value curve's proportional term scales by `ratio`.
-function check_cost_curve(get, set, nat, alt; prop, ratio)
-    @test get_proportional(get_value_curve(get(nat))) ≈ prop
-    @test get_proportional(get_value_curve(get(alt))) ≈ prop * ratio
-    set(get(alt), alt)
-    @test get_proportional(get_value_curve(get(nat))) ≈ prop
-end
-
-# StorageCost field: the scalar `fixed` term scales by `ratio`.
-function check_storage_cost(get, set, nat, alt; fixed, ratio)
-    @test get(nat).fixed ≈ fixed
-    @test get(alt).fixed ≈ fixed * ratio
-    set(get(alt), alt)
-    @test get(nat).fixed ≈ fixed
-end
-
 @testset "natural_unit definitions" begin
     @test PSIP.natural_unit(PSIP.POWER) == u"MW"
     @test PSIP.natural_unit(PSIP.ENERGY) == u"MW" * u"hr"
@@ -300,8 +268,6 @@ end
     @test PSIP.natural_unit(PSIP.POWER_COST) == (x_unit=u"MW", y_unit=USD)
     @test PSIP.natural_unit(PSIP.ENERGY_COST) == (x_unit=u"MW" * u"hr", y_unit=USD)
     @test PSIP.natural_unit(PSIP.FUEL_COST) == (x_unit=MMBtu, y_unit=USD)
-    @test PSIP.natural_unit(PSIP.FUEL_CURVE) ==
-          (energy_unit=u"MW" * u"hr", fuel_unit=MMBtu, currency_unit=USD)
 
     # _unit_category resolves the schema tokens used by the generated code.
     @test PSIP._unit_category(Val(:mw)) === PSIP.POWER
@@ -397,80 +363,60 @@ end
     @test navg.input_at_zero ≈ 2.0e6
 end
 
-@testset "CostCurve / FuelCurve conversions" begin
+@testset "Operating costs carry their own units" begin
     t = supply()
-    io = InputOutputCurve(LinearFunctionData(0.5, 10.0), 1.0)
-
-    cc = CostCurve(io, LinearCurve(1.0))
-    ncc = PSIP._natural_unit_conversions(
-        t,
-        cc,
-        conversion_unit(u"MW", USD),
-        conversion_unit(u"MW", USD),
+    io = InputOutputCurve(LinearFunctionData(10.0, 2.0))
+    fuel_curve = FuelCurve(;
+        value_curve=io,
+        fuel_units=u"GJ",
+        fuel_cost=4.0,
+        startup_fuel_offtake=LinearCurve(2.0),
+        vom_cost=LinearCurve(1.0),
     )
-    @test ncc isa CostCurve
-    @test ncc.value_curve.function_data.proportional_term ≈ 0.5
+    cost = ThermalGenerationCost(fuel_curve, 100.0, (hot=100.0, warm=50.0, cold=10.0), 0.0)
+    PSIP.set_operation_costs!(t, cost, IS.NU)
 
-    fc = FuelCurve(io, MMBtu, 100.0, LinearCurve(1.0), LinearCurve(1.0))
-    nfc = PSIP._natural_unit_conversions(
-        t,
-        fc,
-        (energy_unit=u"MW" * u"hr", fuel_unit=MMBtu, currency_unit=USD),
-        (energy_unit=u"MW" * u"hr", fuel_unit=u"btu", currency_unit=USD),
-    )
-    @test nfc isa FuelCurve
-    @test nfc.value_curve.function_data.proportional_term ≈ 5.0e5
-    @test nfc.fuel_cost ≈ 1.0e-4
-end
+    # Natural units return the cost as stored, its fuel in GJ
+    @test PSIP.get_operation_costs(t, IS.NU) === cost
+    @test PSIP.get_operation_costs(t, u"NU") === cost
 
-@testset "OperationalCost conversions" begin
-    t = supply()
-    cu_kw = conversion_unit(u"kW", USD)
-    cu_mw = conversion_unit(u"MW", USD)
+    # A fuel unit converts the fuel of the fuel curve and nothing else
+    gj = ustrip(uconvert(MMBtu, 1.0u"GJ"))
+    converted = PSIP.get_operation_costs(t, MMBtu)
+    curve = converted.variable_operation_cost
+    @test IS.get_fuel_units(curve) == MMBtu
+    @test get_value_curve(curve).function_data.proportional_term ≈ 10.0 * gj
+    @test get_value_curve(curve).function_data.constant_term ≈ 2.0 * gj
+    @test IS.get_fuel_cost(curve) ≈ 4.0 / gj
+    @test get_proportional_term(IS.get_startup_fuel_offtake(curve)) ≈ 2.0 * gj
+    @test get_vom_cost(curve) == LinearCurve(1.0)
+    @test converted.fixed == 100.0
+    @test converted.start_up == (hot=100.0, warm=50.0, cold=10.0)
+    @test PSIP.get_operation_costs(t, u"GJ") === cost
 
-    gc = ThermalGenerationCost(
-        CostCurve(InputOutputCurve(LinearFunctionData(0.5, 10.0))),
-        100.0,
-        0.0,
-        0.0,
-    )
-    ngc = PSIP._natural_unit_conversions(t, gc, cu_kw, cu_mw)
-    @test ngc isa ThermalGenerationCost
-    @test ngc.variable_operation_cost.value_curve.function_data.proportional_term ≈ 500.0
-    @test ngc.fixed ≈ 1.0e5
-
-    io = InputOutputCurve(LinearFunctionData(0.5, 10.0), 1.0)
-    fc = FuelCurve(io, MMBtu, 100.0, LinearCurve(1.0), LinearCurve(1.0))
-    gfc = ThermalGenerationCost(fc, 100.0, (hot=100.0, warm=50.0, cold=10.0), 0.0)
-    ngfc = PSIP._natural_unit_conversions(
-        t,
-        gfc,
-        (energy_unit=u"MW" * u"hr", fuel_unit=MMBtu, currency_unit=USD),
-        (energy_unit=u"MW" * u"hr", fuel_unit=u"btu", currency_unit=USD),
-    )
-    @test ngfc isa ThermalGenerationCost
-    @test ngfc.variable_operation_cost.fuel_cost ≈ 1.0e-4
-    @test ngfc.start_up == (hot=100.0, warm=50.0, cold=10.0)
-
-    sc = StorageCost(;
+    # Cost curves have no fuel to convert
+    storage_cost = StorageCost(;
         charge_variable_cost=CostCurve(LinearCurve(1.0)),
         discharge_variable_cost=CostCurve(LinearCurve(1.0)),
         fixed=2.0,
     )
-    nsc = PSIP._natural_unit_conversions(t, sc, cu_kw, cu_mw)
-    @test nsc isa StorageCost
-    @test nsc.fixed ≈ 2000.0
+    @test PSIP.convert_fuel_units(storage_cost, MMBtu) === storage_cost
 
-    # RenewableGenerationCost: `curtailment_cost` field (bug fixed on this branch).
-    rc = RenewableGenerationCost(
-        CostCurve(LinearCurve(1.0)),
-        CostCurve(LinearCurve(0.0)),
-        1.0,
+    # Power and currency conversions are not available for curves that carry units
+    @test_throws ArgumentError PSIP.get_operation_costs(t, u"kW")
+    @test_throws ArgumentError PSIP.get_operation_costs(
+        t,
+        conversion_unit(u"kW" * u"hr", USD),
     )
-    nrc = PSIP._natural_unit_conversions(t, rc, cu_kw, cu_mw)
-    @test nrc isa RenewableGenerationCost
-    @test nrc.fixed ≈ 1000.0
-    @test nrc.variable_operation_cost.value_curve.function_data.proportional_term ≈ 1000.0
+    @test_throws ArgumentError PSIP.set_operation_costs!(t, cost, u"MW")
+    @test_throws Unitful.DimensionError PSIP.get_operation_costs(t, u"L")
+
+    # A portfolio has no base power, so per-unit curves are rejected
+    per_unit = ThermalGenerationCost(CostCurve(LinearCurve(1.0), IS.SU), 0.0, 0.0, 0.0)
+    @test_throws IS.InvalidValue PSIP.set_operation_costs!(t, per_unit, IS.NU)
+    t.operation_costs = per_unit
+    @test_throws IS.InvalidValue PSIP.get_operation_costs(t, IS.NU)
+    @test !(@test_logs (:error, r"natural units") IS.validate_struct(t))
 end
 
 @testset "SupplyTechnology getters/setters" begin
@@ -525,12 +471,10 @@ end
     PSIP.set_outage_factor!(t, (planned=0.08, forced=0.0))
     @test PSIP.get_outage_factor(t) == (planned=0.08, forced=0.0)
 
-    # operation_costs (usd_per_mwh, OperationalCost)
-    oc = PSIP.get_operation_costs(t, conversion_unit(u"MW" * u"hr", USD))
+    # operation_costs carry their own units
+    oc = PSIP.get_operation_costs(t, IS.NU)
     @test oc.variable_operation_cost.value_curve.function_data.proportional_term ≈ 10.0
     @test oc.fixed ≈ 100.0
-    oc2 = PSIP.get_operation_costs(t, conversion_unit(u"kW" * u"hr", USD))
-    @test oc2.variable_operation_cost.value_curve.function_data.proportional_term ≈ 0.01
     # lifetime (yr, Int)
     @test PSIP.get_lifetime(t, u"yr") == 30
     PSIP.set_lifetime!(t, 20, u"yr")
@@ -773,14 +717,9 @@ end
         mx=600.0,
         ratio=1000.0,
     )
-    check_cost_curve(
-        u -> PSIP.get_operation_costs_inverter(t, u),
-        (v, u) -> PSIP.set_operation_costs_inverter!(t, v, u),
-        conversion_unit(u"MW" * u"hr", USD),
-        conversion_unit(u"kW" * u"hr", USD);
-        prop=6.0,
-        ratio=1e-3,
-    )
+    inverter_cost = PSIP.get_operation_costs_inverter(t, IS.NU)
+    @test get_proportional(get_value_curve(inverter_cost)) ≈ 6.0
+    @test_throws ArgumentError PSIP.get_operation_costs_inverter(t, u"kW")
 
     PSIP.set_capital_costs_inverter!(t, PSIP.CapitalCost(LinearCurve(1300.0), 4.0))
     @test PSIP.get_capital_cost(PSIP.get_capital_costs_inverter(t)) == LinearCurve(1300.0)
