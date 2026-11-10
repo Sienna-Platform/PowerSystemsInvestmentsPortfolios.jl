@@ -679,10 +679,8 @@ function generate_invest_structs(directory, data::JSONSchema.Schema; print_resul
         # Whether to emit `from_openapi`/`to_openapi` for this struct. Opt-out, because most
         # structs here mirror a schema: a descriptor entry sets `"openapi": false` when the
         # struct is a portfolio-only concept with no counterpart in SiennaSchemas, and so no
-        # `PI.<Name>` to convert against. `Zone`/`Node` are that case since the schemas
-        # dropped the Regions folder (SiennaSchemas 51f872e) -- they remain real PSIP types,
-        # reachable through `RegionTopology` and the DB parser, but they do not ride in an
-        # OpenAPI document.
+        # `PI.<Name>` to convert against. No current descriptor entry uses it: topology
+        # (formerly the PSIP-local `Zone`/`Node`) is PowerSystems topology in the base system.
         item["has_openapi"] = get(input, "openapi", true)
 
         item["has_parametric"] = false
