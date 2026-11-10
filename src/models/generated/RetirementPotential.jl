@@ -54,8 +54,9 @@ get_build_year(value::RetirementPotential) = value.build_year
 get_retirement_cost(value::RetirementPotential, units) = InfrastructureSystems._strip_units(get_value(value, Val(:retirement_cost), Val(:usd_per_mw), units))
 """Get [`RetirementPotential`](@ref) `retirement_cost` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_retirement_cost`](@ref)."""
 get_retirement_cost_unitful(value::RetirementPotential, units) = get_value(value, Val(:retirement_cost), Val(:usd_per_mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_retirement_cost), ::Type{RetirementPotential}) = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_retirement_cost_unitful), ::Type{RetirementPotential}) = InfrastructureSystems.NU
+get_retirement_cost(value::RetirementPotential) = _units_arg_required(get_retirement_cost, Val(:usd_per_mw))
+InfrastructureSystems.display_units_arg(::typeof(get_retirement_cost), ::Type{RetirementPotential}) = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_retirement_cost_unitful), ::Type{RetirementPotential}) = u"NU"
 """Get [`RetirementPotential`](@ref) `ext`."""
 get_ext(value::RetirementPotential) = value.ext
 """Get [`RetirementPotential`](@ref) `internal`."""
@@ -67,8 +68,8 @@ set_eligible_generators!(value::RetirementPotential, val) = value.eligible_gener
 set_planned_retirement_year!(value::RetirementPotential, val) = value.planned_retirement_year = val
 """Set [`RetirementPotential`](@ref) `build_year`."""
 set_build_year!(value::RetirementPotential, val) = value.build_year = val
-"""Set [`RetirementPotential`](@ref) `retirement_cost`."""
-set_retirement_cost!(value::RetirementPotential, val, unit) = value.retirement_cost = set_value(value, Val(:retirement_cost), val, unit, Val(:usd_per_mw))
+"""Set [`RetirementPotential`](@ref) `retirement_cost` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_retirement_cost!(value::RetirementPotential, val) = value.retirement_cost = set_value(value, Val(:retirement_cost), val, Val(:usd_per_mw))
 """Set [`RetirementPotential`](@ref) `ext`."""
 set_ext!(value::RetirementPotential, val) = value.ext = val
 """Set [`RetirementPotential`](@ref) `internal`."""
@@ -91,6 +92,6 @@ function to_openapi(value::RetirementPotential, refs::OpenAPIRefs)
         eligible_generators = get_eligible_generators(value),
         planned_retirement_year = _keyed_map_to_openapi(PI.RetirementPotentialPlannedRetirementYear, get_planned_retirement_year(value)),
         build_year = _keyed_map_to_openapi(PI.RetirementPotentialBuildYear, get_build_year(value)),
-        retirement_cost = _curve_to_openapi(PI.RetirementPotentialRetirementCost, get_retirement_cost(value, IS.NU)),
+        retirement_cost = _curve_to_openapi(PI.RetirementPotentialRetirementCost, get_retirement_cost(value, u"NU")),
     )
 end

@@ -94,34 +94,39 @@ get_end_node(value::NodalACTransportTechnology) = value.end_node
 get_capacity_limits(value::NodalACTransportTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:capacity_limits), Val(:mw), units))
 """Get [`NodalACTransportTechnology`](@ref) `capacity_limits` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_capacity_limits`](@ref)."""
 get_capacity_limits_unitful(value::NodalACTransportTechnology, units) = get_value(value, Val(:capacity_limits), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_unitful), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
+get_capacity_limits(value::NodalACTransportTechnology) = _units_arg_required(get_capacity_limits, Val(:mw))
+InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_unitful), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = u"NU"
 """Get [`NodalACTransportTechnology`](@ref) `unit_size` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_unit_size_unitful`](@ref)."""
 get_unit_size(value::NodalACTransportTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:unit_size), Val(:mw), units))
 """Get [`NodalACTransportTechnology`](@ref) `unit_size` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_unit_size`](@ref)."""
 get_unit_size_unitful(value::NodalACTransportTechnology, units) = get_value(value, Val(:unit_size), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_unit_size), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_unit_size_unitful), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
+get_unit_size(value::NodalACTransportTechnology) = _units_arg_required(get_unit_size, Val(:mw))
+InfrastructureSystems.display_units_arg(::typeof(get_unit_size), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_unit_size_unitful), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = u"NU"
 """Get [`NodalACTransportTechnology`](@ref) `capital_costs`."""
 get_capital_costs(value::NodalACTransportTechnology) = value.capital_costs
 """Get [`NodalACTransportTechnology`](@ref) `resistance` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_resistance_unitful`](@ref)."""
 get_resistance(value::NodalACTransportTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:resistance), Val(:ohm), units))
 """Get [`NodalACTransportTechnology`](@ref) `resistance` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_resistance`](@ref)."""
 get_resistance_unitful(value::NodalACTransportTechnology, units) = get_value(value, Val(:resistance), Val(:ohm), units)
-InfrastructureSystems.display_units_arg(::typeof(get_resistance), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_resistance_unitful), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
+get_resistance(value::NodalACTransportTechnology) = _units_arg_required(get_resistance, Val(:ohm))
+InfrastructureSystems.display_units_arg(::typeof(get_resistance), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_resistance_unitful), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = u"NU"
 """Get [`NodalACTransportTechnology`](@ref) `voltage` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_voltage_unitful`](@ref)."""
 get_voltage(value::NodalACTransportTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:voltage), Val(:kv), units))
 """Get [`NodalACTransportTechnology`](@ref) `voltage` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_voltage`](@ref)."""
 get_voltage_unitful(value::NodalACTransportTechnology, units) = get_value(value, Val(:voltage), Val(:kv), units)
-InfrastructureSystems.display_units_arg(::typeof(get_voltage), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_voltage_unitful), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
+get_voltage(value::NodalACTransportTechnology) = _units_arg_required(get_voltage, Val(:kv))
+InfrastructureSystems.display_units_arg(::typeof(get_voltage), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_voltage_unitful), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = u"NU"
 """Get [`NodalACTransportTechnology`](@ref) `reactance` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_reactance_unitful`](@ref)."""
 get_reactance(value::NodalACTransportTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:reactance), Val(:ohm), units))
 """Get [`NodalACTransportTechnology`](@ref) `reactance` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_reactance`](@ref)."""
 get_reactance_unitful(value::NodalACTransportTechnology, units) = get_value(value, Val(:reactance), Val(:ohm), units)
-InfrastructureSystems.display_units_arg(::typeof(get_reactance), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_reactance_unitful), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
+get_reactance(value::NodalACTransportTechnology) = _units_arg_required(get_reactance, Val(:ohm))
+InfrastructureSystems.display_units_arg(::typeof(get_reactance), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_reactance_unitful), ::Type{NodalACTransportTechnology{T}}) where {T <: PSY.Device} = u"NU"
 """Get [`NodalACTransportTechnology`](@ref) `requirements`."""
 get_requirements(value::NodalACTransportTechnology) = value.requirements
 """Get [`NodalACTransportTechnology`](@ref) `financial_data`."""
@@ -141,18 +146,18 @@ set_power_systems_type!(value::NodalACTransportTechnology, val) = value.power_sy
 set_start_node!(value::NodalACTransportTechnology, val) = value.start_node = val
 """Set [`NodalACTransportTechnology`](@ref) `end_node`."""
 set_end_node!(value::NodalACTransportTechnology, val) = value.end_node = val
-"""Set [`NodalACTransportTechnology`](@ref) `capacity_limits`."""
-set_capacity_limits!(value::NodalACTransportTechnology, val, unit) = value.capacity_limits = set_value(value, Val(:capacity_limits), val, unit, Val(:mw))
-"""Set [`NodalACTransportTechnology`](@ref) `unit_size`."""
-set_unit_size!(value::NodalACTransportTechnology, val, unit) = value.unit_size = set_value(value, Val(:unit_size), val, unit, Val(:mw))
+"""Set [`NodalACTransportTechnology`](@ref) `capacity_limits` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_capacity_limits!(value::NodalACTransportTechnology, val) = value.capacity_limits = set_value(value, Val(:capacity_limits), val, Val(:mw))
+"""Set [`NodalACTransportTechnology`](@ref) `unit_size` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_unit_size!(value::NodalACTransportTechnology, val) = value.unit_size = set_value(value, Val(:unit_size), val, Val(:mw))
 """Set [`NodalACTransportTechnology`](@ref) `capital_costs`."""
 set_capital_costs!(value::NodalACTransportTechnology, val) = value.capital_costs = val
-"""Set [`NodalACTransportTechnology`](@ref) `resistance`."""
-set_resistance!(value::NodalACTransportTechnology, val, unit) = value.resistance = set_value(value, Val(:resistance), val, unit, Val(:ohm))
-"""Set [`NodalACTransportTechnology`](@ref) `voltage`."""
-set_voltage!(value::NodalACTransportTechnology, val, unit) = value.voltage = set_value(value, Val(:voltage), val, unit, Val(:kv))
-"""Set [`NodalACTransportTechnology`](@ref) `reactance`."""
-set_reactance!(value::NodalACTransportTechnology, val, unit) = value.reactance = set_value(value, Val(:reactance), val, unit, Val(:ohm))
+"""Set [`NodalACTransportTechnology`](@ref) `resistance` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_resistance!(value::NodalACTransportTechnology, val) = value.resistance = set_value(value, Val(:resistance), val, Val(:ohm))
+"""Set [`NodalACTransportTechnology`](@ref) `voltage` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_voltage!(value::NodalACTransportTechnology, val) = value.voltage = set_value(value, Val(:voltage), val, Val(:kv))
+"""Set [`NodalACTransportTechnology`](@ref) `reactance` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_reactance!(value::NodalACTransportTechnology, val) = value.reactance = set_value(value, Val(:reactance), val, Val(:ohm))
 """Set [`NodalACTransportTechnology`](@ref) `requirements`."""
 set_requirements!(value::NodalACTransportTechnology, val) = value.requirements = val
 """Set [`NodalACTransportTechnology`](@ref) `financial_data`."""
@@ -189,12 +194,12 @@ function to_openapi(value::NodalACTransportTechnology{T}, refs::OpenAPIRefs) whe
         power_systems_type = string(nameof(T)),
         start_node = component_id(refs, get_start_node(value)),
         end_node = component_id(refs, get_end_node(value)),
-        capacity_limits = _minmax_po(get_capacity_limits(value, IS.NU)),
-        unit_size = get_unit_size(value, IS.NU),
+        capacity_limits = _minmax_po(get_capacity_limits(value, u"NU")),
+        unit_size = get_unit_size(value, u"NU"),
         capital_costs = convert_nested_data_to_openapi(get_capital_costs(value)),
-        resistance = get_resistance(value, IS.NU),
-        voltage = get_voltage(value, IS.NU),
-        reactance = get_reactance(value, IS.NU),
+        resistance = get_resistance(value, u"NU"),
+        voltage = get_voltage(value, u"NU"),
+        reactance = get_reactance(value, u"NU"),
         financial_data = convert_nested_data_to_openapi(get_financial_data(value)),
     )
 end

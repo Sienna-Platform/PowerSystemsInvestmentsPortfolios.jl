@@ -52,8 +52,9 @@ get_available(value::MaximumCapacityRequirements) = value.available
 get_max_capacity_mw(value::MaximumCapacityRequirements, units) = InfrastructureSystems._strip_units(get_value(value, Val(:max_capacity_mw), Val(:mw), units))
 """Get [`MaximumCapacityRequirements`](@ref) `max_capacity_mw` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_max_capacity_mw`](@ref)."""
 get_max_capacity_mw_unitful(value::MaximumCapacityRequirements, units) = get_value(value, Val(:max_capacity_mw), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_max_capacity_mw), ::Type{MaximumCapacityRequirements}) = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_max_capacity_mw_unitful), ::Type{MaximumCapacityRequirements}) = InfrastructureSystems.NU
+get_max_capacity_mw(value::MaximumCapacityRequirements) = _units_arg_required(get_max_capacity_mw, Val(:mw))
+InfrastructureSystems.display_units_arg(::typeof(get_max_capacity_mw), ::Type{MaximumCapacityRequirements}) = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_max_capacity_mw_unitful), ::Type{MaximumCapacityRequirements}) = u"NU"
 """Get [`MaximumCapacityRequirements`](@ref) `target_year`."""
 get_target_year(value::MaximumCapacityRequirements) = value.target_year
 """Get [`MaximumCapacityRequirements`](@ref) `ext`."""
@@ -65,8 +66,8 @@ get_internal(value::MaximumCapacityRequirements) = value.internal
 set_name!(value::MaximumCapacityRequirements, val) = value.name = val
 """Set [`MaximumCapacityRequirements`](@ref) `available`."""
 set_available!(value::MaximumCapacityRequirements, val) = value.available = val
-"""Set [`MaximumCapacityRequirements`](@ref) `max_capacity_mw`."""
-set_max_capacity_mw!(value::MaximumCapacityRequirements, val, unit) = value.max_capacity_mw = set_value(value, Val(:max_capacity_mw), val, unit, Val(:mw))
+"""Set [`MaximumCapacityRequirements`](@ref) `max_capacity_mw` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_max_capacity_mw!(value::MaximumCapacityRequirements, val) = value.max_capacity_mw = set_value(value, Val(:max_capacity_mw), val, Val(:mw))
 """Set [`MaximumCapacityRequirements`](@ref) `target_year`."""
 set_target_year!(value::MaximumCapacityRequirements, val) = value.target_year = val
 """Set [`MaximumCapacityRequirements`](@ref) `ext`."""
@@ -90,7 +91,7 @@ function to_openapi(value::MaximumCapacityRequirements, refs::OpenAPIRefs)
         id = get_id(value),
         name = get_name(value),
         available = get_available(value),
-        max_capacity_mw = get_max_capacity_mw(value, IS.NU),
+        max_capacity_mw = get_max_capacity_mw(value, u"NU"),
         target_year = get_target_year(value),
     )
 end

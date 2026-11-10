@@ -201,7 +201,7 @@ end
     # cheap_thermal uses a FuelCurve — heat_rate and fuel_cost are defined
     # Operating costs carry their own units: natural units, or a fuel unit for fuel curves
     fc_units = MMBtu
-    cost_units = IS.NU
+    cost_units = u"NU"
     thermal = get_technology(SupplyTechnology{ThermalStandard}, p_5bus, "cheap_thermal")
     @test PSIP.get_heat_rate(thermal, fc_units) isa Float64
     @test PSIP.get_heat_rate(thermal, fc_units) > 0
@@ -218,7 +218,7 @@ end
 @testset "get_variable_cost_charge / get_variable_cost_discharge" begin
     p_5bus = build_portfolio()
 
-    cost_units = IS.NU
+    cost_units = u"NU"
     storage = get_technology(StorageTechnology, p_5bus, "test_storage")
     @test get_variable_cost_charge(storage, cost_units) isa Float64
     @test get_variable_cost_discharge(storage, cost_units) isa Float64
@@ -232,7 +232,7 @@ end
 
     # Operating costs carry their own units: natural units, or a fuel unit for fuel curves
     fc_units = MMBtu
-    cost_units = IS.NU
+    cost_units = u"NU"
     thermal = get_technology(SupplyTechnology{ThermalStandard}, p_5bus, "cheap_thermal")
     wind = get_technology(SupplyTechnology{RenewableDispatch}, p_5bus, "wind")
     storage = get_technology(StorageTechnology, p_5bus, "test_storage")

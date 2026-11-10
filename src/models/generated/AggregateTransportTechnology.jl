@@ -86,14 +86,16 @@ get_end_region(value::AggregateTransportTechnology) = value.end_region
 get_capacity_limits(value::AggregateTransportTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:capacity_limits), Val(:mw), units))
 """Get [`AggregateTransportTechnology`](@ref) `capacity_limits` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_capacity_limits`](@ref)."""
 get_capacity_limits_unitful(value::AggregateTransportTechnology, units) = get_value(value, Val(:capacity_limits), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits), ::Type{AggregateTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_unitful), ::Type{AggregateTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
+get_capacity_limits(value::AggregateTransportTechnology) = _units_arg_required(get_capacity_limits, Val(:mw))
+InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits), ::Type{AggregateTransportTechnology{T}}) where {T <: PSY.Device} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_unitful), ::Type{AggregateTransportTechnology{T}}) where {T <: PSY.Device} = u"NU"
 """Get [`AggregateTransportTechnology`](@ref) `unit_size` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_unit_size_unitful`](@ref)."""
 get_unit_size(value::AggregateTransportTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:unit_size), Val(:mw), units))
 """Get [`AggregateTransportTechnology`](@ref) `unit_size` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_unit_size`](@ref)."""
 get_unit_size_unitful(value::AggregateTransportTechnology, units) = get_value(value, Val(:unit_size), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_unit_size), ::Type{AggregateTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_unit_size_unitful), ::Type{AggregateTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
+get_unit_size(value::AggregateTransportTechnology) = _units_arg_required(get_unit_size, Val(:mw))
+InfrastructureSystems.display_units_arg(::typeof(get_unit_size), ::Type{AggregateTransportTechnology{T}}) where {T <: PSY.Device} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_unit_size_unitful), ::Type{AggregateTransportTechnology{T}}) where {T <: PSY.Device} = u"NU"
 """Get [`AggregateTransportTechnology`](@ref) `capital_costs`."""
 get_capital_costs(value::AggregateTransportTechnology) = value.capital_costs
 """Get [`AggregateTransportTechnology`](@ref) `line_loss`."""
@@ -117,10 +119,10 @@ set_power_systems_type!(value::AggregateTransportTechnology, val) = value.power_
 set_start_region!(value::AggregateTransportTechnology, val) = value.start_region = val
 """Set [`AggregateTransportTechnology`](@ref) `end_region`."""
 set_end_region!(value::AggregateTransportTechnology, val) = value.end_region = val
-"""Set [`AggregateTransportTechnology`](@ref) `capacity_limits`."""
-set_capacity_limits!(value::AggregateTransportTechnology, val, unit) = value.capacity_limits = set_value(value, Val(:capacity_limits), val, unit, Val(:mw))
-"""Set [`AggregateTransportTechnology`](@ref) `unit_size`."""
-set_unit_size!(value::AggregateTransportTechnology, val, unit) = value.unit_size = set_value(value, Val(:unit_size), val, unit, Val(:mw))
+"""Set [`AggregateTransportTechnology`](@ref) `capacity_limits` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_capacity_limits!(value::AggregateTransportTechnology, val) = value.capacity_limits = set_value(value, Val(:capacity_limits), val, Val(:mw))
+"""Set [`AggregateTransportTechnology`](@ref) `unit_size` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_unit_size!(value::AggregateTransportTechnology, val) = value.unit_size = set_value(value, Val(:unit_size), val, Val(:mw))
 """Set [`AggregateTransportTechnology`](@ref) `capital_costs`."""
 set_capital_costs!(value::AggregateTransportTechnology, val) = value.capital_costs = val
 """Set [`AggregateTransportTechnology`](@ref) `line_loss`."""
@@ -159,8 +161,8 @@ function to_openapi(value::AggregateTransportTechnology{T}, refs::OpenAPIRefs) w
         power_systems_type = string(nameof(T)),
         start_region = component_id(refs, get_start_region(value)),
         end_region = component_id(refs, get_end_region(value)),
-        capacity_limits = _minmax_po(get_capacity_limits(value, IS.NU)),
-        unit_size = get_unit_size(value, IS.NU),
+        capacity_limits = _minmax_po(get_capacity_limits(value, u"NU")),
+        unit_size = get_unit_size(value, u"NU"),
         capital_costs = convert_nested_data_to_openapi(get_capital_costs(value)),
         line_loss = get_line_loss(value),
         financial_data = convert_nested_data_to_openapi(get_financial_data(value)),

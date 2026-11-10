@@ -130,52 +130,60 @@ get_capital_costs(value::StorageTechnology) = value.capital_costs
 get_operation_costs(value::StorageTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:operation_costs), Val(:usd_per_mwh), units))
 """Get [`StorageTechnology`](@ref) `operation_costs` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_operation_costs`](@ref)."""
 get_operation_costs_unitful(value::StorageTechnology, units) = get_value(value, Val(:operation_costs), Val(:usd_per_mwh), units)
-InfrastructureSystems.display_units_arg(::typeof(get_operation_costs), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_operation_costs_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
+get_operation_costs(value::StorageTechnology) = _units_arg_required(get_operation_costs, Val(:usd_per_mwh))
+InfrastructureSystems.display_units_arg(::typeof(get_operation_costs), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_operation_costs_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = u"NU"
 """Get [`StorageTechnology`](@ref) `min_discharge_fraction`."""
 get_min_discharge_fraction(value::StorageTechnology) = value.min_discharge_fraction
 """Get [`StorageTechnology`](@ref) `unit_size_charge` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_unit_size_charge_unitful`](@ref)."""
 get_unit_size_charge(value::StorageTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:unit_size_charge), Val(:mw), units))
 """Get [`StorageTechnology`](@ref) `unit_size_charge` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_unit_size_charge`](@ref)."""
 get_unit_size_charge_unitful(value::StorageTechnology, units) = get_value(value, Val(:unit_size_charge), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_unit_size_charge), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_unit_size_charge_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
+get_unit_size_charge(value::StorageTechnology) = _units_arg_required(get_unit_size_charge, Val(:mw))
+InfrastructureSystems.display_units_arg(::typeof(get_unit_size_charge), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_unit_size_charge_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = u"NU"
 """Get [`StorageTechnology`](@ref) `unit_size_discharge` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_unit_size_discharge_unitful`](@ref)."""
 get_unit_size_discharge(value::StorageTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:unit_size_discharge), Val(:mw), units))
 """Get [`StorageTechnology`](@ref) `unit_size_discharge` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_unit_size_discharge`](@ref)."""
 get_unit_size_discharge_unitful(value::StorageTechnology, units) = get_value(value, Val(:unit_size_discharge), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_unit_size_discharge), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_unit_size_discharge_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
+get_unit_size_discharge(value::StorageTechnology) = _units_arg_required(get_unit_size_discharge, Val(:mw))
+InfrastructureSystems.display_units_arg(::typeof(get_unit_size_discharge), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_unit_size_discharge_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = u"NU"
 """Get [`StorageTechnology`](@ref) `unit_size_energy` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_unit_size_energy_unitful`](@ref)."""
 get_unit_size_energy(value::StorageTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:unit_size_energy), Val(:mwh), units))
 """Get [`StorageTechnology`](@ref) `unit_size_energy` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_unit_size_energy`](@ref)."""
 get_unit_size_energy_unitful(value::StorageTechnology, units) = get_value(value, Val(:unit_size_energy), Val(:mwh), units)
-InfrastructureSystems.display_units_arg(::typeof(get_unit_size_energy), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_unit_size_energy_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
+get_unit_size_energy(value::StorageTechnology) = _units_arg_required(get_unit_size_energy, Val(:mwh))
+InfrastructureSystems.display_units_arg(::typeof(get_unit_size_energy), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_unit_size_energy_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = u"NU"
 """Get [`StorageTechnology`](@ref) `capacity_limits_charge` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_capacity_limits_charge_unitful`](@ref)."""
 get_capacity_limits_charge(value::StorageTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:capacity_limits_charge), Val(:mw), units))
 """Get [`StorageTechnology`](@ref) `capacity_limits_charge` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_capacity_limits_charge`](@ref)."""
 get_capacity_limits_charge_unitful(value::StorageTechnology, units) = get_value(value, Val(:capacity_limits_charge), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_charge), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_charge_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
+get_capacity_limits_charge(value::StorageTechnology) = _units_arg_required(get_capacity_limits_charge, Val(:mw))
+InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_charge), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_charge_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = u"NU"
 """Get [`StorageTechnology`](@ref) `capacity_limits_discharge` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_capacity_limits_discharge_unitful`](@ref)."""
 get_capacity_limits_discharge(value::StorageTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:capacity_limits_discharge), Val(:mw), units))
 """Get [`StorageTechnology`](@ref) `capacity_limits_discharge` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_capacity_limits_discharge`](@ref)."""
 get_capacity_limits_discharge_unitful(value::StorageTechnology, units) = get_value(value, Val(:capacity_limits_discharge), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_discharge), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_discharge_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
+get_capacity_limits_discharge(value::StorageTechnology) = _units_arg_required(get_capacity_limits_discharge, Val(:mw))
+InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_discharge), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_discharge_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = u"NU"
 """Get [`StorageTechnology`](@ref) `capacity_limits_energy` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_capacity_limits_energy_unitful`](@ref)."""
 get_capacity_limits_energy(value::StorageTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:capacity_limits_energy), Val(:mwh), units))
 """Get [`StorageTechnology`](@ref) `capacity_limits_energy` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_capacity_limits_energy`](@ref)."""
 get_capacity_limits_energy_unitful(value::StorageTechnology, units) = get_value(value, Val(:capacity_limits_energy), Val(:mwh), units)
-InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_energy), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_energy_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
+get_capacity_limits_energy(value::StorageTechnology) = _units_arg_required(get_capacity_limits_energy, Val(:mwh))
+InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_energy), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_energy_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = u"NU"
 """Get [`StorageTechnology`](@ref) `duration_limits` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_duration_limits_unitful`](@ref)."""
 get_duration_limits(value::StorageTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:duration_limits), Val(:min), units))
 """Get [`StorageTechnology`](@ref) `duration_limits` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_duration_limits`](@ref)."""
 get_duration_limits_unitful(value::StorageTechnology, units) = get_value(value, Val(:duration_limits), Val(:min), units)
-InfrastructureSystems.display_units_arg(::typeof(get_duration_limits), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_duration_limits_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
+get_duration_limits(value::StorageTechnology) = _units_arg_required(get_duration_limits, Val(:min))
+InfrastructureSystems.display_units_arg(::typeof(get_duration_limits), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_duration_limits_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = u"NU"
 """Get [`StorageTechnology`](@ref) `efficiency`."""
 get_efficiency(value::StorageTechnology) = value.efficiency
 """Get [`StorageTechnology`](@ref) `losses`."""
@@ -184,8 +192,9 @@ get_losses(value::StorageTechnology) = value.losses
 get_lifetime(value::StorageTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:lifetime), Val(:yr), units))
 """Get [`StorageTechnology`](@ref) `lifetime` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_lifetime`](@ref)."""
 get_lifetime_unitful(value::StorageTechnology, units) = get_value(value, Val(:lifetime), Val(:yr), units)
-InfrastructureSystems.display_units_arg(::typeof(get_lifetime), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_lifetime_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = InfrastructureSystems.NU
+get_lifetime(value::StorageTechnology) = _units_arg_required(get_lifetime, Val(:yr))
+InfrastructureSystems.display_units_arg(::typeof(get_lifetime), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_lifetime_unitful), ::Type{StorageTechnology{T}}) where {T <: PSY.Storage} = u"NU"
 """Get [`StorageTechnology`](@ref) `requirements`."""
 get_requirements(value::StorageTechnology) = value.requirements
 """Get [`StorageTechnology`](@ref) `financial_data`."""
@@ -209,30 +218,30 @@ set_prime_mover_type!(value::StorageTechnology, val) = value.prime_mover_type = 
 set_storage_tech!(value::StorageTechnology, val) = value.storage_tech = val
 """Set [`StorageTechnology`](@ref) `capital_costs`."""
 set_capital_costs!(value::StorageTechnology, val) = value.capital_costs = val
-"""Set [`StorageTechnology`](@ref) `operation_costs`."""
-set_operation_costs!(value::StorageTechnology, val, unit) = value.operation_costs = set_value(value, Val(:operation_costs), val, unit, Val(:usd_per_mwh))
+"""Set [`StorageTechnology`](@ref) `operation_costs` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_operation_costs!(value::StorageTechnology, val) = value.operation_costs = set_value(value, Val(:operation_costs), val, Val(:usd_per_mwh))
 """Set [`StorageTechnology`](@ref) `min_discharge_fraction`."""
 set_min_discharge_fraction!(value::StorageTechnology, val) = value.min_discharge_fraction = val
-"""Set [`StorageTechnology`](@ref) `unit_size_charge`."""
-set_unit_size_charge!(value::StorageTechnology, val, unit) = value.unit_size_charge = set_value(value, Val(:unit_size_charge), val, unit, Val(:mw))
-"""Set [`StorageTechnology`](@ref) `unit_size_discharge`."""
-set_unit_size_discharge!(value::StorageTechnology, val, unit) = value.unit_size_discharge = set_value(value, Val(:unit_size_discharge), val, unit, Val(:mw))
-"""Set [`StorageTechnology`](@ref) `unit_size_energy`."""
-set_unit_size_energy!(value::StorageTechnology, val, unit) = value.unit_size_energy = set_value(value, Val(:unit_size_energy), val, unit, Val(:mwh))
-"""Set [`StorageTechnology`](@ref) `capacity_limits_charge`."""
-set_capacity_limits_charge!(value::StorageTechnology, val, unit) = value.capacity_limits_charge = set_value(value, Val(:capacity_limits_charge), val, unit, Val(:mw))
-"""Set [`StorageTechnology`](@ref) `capacity_limits_discharge`."""
-set_capacity_limits_discharge!(value::StorageTechnology, val, unit) = value.capacity_limits_discharge = set_value(value, Val(:capacity_limits_discharge), val, unit, Val(:mw))
-"""Set [`StorageTechnology`](@ref) `capacity_limits_energy`."""
-set_capacity_limits_energy!(value::StorageTechnology, val, unit) = value.capacity_limits_energy = set_value(value, Val(:capacity_limits_energy), val, unit, Val(:mwh))
-"""Set [`StorageTechnology`](@ref) `duration_limits`."""
-set_duration_limits!(value::StorageTechnology, val, unit) = value.duration_limits = set_value(value, Val(:duration_limits), val, unit, Val(:min))
+"""Set [`StorageTechnology`](@ref) `unit_size_charge` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_unit_size_charge!(value::StorageTechnology, val) = value.unit_size_charge = set_value(value, Val(:unit_size_charge), val, Val(:mw))
+"""Set [`StorageTechnology`](@ref) `unit_size_discharge` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_unit_size_discharge!(value::StorageTechnology, val) = value.unit_size_discharge = set_value(value, Val(:unit_size_discharge), val, Val(:mw))
+"""Set [`StorageTechnology`](@ref) `unit_size_energy` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_unit_size_energy!(value::StorageTechnology, val) = value.unit_size_energy = set_value(value, Val(:unit_size_energy), val, Val(:mwh))
+"""Set [`StorageTechnology`](@ref) `capacity_limits_charge` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_capacity_limits_charge!(value::StorageTechnology, val) = value.capacity_limits_charge = set_value(value, Val(:capacity_limits_charge), val, Val(:mw))
+"""Set [`StorageTechnology`](@ref) `capacity_limits_discharge` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_capacity_limits_discharge!(value::StorageTechnology, val) = value.capacity_limits_discharge = set_value(value, Val(:capacity_limits_discharge), val, Val(:mw))
+"""Set [`StorageTechnology`](@ref) `capacity_limits_energy` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_capacity_limits_energy!(value::StorageTechnology, val) = value.capacity_limits_energy = set_value(value, Val(:capacity_limits_energy), val, Val(:mwh))
+"""Set [`StorageTechnology`](@ref) `duration_limits` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_duration_limits!(value::StorageTechnology, val) = value.duration_limits = set_value(value, Val(:duration_limits), val, Val(:min))
 """Set [`StorageTechnology`](@ref) `efficiency`."""
 set_efficiency!(value::StorageTechnology, val) = value.efficiency = val
 """Set [`StorageTechnology`](@ref) `losses`."""
 set_losses!(value::StorageTechnology, val) = value.losses = val
-"""Set [`StorageTechnology`](@ref) `lifetime`."""
-set_lifetime!(value::StorageTechnology, val, unit) = value.lifetime = set_value(value, Val(:lifetime), val, unit, Val(:yr))
+"""Set [`StorageTechnology`](@ref) `lifetime` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_lifetime!(value::StorageTechnology, val) = value.lifetime = set_value(value, Val(:lifetime), val, Val(:yr))
 """Set [`StorageTechnology`](@ref) `requirements`."""
 set_requirements!(value::StorageTechnology, val) = value.requirements = val
 """Set [`StorageTechnology`](@ref) `financial_data`."""
@@ -279,18 +288,18 @@ function to_openapi(value::StorageTechnology{T}, refs::OpenAPIRefs) where {T <: 
         prime_mover_type = PC.PrimeMovers(string(get_prime_mover_type(value))),
         storage_tech = PC.StorageTech(string(get_storage_tech(value))),
         capital_costs = convert_nested_data_to_openapi(get_capital_costs(value)),
-        operation_costs = convert_cost_to_openapi(get_operation_costs(value, IS.NU)),
+        operation_costs = convert_cost_to_openapi(get_operation_costs(value, u"NU")),
         min_discharge_fraction = get_min_discharge_fraction(value),
-        unit_size_charge = _optional_to_wire(get_unit_size_charge(value, IS.NU)),
-        unit_size_discharge = get_unit_size_discharge(value, IS.NU),
-        unit_size_energy = get_unit_size_energy(value, IS.NU),
-        capacity_limits_charge = PI.StorageTechnologyCapacityLimitsCharge(_capacity_bound_po_value(get_capacity_limits_charge(value, IS.NU), refs)),
-        capacity_limits_discharge = PI.StorageTechnologyCapacityLimitsDischarge(_capacity_bound_po_value(get_capacity_limits_discharge(value, IS.NU), refs)),
-        capacity_limits_energy = PI.StorageTechnologyCapacityLimitsEnergy(_capacity_bound_po_value(get_capacity_limits_energy(value, IS.NU), refs)),
-        duration_limits = _minmax_po(get_duration_limits(value, IS.NU)),
+        unit_size_charge = _optional_to_wire(get_unit_size_charge(value, u"NU")),
+        unit_size_discharge = get_unit_size_discharge(value, u"NU"),
+        unit_size_energy = get_unit_size_energy(value, u"NU"),
+        capacity_limits_charge = PI.StorageTechnologyCapacityLimitsCharge(_capacity_bound_po_value(get_capacity_limits_charge(value, u"NU"), refs)),
+        capacity_limits_discharge = PI.StorageTechnologyCapacityLimitsDischarge(_capacity_bound_po_value(get_capacity_limits_discharge(value, u"NU"), refs)),
+        capacity_limits_energy = PI.StorageTechnologyCapacityLimitsEnergy(_capacity_bound_po_value(get_capacity_limits_energy(value, u"NU"), refs)),
+        duration_limits = _minmax_po(get_duration_limits(value, u"NU")),
         efficiency = _inout_po(get_efficiency(value)),
         losses = get_losses(value),
-        lifetime = get_lifetime(value, IS.NU),
+        lifetime = get_lifetime(value, u"NU"),
         financial_data = convert_nested_data_to_openapi(get_financial_data(value)),
     )
 end

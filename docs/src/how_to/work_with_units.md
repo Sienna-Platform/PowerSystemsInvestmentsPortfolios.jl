@@ -42,7 +42,7 @@ supply = SupplyTechnology{PSY.ThermalStandard}(;
     time_limits=(up=240.0, down=240.0),     # stored in minutes
 )
 
-get_unit_size(supply, NU)       # 100.0 (MW)
+get_unit_size(supply, u"NU")       # 100.0 (MW)
 get_unit_size(supply, u"kW")    # 100000.0
 ```
 
@@ -56,11 +56,11 @@ ustrip(q)                                        # 100.0
 
 ## Write a field in a convenient unit
 
-The setter interprets the value you pass as being in the given unit and stores it in the
-field's natural unit:
+As in PowerSystems, the setter takes a units-tagged value and stores it in the field's
+natural unit; a bare number is an error:
 
 ```julia
-set_unit_size!(supply, 250_000.0, u"kW")   # stores 250.0 MW
+set_unit_size!(supply, 250_000.0u"kW")     # stores 250.0 MW
 get_unit_size(supply, u"MW")               # 250.0
 ```
 
@@ -70,10 +70,10 @@ get_unit_size(supply, u"MW")               # 250.0
 
 ```julia
 get_capacity_limits(supply, u"GW")                    # (min = 0.0, max = 0.5)
-set_capacity_limits!(supply, (min=0.0, max=0.8), u"GW")
+set_capacity_limits!(supply, (min=0.0u"GW", max=0.8u"GW"))
 get_capacity_limits(supply, u"MW")                    # (min = 0.0, max = 800.0)
 
-get_time_limits(supply, NU)          # (up = 240.0, down = 240.0), minutes
+get_time_limits(supply, u"NU")          # (up = 240.0, down = 240.0), minutes
 get_time_limits(supply, u"hr")       # (up = 4.0, down = 4.0)
 ```
 
@@ -84,19 +84,39 @@ PowerSystems, and must be in natural units. Read them in natural units to get th
 stored, or with a fuel unit to convert the fuel of a `FuelCurve`:
 
 ```julia
-get_operation_costs(supply, NU)       # as stored, e.g. a FuelCurve in GJ
+get_operation_costs(supply, u"NU")       # as stored, e.g. a FuelCurve in GJ
 get_operation_costs(supply, MMBtu)    # the FuelCurve's heat rate and fuel price in MMBtu
 ```
 
-`u"NU"` (as in PowerSystems) and `NU` both mean natural units. Other value-curve fields,
-such as `curtailment_cost`, take a [`ConversionUnits`](@ref) `NamedTuple`:
+Other curve-valued fields (`curtailment_cost`, `shift_cost`, `price_per_unit`,
+`retirement_cost`, `retrofit_cost`) are a cost in USD as a function of a quantity. Pass the
+unit of that quantity to convert the curve's x-axis; the cost stays in USD:
 
 ```julia
-get_curtailment_cost(demand, (x_unit=u"kW" * u"hr", y_unit=USD))   # USD/kWh
+get_curtailment_cost(demand, u"NU")        # USD/MWh, as stored
+get_curtailment_cost(demand, u"kWh")    # USD/kWh
+get_retrofit_cost(retrofit, u"kW")      # USD/kW
+set_price_per_unit!(electrolyzer, LinearCurve(3000.0))   # curves are set in natural units (USD/t)
 ```
 
-Capital costs are a [`CapitalCost`](@ref) or [`StorageCapitalCost`](@ref) whose curves are
-always in USD/MW (or USD/MWh for storage energy); they have no units argument.
+A tiered `curtailment_cost` (a `PiecewiseIncrementalCurve`) is the exception: its breakpoints
+are fractions of demand, so only its prices convert.
+
+`u"NU"` means natural units, as in PowerSystems. PSIP defines `u"Wh"` with SI
+prefixes (`u"kWh"`, `u"MWh"`, ...), since Unitful spells energy `u"kW*hr"`.
+
+Capital costs are a [`CapitalCost`](@ref) or [`StorageCapitalCost`](@ref); their fields take
+units like any other curve or scalar:
+
+```julia
+costs = get_capital_costs(supply)
+get_capital_cost(costs, u"kW")                 # USD/kW
+get_interconnection_cost(costs, USD / u"kW")   # a rate, like other scalar fields
+set_interconnection_cost!(costs, 50.0USD / u"kW")
+
+storage_costs = get_capital_costs(storage)
+get_energy_capital_cost(storage_costs, u"kWh") # USD/kWh
+```
 
 ## Rate units
 
@@ -139,4 +159,3 @@ natural_unit(OPS_TIME)   # hr
 
   - [Units and Unit Conversions](@ref)
   - [`natural_unit`](@ref)
-  - [`ConversionUnits`](@ref)

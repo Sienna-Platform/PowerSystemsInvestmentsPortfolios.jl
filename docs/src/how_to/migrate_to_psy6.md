@@ -68,7 +68,7 @@ The co-located inverter cost, `capital_costs_inverter`, is also a `CapitalCost`.
 
 `AggregateRetirementPotential` and `AggregateRetrofitPotential` are removed.
 
-Unit-aware getters require a units argument: use `get_capacity_limits(tech, NU)` for the
+Unit-aware getters require a units argument: use `get_capacity_limits(tech, u"NU")` for the
 natural-unit value.
 
 ## Time series features

@@ -208,7 +208,6 @@ colocated() = ColocatedSupplyStorageTechnology{PSY.ThermalStandard}(;
 # ---------------------------------------------------------------------------
 # Reusable field-check helpers. `get` / `set` are closures over the component.
 # ---------------------------------------------------------------------------
-conversion_unit(x, y) = (x_unit=x, y_unit=y)
 get_proportional(vc) = vc.function_data.proportional_term
 
 # Scalar field: value stored in `nat`, retrievable in `alt` scaled by `ratio`.
@@ -239,11 +238,16 @@ function check_updown(get, set, nat, alt; up, down, ratio)
     @test r3.up ≈ up && r3.down ≈ down
 end
 
+# Value curve field: USD per a quantity stored in `nat`; in `alt` the x-axis is scaled by
+# `ratio` (alt per nat), so the cost per unit divides by it
 function check_valuecurve(get, set, nat, alt; prop, ratio)
+    @test get_proportional(get(u"NU")) ≈ prop
+    @test get_proportional(get(u"NU")) ≈ prop
     @test get_proportional(get(nat)) ≈ prop
-    @test get_proportional(get(alt)) ≈ prop * ratio
-    set(LinearCurve(prop * ratio), alt)
-    @test get_proportional(get(nat)) ≈ prop
+    @test get_proportional(get(alt)) ≈ prop / ratio
+    set(LinearCurve(2 * prop))      # curves are set in natural units
+    @test get_proportional(get(u"NU")) ≈ 2 * prop
+    @test_throws Unitful.DimensionError get(u"s")
 end
 
 @testset "natural_unit definitions" begin
@@ -264,10 +268,10 @@ end
     @test PSIP.natural_unit(PSIP.RAMPING) == u"MW" / u"minute"
     @test PSIP.natural_unit(PSIP.FUEL_CONSUMPTION_POWER) == MMBtu / u"MW"
 
-    # Compound (x_unit, y_unit) categories.
-    @test PSIP.natural_unit(PSIP.POWER_COST) == (x_unit=u"MW", y_unit=USD)
-    @test PSIP.natural_unit(PSIP.ENERGY_COST) == (x_unit=u"MW" * u"hr", y_unit=USD)
-    @test PSIP.natural_unit(PSIP.FUEL_COST) == (x_unit=MMBtu, y_unit=USD)
+    # Cost rates; a value curve's x-axis is USD per its rate
+    @test PSIP.natural_unit(PSIP.POWER_COST) == USD / u"MW"
+    @test PSIP.natural_unit(PSIP.ENERGY_COST) == USD / (u"MW" * u"hr")
+    @test PSIP.natural_unit(PSIP.FUEL_COST) == USD / MMBtu
 
     # _unit_category resolves the schema tokens used by the generated code.
     @test PSIP._unit_category(Val(:mw)) === PSIP.POWER
@@ -301,61 +305,47 @@ end
     @test ustrip(ud.up) ≈ 60.0 && ustrip(ud.down) ≈ 120.0
 end
 
-@testset "FunctionData conversions" begin
-    t = supply()
-    cu_kw = conversion_unit(u"kW", USD)
-    cu_mw = conversion_unit(u"MW", USD)
-
+@testset "Scaling curve axes" begin
+    # kW to MW on the x-axis: x' = 0.001 x
     lin = LinearFunctionData(0.5, 10.0)
-    nl = PSIP._natural_unit_conversions(t, lin, cu_kw, cu_mw)
+    nl = PSIP.scale_axes(lin, 0.001, 1.0)
     @test nl isa LinearFunctionData
     @test nl.proportional_term ≈ 500.0
     @test nl.constant_term ≈ 10.0
 
-    quad = QuadraticFunctionData(1.0, 0.5, 10.0)
-    nq = PSIP._natural_unit_conversions(t, quad, cu_kw, cu_mw)
+    nq = PSIP.scale_axes(QuadraticFunctionData(1.0, 0.5, 10.0), 0.001, 1.0)
     @test nq.quadratic_term ≈ 1.0e6
     @test nq.proportional_term ≈ 500.0
     @test nq.constant_term ≈ 10.0
 
     pcl = PiecewiseLinearData([(x=0.0, y=10.0), (x=1.0, y=20.0), (x=2.0, y=30.0)])
-    npcl = PSIP._natural_unit_conversions(t, pcl, cu_mw, cu_kw)
-    pts = PSY.get_points(npcl)
+    pts = PSY.get_points(PSIP.scale_axes(pcl, 1000.0, 1.0))
     @test [p.x for p in pts] ≈ [0.0, 1000.0, 2000.0]
     @test [p.y for p in pts] ≈ [10.0, 20.0, 30.0]
 
-    pcs = PiecewiseStepData([0.0, 1.0, 2.0], [10.0, 20.0])
-    npcs = PSIP._natural_unit_conversions(t, pcs, cu_kw, cu_mw)
+    npcs = PSIP.scale_axes(PiecewiseStepData([0.0, 1.0, 2.0], [10.0, 20.0]), 0.001, 1.0)
     @test npcs.x_coords ≈ [0.0, 0.001, 0.002]
-    @test npcs.y_coords ≈ [10000.0, 20000.0]
-end
+    @test npcs.y_coords ≈ [10.0, 20.0]
 
-@testset "ValueCurve conversions" begin
-    t = supply()
-    lin = LinearFunctionData(0.5, 10.0)
-    cu_kw = conversion_unit(u"kW", USD)
-    cu_mw = conversion_unit(u"MW", USD)
-
-    io = InputOutputCurve(lin, 1.0)
-    nio = PSIP._natural_unit_conversions(t, io, cu_kw, cu_mw)
+    nio = PSIP.scale_axes(InputOutputCurve(lin, 1.0), 0.001, 1.0)
     @test nio isa InputOutputCurve
     @test nio.function_data.proportional_term ≈ 500.0
     @test nio.input_at_zero ≈ 1.0
 
-    inc = IncrementalCurve(lin, 1.0, 2.0)
-    ninc = PSIP._natural_unit_conversions(t, inc, cu_kw, cu_mw)
+    # Incremental and average rate data are in y per x, so the x scale applies once more
+    ninc = PSIP.scale_axes(IncrementalCurve(lin, 1.0, 2.0), 0.001, 1.0)
     @test ninc isa IncrementalCurve
-    @test ninc.function_data.proportional_term ≈ 500.0
+    @test ninc.function_data.proportional_term ≈ 5.0e5
+    @test ninc.function_data.constant_term ≈ 1.0e4
     @test ninc.initial_input ≈ 1.0
     @test ninc.input_at_zero ≈ 2.0
+    steps = IncrementalCurve(PiecewiseStepData([0.0, 1.0, 2.0], [10.0, 20.0]), 0.0)
+    nsteps = PSIP.scale_axes(steps, 1000.0, 1.0)
+    @test nsteps.function_data.x_coords ≈ [0.0, 1000.0, 2000.0]
+    @test nsteps.function_data.y_coords ≈ [0.01, 0.02]
 
-    avg = AverageRateCurve(lin, 1.0, 2.0)
-    navg = PSIP._natural_unit_conversions(
-        t,
-        avg,
-        conversion_unit(u"MW" * u"hr", MMBtu),
-        conversion_unit(u"MW" * u"hr", u"btu"),
-    )
+    # MMBtu to btu on the y-axis
+    navg = PSIP.scale_axes(AverageRateCurve(lin, 1.0, 2.0), 1.0, 1.0e6)
     @test navg isa AverageRateCurve
     @test navg.function_data.proportional_term ≈ 5.0e5
     @test navg.function_data.constant_term ≈ 1.0e7
@@ -374,10 +364,10 @@ end
         vom_cost=LinearCurve(1.0),
     )
     cost = ThermalGenerationCost(fuel_curve, 100.0, (hot=100.0, warm=50.0, cold=10.0), 0.0)
-    PSIP.set_operation_costs!(t, cost, IS.NU)
+    PSIP.set_operation_costs!(t, cost)
 
     # Natural units return the cost as stored, its fuel in GJ
-    @test PSIP.get_operation_costs(t, IS.NU) === cost
+    @test PSIP.get_operation_costs(t, u"NU") === cost
     @test PSIP.get_operation_costs(t, u"NU") === cost
 
     # A fuel unit converts the fuel of the fuel curve and nothing else
@@ -404,18 +394,13 @@ end
 
     # Power and currency conversions are not available for curves that carry units
     @test_throws ArgumentError PSIP.get_operation_costs(t, u"kW")
-    @test_throws ArgumentError PSIP.get_operation_costs(
-        t,
-        conversion_unit(u"kW" * u"hr", USD),
-    )
-    @test_throws ArgumentError PSIP.set_operation_costs!(t, cost, u"MW")
     @test_throws Unitful.DimensionError PSIP.get_operation_costs(t, u"L")
 
     # A portfolio has no base power, so per-unit curves are rejected
     per_unit = ThermalGenerationCost(CostCurve(LinearCurve(1.0), IS.SU), 0.0, 0.0, 0.0)
-    @test_throws IS.InvalidValue PSIP.set_operation_costs!(t, per_unit, IS.NU)
+    @test_throws IS.InvalidValue PSIP.set_operation_costs!(t, per_unit)
     t.operation_costs = per_unit
-    @test_throws IS.InvalidValue PSIP.get_operation_costs(t, IS.NU)
+    @test_throws IS.InvalidValue PSIP.get_operation_costs(t, u"NU")
     @test !(@test_logs (:error, r"natural units") IS.validate_struct(t))
 end
 
@@ -423,7 +408,7 @@ end
     t = supply()
     check_scalar(
         u -> PSIP.get_unit_size(t, u),
-        (v, u) -> PSIP.set_unit_size!(t, v, u),
+        (v, u) -> PSIP.set_unit_size!(t, v * u),
         u"MW",
         u"kW";
         base=100.0,
@@ -431,7 +416,7 @@ end
     )
     check_scalar(
         u -> PSIP.get_start_fuel_mmbtu_per_mw(t, u),
-        (v, u) -> PSIP.set_start_fuel_mmbtu_per_mw!(t, v, u),
+        (v, u) -> PSIP.set_start_fuel_mmbtu_per_mw!(t, v * u),
         u"MMBtu/MW",
         u"MMBtu/kW";
         base=5.0,
@@ -439,7 +424,7 @@ end
     )
     check_minmax(
         u -> PSIP.get_capacity_limits(t, u),
-        (v, u) -> PSIP.set_capacity_limits!(t, v, u),
+        (v, u) -> PSIP.set_capacity_limits!(t, map(x -> x * u, v)),
         u"MW",
         u"kW";
         mn=0.0,
@@ -448,7 +433,7 @@ end
     )
     check_updown(
         u -> PSIP.get_ramp_limits(t, u),
-        (v, u) -> PSIP.set_ramp_limits!(t, v, u),
+        (v, u) -> PSIP.set_ramp_limits!(t, map(x -> x * u, v)),
         u"MW/minute",
         u"MW/s";
         up=1.0,
@@ -457,7 +442,7 @@ end
     )
     check_updown(
         u -> PSIP.get_time_limits(t, u),
-        (v, u) -> PSIP.set_time_limits!(t, v, u),
+        (v, u) -> PSIP.set_time_limits!(t, map(x -> x * u, v)),
         u"minute",
         u"hr";
         up=600.0,
@@ -466,18 +451,18 @@ end
     )
     # capital_costs is a `CapitalCost` struct with no unit-aware accessor; its nested
     # accessors are covered below.
-    @test PSIP.get_capital_cost(PSIP.get_capital_costs(t)) == LinearCurve(10000.0)
+    @test PSIP.get_capital_cost(PSIP.get_capital_costs(t), u"NU") == LinearCurve(10000.0)
 
     PSIP.set_outage_factor!(t, (planned=0.08, forced=0.0))
     @test PSIP.get_outage_factor(t) == (planned=0.08, forced=0.0)
 
     # operation_costs carry their own units
-    oc = PSIP.get_operation_costs(t, IS.NU)
+    oc = PSIP.get_operation_costs(t, u"NU")
     @test oc.variable_operation_cost.value_curve.function_data.proportional_term ≈ 10.0
     @test oc.fixed ≈ 100.0
     # lifetime (yr, Int)
     @test PSIP.get_lifetime(t, u"yr") == 30
-    PSIP.set_lifetime!(t, 20, u"yr")
+    PSIP.set_lifetime!(t, 20u"yr")
     @test PSIP.get_lifetime(t, u"yr") == 20
     # _unitful companion returns a Quantity
     @test PSIP.get_unit_size_unitful(t, u"MW") == 100.0u"MW"
@@ -487,7 +472,7 @@ end
     t = storage()
     check_scalar(
         u -> PSIP.get_unit_size_charge(t, u),
-        (v, u) -> PSIP.set_unit_size_charge!(t, v, u),
+        (v, u) -> PSIP.set_unit_size_charge!(t, v * u),
         u"MW",
         u"kW";
         base=10.0,
@@ -495,7 +480,7 @@ end
     )
     check_scalar(
         u -> PSIP.get_unit_size_discharge(t, u),
-        (v, u) -> PSIP.set_unit_size_discharge!(t, v, u),
+        (v, u) -> PSIP.set_unit_size_discharge!(t, v * u),
         u"MW",
         u"kW";
         base=20.0,
@@ -503,7 +488,7 @@ end
     )
     check_scalar(
         u -> PSIP.get_unit_size_energy(t, u),
-        (v, u) -> PSIP.set_unit_size_energy!(t, v, u),
+        (v, u) -> PSIP.set_unit_size_energy!(t, v * u),
         u"MW" * u"hr",
         u"kW" * u"hr";
         base=200.0,
@@ -511,7 +496,7 @@ end
     )
     check_minmax(
         u -> PSIP.get_capacity_limits_charge(t, u),
-        (v, u) -> PSIP.set_capacity_limits_charge!(t, v, u),
+        (v, u) -> PSIP.set_capacity_limits_charge!(t, map(x -> x * u, v)),
         u"MW",
         u"kW";
         mn=0.0,
@@ -520,7 +505,7 @@ end
     )
     check_minmax(
         u -> PSIP.get_capacity_limits_discharge(t, u),
-        (v, u) -> PSIP.set_capacity_limits_discharge!(t, v, u),
+        (v, u) -> PSIP.set_capacity_limits_discharge!(t, map(x -> x * u, v)),
         u"MW",
         u"kW";
         mn=0.0,
@@ -529,7 +514,7 @@ end
     )
     check_minmax(
         u -> PSIP.get_capacity_limits_energy(t, u),
-        (v, u) -> PSIP.set_capacity_limits_energy!(t, v, u),
+        (v, u) -> PSIP.set_capacity_limits_energy!(t, map(x -> x * u, v)),
         u"MW" * u"hr",
         u"kW" * u"hr";
         mn=0.0,
@@ -538,7 +523,7 @@ end
     )
     check_minmax(
         u -> PSIP.get_duration_limits(t, u),
-        (v, u) -> PSIP.set_duration_limits!(t, v, u),
+        (v, u) -> PSIP.set_duration_limits!(t, map(x -> x * u, v)),
         u"minute",
         u"hr";
         mn=60.0,
@@ -554,17 +539,17 @@ end
     )
     PSIP.set_capital_costs!(t, sc)
     sc2 = PSIP.get_capital_costs(t)
-    @test PSIP.get_charge_capital_cost(sc2) == LinearCurve(1000.0)
-    @test PSIP.get_discharge_capital_cost(sc2) == LinearCurve(2000.0)
-    @test PSIP.get_energy_capital_cost(sc2) == LinearCurve(3000.0)
-    @test PSIP.get_interconnection_cost(sc2) == 7.0
+    @test PSIP.get_charge_capital_cost(sc2, u"NU") == LinearCurve(1000.0)
+    @test PSIP.get_discharge_capital_cost(sc2, u"NU") == LinearCurve(2000.0)
+    @test PSIP.get_energy_capital_cost(sc2, u"NU") == LinearCurve(3000.0)
+    @test PSIP.get_interconnection_cost(sc2, u"NU") == 7.0
 end
 
 @testset "Transport technology getters/setters" begin
     for t in (agg_transport(), acline(), hvdc())
         check_scalar(
             u -> PSIP.get_unit_size(t, u),
-            (v, u) -> PSIP.set_unit_size!(t, v, u),
+            (v, u) -> PSIP.set_unit_size!(t, v * u),
             u"MW",
             u"kW";
             base=PSIP.get_unit_size(t, u"MW"),
@@ -572,7 +557,7 @@ end
         )
         check_minmax(
             u -> PSIP.get_capacity_limits(t, u),
-            (v, u) -> PSIP.set_capacity_limits!(t, v, u),
+            (v, u) -> PSIP.set_capacity_limits!(t, map(x -> x * u, v)),
             u"MW",
             u"kW";
             mn=0.0,
@@ -580,8 +565,8 @@ end
             ratio=1000.0,
         )
         PSIP.set_capital_costs!(t, PSIP.CapitalCost(LinearCurve(1500.0), 3.0))
-        @test PSIP.get_capital_cost(PSIP.get_capital_costs(t)) == LinearCurve(1500.0)
-        @test PSIP.get_interconnection_cost(PSIP.get_capital_costs(t)) == 3.0
+        @test PSIP.get_capital_cost(PSIP.get_capital_costs(t), u"NU") == LinearCurve(1500.0)
+        @test PSIP.get_interconnection_cost(PSIP.get_capital_costs(t), u"NU") == 3.0
     end
 end
 
@@ -589,7 +574,7 @@ end
     t = demand_req()
     check_scalar(
         u -> PSIP.get_peak_demand_mw(t, u),
-        (v, u) -> PSIP.set_peak_demand_mw!(t, v, u),
+        (v, u) -> PSIP.set_peak_demand_mw!(t, v * u),
         u"MW",
         u"kW";
         base=300.0,
@@ -597,15 +582,21 @@ end
     )
     check_valuecurve(
         u -> PSIP.get_curtailment_cost(t, u),
-        (v, u) -> PSIP.set_curtailment_cost!(t, v, u),
-        conversion_unit(u"MW" * u"hr", USD),
-        conversion_unit(u"kW" * u"hr", USD);
+        v -> PSIP.set_curtailment_cost!(t, v),
+        u"MW" * u"hr",
+        u"kW" * u"hr";
         prop=50.0,
-        ratio=1e-3,
+        ratio=1000.0,
     )
+    # Curtailment tiers are fractions of demand: only their prices convert
+    tiers = PiecewiseIncrementalCurve(0.0, [0.0, 0.05, 0.1], [200.0, 500.0])
+    PSIP.set_curtailment_cost!(t, tiers)
+    in_kwh = PSIP.get_curtailment_cost(t, u"kWh")
+    @test get_function_data(in_kwh).x_coords == [0.0, 0.05, 0.1]
+    @test get_function_data(in_kwh).y_coords ≈ [0.2, 0.5]
     check_scalar(
         u -> PSIP.get_value_of_lost_load(t, u),
-        (v, u) -> PSIP.set_value_of_lost_load!(t, v, u),
+        (v, u) -> PSIP.set_value_of_lost_load!(t, v * u),
         USD / (u"MW" * u"hr"),
         USD / (u"kW" * u"hr");
         base=1e5,
@@ -613,7 +604,7 @@ end
     )
     check_scalar(
         u -> PSIP.get_max_demand_advance(t, u),
-        (v, u) -> PSIP.set_max_demand_advance!(t, v, u),
+        (v, u) -> PSIP.set_max_demand_advance!(t, v * u),
         u"minute",
         u"hr";
         base=240.0,
@@ -621,7 +612,7 @@ end
     )
     check_scalar(
         u -> PSIP.get_max_demand_delay(t, u),
-        (v, u) -> PSIP.set_max_demand_delay!(t, v, u),
+        (v, u) -> PSIP.set_max_demand_delay!(t, v * u),
         u"minute",
         u"hr";
         base=360.0,
@@ -631,9 +622,16 @@ end
 
 @testset "DemandSideTechnology getters/setters" begin
     t = demand_side()
-    @test PSIP.get_price_per_unit(t, IS.NU) == LinearCurve(3000.0)
-    PSIP.set_capacity_limits!(t, (min=10.0, max=300.0), IS.NU)
-    @test PSIP.get_capacity_limits(t, IS.NU) == (min=10.0, max=300.0)
+    check_valuecurve(
+        u -> PSIP.get_price_per_unit(t, u),
+        v -> PSIP.set_price_per_unit!(t, v),
+        tonne,
+        u"kg";
+        prop=3000.0,
+        ratio=1000.0,
+    )
+    PSIP.set_capacity_limits!(t, (min=10.0u"MW", max=300.0u"MW"))
+    @test PSIP.get_capacity_limits(t, u"NU") == (min=10.0, max=300.0)
 end
 
 @testset "Supplemental attribute getters/setters" begin
@@ -641,19 +639,19 @@ end
     x = RetrofitPotential(eligible_generators=["g1"], retrofit_cost=LinearCurve(150.0))
     check_valuecurve(
         u -> PSIP.get_retirement_cost(r, u),
-        (v, u) -> PSIP.set_retirement_cost!(r, v, u),
-        conversion_unit(u"MW", USD),
-        conversion_unit(u"kW", USD);
+        v -> PSIP.set_retirement_cost!(r, v),
+        u"MW",
+        u"kW";
         prop=100.0,
-        ratio=1e-3,
+        ratio=1000.0,
     )
     check_valuecurve(
         u -> PSIP.get_retrofit_cost(x, u),
-        (v, u) -> PSIP.set_retrofit_cost!(x, v, u),
-        conversion_unit(u"MW", USD),
-        conversion_unit(u"kW", USD);
+        v -> PSIP.set_retrofit_cost!(x, v),
+        u"MW",
+        u"GW";
         prop=150.0,
-        ratio=1e-3,
+        ratio=0.001,
     )
 end
 
@@ -661,7 +659,7 @@ end
     t = carbon_caps()
     check_scalar(
         u -> PSIP.get_max_mtons(t, u),
-        (v, u) -> PSIP.set_max_mtons!(t, v, u),
+        (v, u) -> PSIP.set_max_mtons!(t, v * u),
         Mt,
         tonne;
         base=50.0,
@@ -669,7 +667,7 @@ end
     )
     check_scalar(
         u -> PSIP.get_max_tons_mwh(t, u),
-        (v, u) -> PSIP.set_max_tons_mwh!(t, v, u),
+        (v, u) -> PSIP.set_max_tons_mwh!(t, v * u),
         Mt / (u"MW" * u"hr"),
         Mt / (u"kW" * u"hr");
         base=2.0e-6,
@@ -679,7 +677,7 @@ end
     tax = carbon_tax()
     check_scalar(
         u -> PSIP.get_tax_dollars_per_ton(tax, u),
-        (v, u) -> PSIP.set_tax_dollars_per_ton!(tax, v, u),
+        (v, u) -> PSIP.set_tax_dollars_per_ton!(tax, v * u),
         USD / tonne,
         USD / u"kg";
         base=50.0,
@@ -690,7 +688,7 @@ end
     minc = min_capacity_req()
     check_scalar(
         u -> PSIP.get_max_capacity_mw(maxc, u),
-        (v, u) -> PSIP.set_max_capacity_mw!(maxc, v, u),
+        (v, u) -> PSIP.set_max_capacity_mw!(maxc, v * u),
         u"MW",
         u"kW";
         base=400.0,
@@ -698,7 +696,7 @@ end
     )
     check_scalar(
         u -> PSIP.get_min_capacity_mw(minc, u),
-        (v, u) -> PSIP.set_min_capacity_mw!(minc, v, u),
+        (v, u) -> PSIP.set_min_capacity_mw!(minc, v * u),
         u"MW",
         u"kW";
         base=100.0,
@@ -710,27 +708,70 @@ end
     t = colocated()
     check_minmax(
         u -> PSIP.get_inverter_capacity_limits(t, u),
-        (v, u) -> PSIP.set_inverter_capacity_limits!(t, v, u),
+        (v, u) -> PSIP.set_inverter_capacity_limits!(t, map(x -> x * u, v)),
         u"MW",
         u"kW";
         mn=50.0,
         mx=600.0,
         ratio=1000.0,
     )
-    inverter_cost = PSIP.get_operation_costs_inverter(t, IS.NU)
+    inverter_cost = PSIP.get_operation_costs_inverter(t, u"NU")
     @test get_proportional(get_value_curve(inverter_cost)) ≈ 6.0
     @test_throws ArgumentError PSIP.get_operation_costs_inverter(t, u"kW")
 
     PSIP.set_capital_costs_inverter!(t, PSIP.CapitalCost(LinearCurve(1300.0), 4.0))
-    @test PSIP.get_capital_cost(PSIP.get_capital_costs_inverter(t)) == LinearCurve(1300.0)
-    @test PSIP.get_interconnection_cost(PSIP.get_capital_costs_inverter(t)) == 4.0
+    @test PSIP.get_capital_cost(PSIP.get_capital_costs_inverter(t), u"NU") ==
+          LinearCurve(1300.0)
+    @test PSIP.get_interconnection_cost(PSIP.get_capital_costs_inverter(t), u"NU") == 4.0
+end
+
+@testset "Capital cost units" begin
+    cc = PSIP.CapitalCost(LinearCurve(1.2e6), 5.0e4)
+    # Curves convert their x-axis; the interconnection cost is a USD/MW rate
+    @test PSIP.get_capital_cost(cc, u"NU") == LinearCurve(1.2e6)
+    @test get_proportional(PSIP.get_capital_cost(cc, u"kW")) ≈ 1200.0
+    @test PSIP.get_interconnection_cost(cc, u"NU") == 5.0e4
+    @test PSIP.get_interconnection_cost(cc, USD / u"kW") ≈ 50.0
+    PSIP.set_interconnection_cost!(cc, 60.0USD / u"kW")
+    @test PSIP.get_interconnection_cost(cc, u"NU") ≈ 6.0e4
+    PSIP.set_capital_cost!(cc, LinearCurve(1.0e6))
+    @test PSIP.get_capital_cost(cc, u"NU") == LinearCurve(1.0e6)
+    @test_throws r"requires a units argument" PSIP.get_capital_cost(cc)
+    @test_throws r"units-tagged value" PSIP.set_interconnection_cost!(cc, 1.0)
+    @test IS.display_units_arg(PSIP.get_capital_cost, PSIP.CapitalCost) == u"NU"
+
+    sc = PSIP.StorageCapitalCost(
+        LinearCurve(0.0),
+        LinearCurve(9.0e5),
+        LinearCurve(3.0e5),
+        1.0e4,
+    )
+    @test get_proportional(PSIP.get_discharge_capital_cost(sc, u"kW")) ≈ 900.0
+    @test get_proportional(PSIP.get_energy_capital_cost(sc, u"kWh")) ≈ 300.0
+    @test PSIP.get_charge_capital_cost(sc, u"NU") == LinearCurve(0.0)
+    @test PSIP.get_interconnection_cost(sc, USD / u"kW") ≈ 10.0
+    @test_throws Unitful.DimensionError PSIP.get_energy_capital_cost(sc, u"kW")
+end
+
+@testset "Accessors take units as PowerSystems does" begin
+    t = supply()
+    # Setters take a units-tagged value; a bare number is an error
+    PSIP.set_unit_size!(t, 250_000.0u"kW")
+    @test PSIP.get_unit_size(t, u"MW") ≈ 250.0
+    PSIP.set_capacity_limits!(t, (min=0.0u"GW", max=0.8u"GW"))
+    @test PSIP.get_capacity_limits(t, u"NU") == (min=0.0, max=800.0)
+    @test_throws r"units-tagged value" PSIP.set_unit_size!(t, 100.0)
+    @test_throws r"units-tagged value" PSIP.set_capacity_limits!(t, (min=0.0, max=1.0))
+    # Getters need a units argument
+    @test_throws r"requires a units argument" PSIP.get_unit_size(t)
+    @test_throws r"requires a units argument" PSIP.get_operation_costs(t)
 end
 
 @testset "display_units_arg" begin
     t = supply()
-    @test IS.display_units_arg(PSIP.get_unit_size, typeof(t)) === IS.NU
-    @test IS.display_units_arg(PSIP.get_capacity_limits, typeof(t)) === IS.NU
-    @test IS.display_units_arg(PSIP.get_unit_size_unitful, typeof(t)) === IS.NU
+    @test IS.display_units_arg(PSIP.get_unit_size, typeof(t)) == u"NU"
+    @test IS.display_units_arg(PSIP.get_capacity_limits, typeof(t)) == u"NU"
+    @test IS.display_units_arg(PSIP.get_unit_size_unitful, typeof(t)) == u"NU"
     # Fields without units have no display_units_arg method -> default `missing`.
     @test ismissing(IS.display_units_arg(PSIP.get_name, typeof(t)))
     @test ismissing(IS.display_units_arg(PSIP.get_available, typeof(t)))
@@ -766,13 +807,10 @@ end
             s = join(schema_unit_token.(split(str, "/")), "/")
             return Unitful.uparse(s; unit_context=[PSIP, Unitful])
         end
-        # A curve-shaped category's "unit" is its rate y_unit/x_unit; a scalar
-        # category's natural_unit already is that rate.
-        function psip_rate_unit(conversion_unit_str)
-            sym = Symbol(lstrip(conversion_unit_str, ':'))
-            nu = PSIP.natural_unit(PSIP._unit_category(Val(sym)))
-            return nu isa NamedTuple ? nu.y_unit / nu.x_unit : nu
-        end
+        # Every category's natural unit is a rate (or a plain unit)
+        psip_rate_unit(conversion_unit_str) = PSIP.natural_unit(
+            PSIP._unit_category(Val(Symbol(lstrip(conversion_unit_str, ':')))),
+        )
         function find_schema_file(type_name)
             for (root, _, files) in walkdir(schemas_root)
                 "$type_name.json" in files && return joinpath(root, "$type_name.json")

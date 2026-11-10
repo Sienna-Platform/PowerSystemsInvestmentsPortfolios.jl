@@ -123,7 +123,7 @@ function update_or_create_new_generator!(
 
         # Get technology specifications from the portfolio
         tech = get_technology(SupplyTechnology{T}, p, tech_name)
-        op_cost = get_operation_costs(tech, IS.NU)
+        op_cost = get_operation_costs(tech, u"NU")
         prime_mover_type = get_prime_mover_type(tech)
         fuel = only(get_fuel(tech))
 
@@ -208,7 +208,7 @@ function update_or_create_new_generator!(
 
         # Get technology specifications from the portfolio
         tech = get_technology(SupplyTechnology{T}, p, tech_name)
-        op_cost = get_operation_costs(tech, IS.NU)
+        op_cost = get_operation_costs(tech, u"NU")
         prime_mover_type = get_prime_mover_type(tech)
 
         # Create new renewable generator with specified parameters

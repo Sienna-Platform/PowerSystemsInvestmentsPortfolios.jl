@@ -108,8 +108,9 @@ get_region(value::ProjectedDemand) = value.region
 get_peak_demand_mw(value::ProjectedDemand, units) = InfrastructureSystems._strip_units(get_value(value, Val(:peak_demand_mw), Val(:mw), units))
 """Get [`ProjectedDemand`](@ref) `peak_demand_mw` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_peak_demand_mw`](@ref)."""
 get_peak_demand_mw_unitful(value::ProjectedDemand, units) = get_value(value, Val(:peak_demand_mw), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_peak_demand_mw), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_peak_demand_mw_unitful), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+get_peak_demand_mw(value::ProjectedDemand) = _units_arg_required(get_peak_demand_mw, Val(:mw))
+InfrastructureSystems.display_units_arg(::typeof(get_peak_demand_mw), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_peak_demand_mw_unitful), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = u"NU"
 """Get [`ProjectedDemand`](@ref) `construction_year`."""
 get_construction_year(value::ProjectedDemand) = value.construction_year
 """Get [`ProjectedDemand`](@ref) `growth_rate`."""
@@ -122,36 +123,41 @@ get_max_demand_curtailment(value::ProjectedDemand) = value.max_demand_curtailmen
 get_curtailment_cost(value::ProjectedDemand, units) = InfrastructureSystems._strip_units(get_value(value, Val(:curtailment_cost), Val(:usd_per_mwh), units))
 """Get [`ProjectedDemand`](@ref) `curtailment_cost` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_curtailment_cost`](@ref)."""
 get_curtailment_cost_unitful(value::ProjectedDemand, units) = get_value(value, Val(:curtailment_cost), Val(:usd_per_mwh), units)
-InfrastructureSystems.display_units_arg(::typeof(get_curtailment_cost), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_curtailment_cost_unitful), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+get_curtailment_cost(value::ProjectedDemand) = _units_arg_required(get_curtailment_cost, Val(:usd_per_mwh))
+InfrastructureSystems.display_units_arg(::typeof(get_curtailment_cost), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_curtailment_cost_unitful), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = u"NU"
 """Get [`ProjectedDemand`](@ref) `value_of_lost_load` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_value_of_lost_load_unitful`](@ref)."""
 get_value_of_lost_load(value::ProjectedDemand, units) = InfrastructureSystems._strip_units(get_value(value, Val(:value_of_lost_load), Val(:usd_per_mwh_scalar), units))
 """Get [`ProjectedDemand`](@ref) `value_of_lost_load` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_value_of_lost_load`](@ref)."""
 get_value_of_lost_load_unitful(value::ProjectedDemand, units) = get_value(value, Val(:value_of_lost_load), Val(:usd_per_mwh_scalar), units)
-InfrastructureSystems.display_units_arg(::typeof(get_value_of_lost_load), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_value_of_lost_load_unitful), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+get_value_of_lost_load(value::ProjectedDemand) = _units_arg_required(get_value_of_lost_load, Val(:usd_per_mwh_scalar))
+InfrastructureSystems.display_units_arg(::typeof(get_value_of_lost_load), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_value_of_lost_load_unitful), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = u"NU"
 """Get [`ProjectedDemand`](@ref) `flexible_fraction`."""
 get_flexible_fraction(value::ProjectedDemand) = value.flexible_fraction
 """Get [`ProjectedDemand`](@ref) `max_demand_delay` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_max_demand_delay_unitful`](@ref)."""
 get_max_demand_delay(value::ProjectedDemand, units) = InfrastructureSystems._strip_units(get_value(value, Val(:max_demand_delay), Val(:min), units))
 """Get [`ProjectedDemand`](@ref) `max_demand_delay` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_max_demand_delay`](@ref)."""
 get_max_demand_delay_unitful(value::ProjectedDemand, units) = get_value(value, Val(:max_demand_delay), Val(:min), units)
-InfrastructureSystems.display_units_arg(::typeof(get_max_demand_delay), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_max_demand_delay_unitful), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+get_max_demand_delay(value::ProjectedDemand) = _units_arg_required(get_max_demand_delay, Val(:min))
+InfrastructureSystems.display_units_arg(::typeof(get_max_demand_delay), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_max_demand_delay_unitful), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = u"NU"
 """Get [`ProjectedDemand`](@ref) `max_demand_advance` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_max_demand_advance_unitful`](@ref)."""
 get_max_demand_advance(value::ProjectedDemand, units) = InfrastructureSystems._strip_units(get_value(value, Val(:max_demand_advance), Val(:min), units))
 """Get [`ProjectedDemand`](@ref) `max_demand_advance` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_max_demand_advance`](@ref)."""
 get_max_demand_advance_unitful(value::ProjectedDemand, units) = get_value(value, Val(:max_demand_advance), Val(:min), units)
-InfrastructureSystems.display_units_arg(::typeof(get_max_demand_advance), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_max_demand_advance_unitful), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+get_max_demand_advance(value::ProjectedDemand) = _units_arg_required(get_max_demand_advance, Val(:min))
+InfrastructureSystems.display_units_arg(::typeof(get_max_demand_advance), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_max_demand_advance_unitful), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = u"NU"
 """Get [`ProjectedDemand`](@ref) `shift_efficiency`."""
 get_shift_efficiency(value::ProjectedDemand) = value.shift_efficiency
 """Get [`ProjectedDemand`](@ref) `shift_cost` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_shift_cost_unitful`](@ref)."""
 get_shift_cost(value::ProjectedDemand, units) = InfrastructureSystems._strip_units(get_value(value, Val(:shift_cost), Val(:usd_per_mwh), units))
 """Get [`ProjectedDemand`](@ref) `shift_cost` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_shift_cost`](@ref)."""
 get_shift_cost_unitful(value::ProjectedDemand, units) = get_value(value, Val(:shift_cost), Val(:usd_per_mwh), units)
-InfrastructureSystems.display_units_arg(::typeof(get_shift_cost), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_shift_cost_unitful), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+get_shift_cost(value::ProjectedDemand) = _units_arg_required(get_shift_cost, Val(:usd_per_mwh))
+InfrastructureSystems.display_units_arg(::typeof(get_shift_cost), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_shift_cost_unitful), ::Type{ProjectedDemand{T}}) where {T <: PSY.StaticInjection} = u"NU"
 """Get [`ProjectedDemand`](@ref) `requirements`."""
 get_requirements(value::ProjectedDemand) = value.requirements
 """Get [`ProjectedDemand`](@ref) `ext`."""
@@ -167,8 +173,8 @@ set_available!(value::ProjectedDemand, val) = value.available = val
 set_power_systems_type!(value::ProjectedDemand, val) = value.power_systems_type = val
 """Set [`ProjectedDemand`](@ref) `region`."""
 set_region!(value::ProjectedDemand, val) = value.region = val
-"""Set [`ProjectedDemand`](@ref) `peak_demand_mw`."""
-set_peak_demand_mw!(value::ProjectedDemand, val, unit) = value.peak_demand_mw = set_value(value, Val(:peak_demand_mw), val, unit, Val(:mw))
+"""Set [`ProjectedDemand`](@ref) `peak_demand_mw` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_peak_demand_mw!(value::ProjectedDemand, val) = value.peak_demand_mw = set_value(value, Val(:peak_demand_mw), val, Val(:mw))
 """Set [`ProjectedDemand`](@ref) `construction_year`."""
 set_construction_year!(value::ProjectedDemand, val) = value.construction_year = val
 """Set [`ProjectedDemand`](@ref) `growth_rate`."""
@@ -177,20 +183,20 @@ set_growth_rate!(value::ProjectedDemand, val) = value.growth_rate = val
 set_conformity!(value::ProjectedDemand, val) = value.conformity = val
 """Set [`ProjectedDemand`](@ref) `max_demand_curtailment`."""
 set_max_demand_curtailment!(value::ProjectedDemand, val) = value.max_demand_curtailment = val
-"""Set [`ProjectedDemand`](@ref) `curtailment_cost`."""
-set_curtailment_cost!(value::ProjectedDemand, val, unit) = value.curtailment_cost = set_value(value, Val(:curtailment_cost), val, unit, Val(:usd_per_mwh))
-"""Set [`ProjectedDemand`](@ref) `value_of_lost_load`."""
-set_value_of_lost_load!(value::ProjectedDemand, val, unit) = value.value_of_lost_load = set_value(value, Val(:value_of_lost_load), val, unit, Val(:usd_per_mwh_scalar))
+"""Set [`ProjectedDemand`](@ref) `curtailment_cost` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_curtailment_cost!(value::ProjectedDemand, val) = value.curtailment_cost = set_value(value, Val(:curtailment_cost), val, Val(:usd_per_mwh))
+"""Set [`ProjectedDemand`](@ref) `value_of_lost_load` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_value_of_lost_load!(value::ProjectedDemand, val) = value.value_of_lost_load = set_value(value, Val(:value_of_lost_load), val, Val(:usd_per_mwh_scalar))
 """Set [`ProjectedDemand`](@ref) `flexible_fraction`."""
 set_flexible_fraction!(value::ProjectedDemand, val) = value.flexible_fraction = val
-"""Set [`ProjectedDemand`](@ref) `max_demand_delay`."""
-set_max_demand_delay!(value::ProjectedDemand, val, unit) = value.max_demand_delay = set_value(value, Val(:max_demand_delay), val, unit, Val(:min))
-"""Set [`ProjectedDemand`](@ref) `max_demand_advance`."""
-set_max_demand_advance!(value::ProjectedDemand, val, unit) = value.max_demand_advance = set_value(value, Val(:max_demand_advance), val, unit, Val(:min))
+"""Set [`ProjectedDemand`](@ref) `max_demand_delay` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_max_demand_delay!(value::ProjectedDemand, val) = value.max_demand_delay = set_value(value, Val(:max_demand_delay), val, Val(:min))
+"""Set [`ProjectedDemand`](@ref) `max_demand_advance` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_max_demand_advance!(value::ProjectedDemand, val) = value.max_demand_advance = set_value(value, Val(:max_demand_advance), val, Val(:min))
 """Set [`ProjectedDemand`](@ref) `shift_efficiency`."""
 set_shift_efficiency!(value::ProjectedDemand, val) = value.shift_efficiency = val
-"""Set [`ProjectedDemand`](@ref) `shift_cost`."""
-set_shift_cost!(value::ProjectedDemand, val, unit) = value.shift_cost = set_value(value, Val(:shift_cost), val, unit, Val(:usd_per_mwh))
+"""Set [`ProjectedDemand`](@ref) `shift_cost` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_shift_cost!(value::ProjectedDemand, val) = value.shift_cost = set_value(value, Val(:shift_cost), val, Val(:usd_per_mwh))
 """Set [`ProjectedDemand`](@ref) `requirements`."""
 set_requirements!(value::ProjectedDemand, val) = value.requirements = val
 """Set [`ProjectedDemand`](@ref) `ext`."""
@@ -228,17 +234,17 @@ function to_openapi(value::ProjectedDemand{T}, refs::OpenAPIRefs) where {T <: PS
         available = get_available(value),
         power_systems_type = string(nameof(T)),
         region = component_ids(refs, get_region(value)),
-        peak_demand_mw = get_peak_demand_mw(value, IS.NU),
+        peak_demand_mw = get_peak_demand_mw(value, u"NU"),
         construction_year = get_construction_year(value),
         growth_rate = get_growth_rate(value),
         conformity = string(get_conformity(value)),
         max_demand_curtailment = get_max_demand_curtailment(value),
-        curtailment_cost = _curve_to_openapi(PI.ProjectedDemandCurtailmentCost, get_curtailment_cost(value, IS.NU)),
-        value_of_lost_load = get_value_of_lost_load(value, IS.NU),
+        curtailment_cost = _curve_to_openapi(PI.ProjectedDemandCurtailmentCost, get_curtailment_cost(value, u"NU")),
+        value_of_lost_load = get_value_of_lost_load(value, u"NU"),
         flexible_fraction = get_flexible_fraction(value),
-        max_demand_delay = get_max_demand_delay(value, IS.NU),
-        max_demand_advance = get_max_demand_advance(value, IS.NU),
+        max_demand_delay = get_max_demand_delay(value, u"NU"),
+        max_demand_advance = get_max_demand_advance(value, u"NU"),
         shift_efficiency = get_shift_efficiency(value),
-        shift_cost = _curve_to_openapi(PI.ProjectedDemandShiftCost, get_shift_cost(value, IS.NU)),
+        shift_cost = _curve_to_openapi(PI.ProjectedDemandShiftCost, get_shift_cost(value, u"NU")),
     )
 end

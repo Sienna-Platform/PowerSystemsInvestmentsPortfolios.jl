@@ -48,8 +48,9 @@ get_retrofit_efficiency(value::RetrofitPotential) = value.retrofit_efficiency
 get_retrofit_cost(value::RetrofitPotential, units) = InfrastructureSystems._strip_units(get_value(value, Val(:retrofit_cost), Val(:usd_per_mw), units))
 """Get [`RetrofitPotential`](@ref) `retrofit_cost` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_retrofit_cost`](@ref)."""
 get_retrofit_cost_unitful(value::RetrofitPotential, units) = get_value(value, Val(:retrofit_cost), Val(:usd_per_mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_retrofit_cost), ::Type{RetrofitPotential}) = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_retrofit_cost_unitful), ::Type{RetrofitPotential}) = InfrastructureSystems.NU
+get_retrofit_cost(value::RetrofitPotential) = _units_arg_required(get_retrofit_cost, Val(:usd_per_mw))
+InfrastructureSystems.display_units_arg(::typeof(get_retrofit_cost), ::Type{RetrofitPotential}) = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_retrofit_cost_unitful), ::Type{RetrofitPotential}) = u"NU"
 """Get [`RetrofitPotential`](@ref) `ext`."""
 get_ext(value::RetrofitPotential) = value.ext
 """Get [`RetrofitPotential`](@ref) `internal`."""
@@ -59,8 +60,8 @@ get_internal(value::RetrofitPotential) = value.internal
 set_eligible_generators!(value::RetrofitPotential, val) = value.eligible_generators = val
 """Set [`RetrofitPotential`](@ref) `retrofit_efficiency`."""
 set_retrofit_efficiency!(value::RetrofitPotential, val) = value.retrofit_efficiency = val
-"""Set [`RetrofitPotential`](@ref) `retrofit_cost`."""
-set_retrofit_cost!(value::RetrofitPotential, val, unit) = value.retrofit_cost = set_value(value, Val(:retrofit_cost), val, unit, Val(:usd_per_mw))
+"""Set [`RetrofitPotential`](@ref) `retrofit_cost` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_retrofit_cost!(value::RetrofitPotential, val) = value.retrofit_cost = set_value(value, Val(:retrofit_cost), val, Val(:usd_per_mw))
 """Set [`RetrofitPotential`](@ref) `ext`."""
 set_ext!(value::RetrofitPotential, val) = value.ext = val
 """Set [`RetrofitPotential`](@ref) `internal`."""
@@ -81,6 +82,6 @@ function to_openapi(value::RetrofitPotential, refs::OpenAPIRefs)
         id = get_id(value),
         eligible_generators = get_eligible_generators(value),
         retrofit_efficiency = get_retrofit_efficiency(value),
-        retrofit_cost = _curve_to_openapi(PI.RetrofitPotentialRetrofitCost, get_retrofit_cost(value, IS.NU)),
+        retrofit_cost = _curve_to_openapi(PI.RetrofitPotentialRetrofitCost, get_retrofit_cost(value, u"NU")),
     )
 end

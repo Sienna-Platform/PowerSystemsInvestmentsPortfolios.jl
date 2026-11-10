@@ -98,16 +98,18 @@ get_storage_technology(value::ColocatedSupplyStorageTechnology) = value.storage_
 get_inverter_capacity_limits(value::ColocatedSupplyStorageTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:inverter_capacity_limits), Val(:mw), units))
 """Get [`ColocatedSupplyStorageTechnology`](@ref) `inverter_capacity_limits` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_inverter_capacity_limits`](@ref)."""
 get_inverter_capacity_limits_unitful(value::ColocatedSupplyStorageTechnology, units) = get_value(value, Val(:inverter_capacity_limits), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_inverter_capacity_limits), ::Type{ColocatedSupplyStorageTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_inverter_capacity_limits_unitful), ::Type{ColocatedSupplyStorageTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
+get_inverter_capacity_limits(value::ColocatedSupplyStorageTechnology) = _units_arg_required(get_inverter_capacity_limits, Val(:mw))
+InfrastructureSystems.display_units_arg(::typeof(get_inverter_capacity_limits), ::Type{ColocatedSupplyStorageTechnology{T}}) where {T <: PSY.Generator} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_inverter_capacity_limits_unitful), ::Type{ColocatedSupplyStorageTechnology{T}}) where {T <: PSY.Generator} = u"NU"
 """Get [`ColocatedSupplyStorageTechnology`](@ref) `capital_costs_inverter`."""
 get_capital_costs_inverter(value::ColocatedSupplyStorageTechnology) = value.capital_costs_inverter
 """Get [`ColocatedSupplyStorageTechnology`](@ref) `operation_costs_inverter` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_operation_costs_inverter_unitful`](@ref)."""
 get_operation_costs_inverter(value::ColocatedSupplyStorageTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:operation_costs_inverter), Val(:usd_per_mwh), units))
 """Get [`ColocatedSupplyStorageTechnology`](@ref) `operation_costs_inverter` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_operation_costs_inverter`](@ref)."""
 get_operation_costs_inverter_unitful(value::ColocatedSupplyStorageTechnology, units) = get_value(value, Val(:operation_costs_inverter), Val(:usd_per_mwh), units)
-InfrastructureSystems.display_units_arg(::typeof(get_operation_costs_inverter), ::Type{ColocatedSupplyStorageTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_operation_costs_inverter_unitful), ::Type{ColocatedSupplyStorageTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
+get_operation_costs_inverter(value::ColocatedSupplyStorageTechnology) = _units_arg_required(get_operation_costs_inverter, Val(:usd_per_mwh))
+InfrastructureSystems.display_units_arg(::typeof(get_operation_costs_inverter), ::Type{ColocatedSupplyStorageTechnology{T}}) where {T <: PSY.Generator} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_operation_costs_inverter_unitful), ::Type{ColocatedSupplyStorageTechnology{T}}) where {T <: PSY.Generator} = u"NU"
 """Get [`ColocatedSupplyStorageTechnology`](@ref) `inverter_efficiency`."""
 get_inverter_efficiency(value::ColocatedSupplyStorageTechnology) = value.inverter_efficiency
 """Get [`ColocatedSupplyStorageTechnology`](@ref) `inverter_supply_ratio`."""
@@ -133,12 +135,12 @@ set_financial_data!(value::ColocatedSupplyStorageTechnology, val) = value.financ
 set_supply_technology!(value::ColocatedSupplyStorageTechnology, val) = value.supply_technology = val
 """Set [`ColocatedSupplyStorageTechnology`](@ref) `storage_technology`."""
 set_storage_technology!(value::ColocatedSupplyStorageTechnology, val) = value.storage_technology = val
-"""Set [`ColocatedSupplyStorageTechnology`](@ref) `inverter_capacity_limits`."""
-set_inverter_capacity_limits!(value::ColocatedSupplyStorageTechnology, val, unit) = value.inverter_capacity_limits = set_value(value, Val(:inverter_capacity_limits), val, unit, Val(:mw))
+"""Set [`ColocatedSupplyStorageTechnology`](@ref) `inverter_capacity_limits` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_inverter_capacity_limits!(value::ColocatedSupplyStorageTechnology, val) = value.inverter_capacity_limits = set_value(value, Val(:inverter_capacity_limits), val, Val(:mw))
 """Set [`ColocatedSupplyStorageTechnology`](@ref) `capital_costs_inverter`."""
 set_capital_costs_inverter!(value::ColocatedSupplyStorageTechnology, val) = value.capital_costs_inverter = val
-"""Set [`ColocatedSupplyStorageTechnology`](@ref) `operation_costs_inverter`."""
-set_operation_costs_inverter!(value::ColocatedSupplyStorageTechnology, val, unit) = value.operation_costs_inverter = set_value(value, Val(:operation_costs_inverter), val, unit, Val(:usd_per_mwh))
+"""Set [`ColocatedSupplyStorageTechnology`](@ref) `operation_costs_inverter` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_operation_costs_inverter!(value::ColocatedSupplyStorageTechnology, val) = value.operation_costs_inverter = set_value(value, Val(:operation_costs_inverter), val, Val(:usd_per_mwh))
 """Set [`ColocatedSupplyStorageTechnology`](@ref) `inverter_efficiency`."""
 set_inverter_efficiency!(value::ColocatedSupplyStorageTechnology, val) = value.inverter_efficiency = val
 """Set [`ColocatedSupplyStorageTechnology`](@ref) `inverter_supply_ratio`."""
@@ -179,9 +181,9 @@ function to_openapi(value::ColocatedSupplyStorageTechnology{T}, refs::OpenAPIRef
         financial_data = convert_nested_data_to_openapi(get_financial_data(value)),
         supply_technology = component_id(refs, get_supply_technology(value)),
         storage_technology = component_id(refs, get_storage_technology(value)),
-        inverter_capacity_limits = _minmax_po(get_inverter_capacity_limits(value, IS.NU)),
+        inverter_capacity_limits = _minmax_po(get_inverter_capacity_limits(value, u"NU")),
         capital_costs_inverter = convert_nested_data_to_openapi(get_capital_costs_inverter(value)),
-        operation_costs_inverter = PI.ColocatedSupplyStorageTechnologyOperationCostsInverter(convert_cost_to_openapi(get_operation_costs_inverter(value, IS.NU))),
+        operation_costs_inverter = PI.ColocatedSupplyStorageTechnologyOperationCostsInverter(convert_cost_to_openapi(get_operation_costs_inverter(value, u"NU"))),
         inverter_efficiency = get_inverter_efficiency(value),
         inverter_supply_ratio = get_inverter_supply_ratio(value),
     )

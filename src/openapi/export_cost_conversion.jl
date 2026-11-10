@@ -384,22 +384,22 @@ end
 
 function convert_nested_data_to_openapi(cc::CapitalCost)
     return PC.CapitalCost(;
-        capital_cost=PC.ValueCurve(convert_cost_to_openapi(get_capital_cost(cc))),
-        interconnection_cost=get_interconnection_cost(cc),
+        capital_cost=PC.ValueCurve(convert_cost_to_openapi(get_capital_cost(cc, u"NU"))),
+        interconnection_cost=get_interconnection_cost(cc, u"NU"),
     )
 end
 function convert_nested_data_to_openapi(sc::StorageCapitalCost)
     return PC.StorageCapitalCost(;
         charge_capital_cost=PC.ValueCurve(
-            convert_cost_to_openapi(get_charge_capital_cost(sc)),
+            convert_cost_to_openapi(get_charge_capital_cost(sc, u"NU")),
         ),
         discharge_capital_cost=PC.ValueCurve(
-            convert_cost_to_openapi(get_discharge_capital_cost(sc)),
+            convert_cost_to_openapi(get_discharge_capital_cost(sc, u"NU")),
         ),
         energy_capital_cost=PC.ValueCurve(
-            convert_cost_to_openapi(get_energy_capital_cost(sc)),
+            convert_cost_to_openapi(get_energy_capital_cost(sc, u"NU")),
         ),
-        interconnection_cost=get_interconnection_cost(sc),
+        interconnection_cost=get_interconnection_cost(sc, u"NU"),
     )
 end
 # ── capacity bounds: a MinMax, or a per-topology map of MinMax ────────────────

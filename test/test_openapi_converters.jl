@@ -245,8 +245,8 @@ end
     @test isempty(PSIP.get_requirements(back))
     @test PSIP.get_prime_mover_type(back) == PrimeMovers.CT
     @test PSIP.get_fuel(back) == [ThermalFuels.NATURAL_GAS]
-    @test PSIP.get_capacity_limits(back, NU) == (min=0.0, max=500.0)
-    @test PSIP.get_unit_size(back, NU) == 100.0
+    @test PSIP.get_capacity_limits(back, u"NU") == (min=0.0, max=500.0)
+    @test PSIP.get_unit_size(back, u"NU") == 100.0
 end
 
 @testset "abstract type parameters survive the round trip" begin
@@ -328,7 +328,7 @@ end
 
     back = PSIP.from_openapi(po, refs)
     @test PSIP.get_parameter_type(back) === PSY.EnergyReservoirStorage
-    @test isnothing(PSIP.get_unit_size_charge(back, NU))
+    @test isnothing(PSIP.get_unit_size_charge(back, u"NU"))
     @test PSIP.get_storage_tech(back) == StorageTech.OTHER_CHEM
 end
 

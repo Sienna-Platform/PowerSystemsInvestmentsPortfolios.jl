@@ -100,44 +100,50 @@ get_region(value::DemandSideTechnology) = value.region
 get_capacity_limits(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:capacity_limits), Val(:mw), units))
 """Get [`DemandSideTechnology`](@ref) `capacity_limits` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_capacity_limits`](@ref)."""
 get_capacity_limits_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:capacity_limits), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+get_capacity_limits(value::DemandSideTechnology) = _units_arg_required(get_capacity_limits, Val(:mw))
+InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = u"NU"
 """Get [`DemandSideTechnology`](@ref) `unit_size` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_unit_size_unitful`](@ref)."""
 get_unit_size(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:unit_size), Val(:mw), units))
 """Get [`DemandSideTechnology`](@ref) `unit_size` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_unit_size`](@ref)."""
 get_unit_size_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:unit_size), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_unit_size), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_unit_size_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+get_unit_size(value::DemandSideTechnology) = _units_arg_required(get_unit_size, Val(:mw))
+InfrastructureSystems.display_units_arg(::typeof(get_unit_size), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_unit_size_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = u"NU"
 """Get [`DemandSideTechnology`](@ref) `capital_costs`."""
 get_capital_costs(value::DemandSideTechnology) = value.capital_costs
 """Get [`DemandSideTechnology`](@ref) `operation_costs` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_operation_costs_unitful`](@ref)."""
 get_operation_costs(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:operation_costs), Val(:usd_per_mwh), units))
 """Get [`DemandSideTechnology`](@ref) `operation_costs` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_operation_costs`](@ref)."""
 get_operation_costs_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:operation_costs), Val(:usd_per_mwh), units)
-InfrastructureSystems.display_units_arg(::typeof(get_operation_costs), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_operation_costs_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+get_operation_costs(value::DemandSideTechnology) = _units_arg_required(get_operation_costs, Val(:usd_per_mwh))
+InfrastructureSystems.display_units_arg(::typeof(get_operation_costs), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_operation_costs_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = u"NU"
 """Get [`DemandSideTechnology`](@ref) `min_power`."""
 get_min_power(value::DemandSideTechnology) = value.min_power
 """Get [`DemandSideTechnology`](@ref) `ramp_limits` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_ramp_limits_unitful`](@ref)."""
 get_ramp_limits(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:ramp_limits), Val(:mw_per_min), units))
 """Get [`DemandSideTechnology`](@ref) `ramp_limits` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_ramp_limits`](@ref)."""
 get_ramp_limits_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:ramp_limits), Val(:mw_per_min), units)
-InfrastructureSystems.display_units_arg(::typeof(get_ramp_limits), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_ramp_limits_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+get_ramp_limits(value::DemandSideTechnology) = _units_arg_required(get_ramp_limits, Val(:mw_per_min))
+InfrastructureSystems.display_units_arg(::typeof(get_ramp_limits), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_ramp_limits_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = u"NU"
 """Get [`DemandSideTechnology`](@ref) `technology_efficiency`."""
 get_technology_efficiency(value::DemandSideTechnology) = value.technology_efficiency
 """Get [`DemandSideTechnology`](@ref) `price_per_unit` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_price_per_unit_unitful`](@ref)."""
 get_price_per_unit(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:price_per_unit), Val(:usd_per_t), units))
 """Get [`DemandSideTechnology`](@ref) `price_per_unit` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_price_per_unit`](@ref)."""
 get_price_per_unit_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:price_per_unit), Val(:usd_per_t), units)
-InfrastructureSystems.display_units_arg(::typeof(get_price_per_unit), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_price_per_unit_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+get_price_per_unit(value::DemandSideTechnology) = _units_arg_required(get_price_per_unit, Val(:usd_per_t))
+InfrastructureSystems.display_units_arg(::typeof(get_price_per_unit), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_price_per_unit_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = u"NU"
 """Get [`DemandSideTechnology`](@ref) `lifetime` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_lifetime_unitful`](@ref)."""
 get_lifetime(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:lifetime), Val(:yr), units))
 """Get [`DemandSideTechnology`](@ref) `lifetime` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_lifetime`](@ref)."""
 get_lifetime_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:lifetime), Val(:yr), units)
-InfrastructureSystems.display_units_arg(::typeof(get_lifetime), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_lifetime_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+get_lifetime(value::DemandSideTechnology) = _units_arg_required(get_lifetime, Val(:yr))
+InfrastructureSystems.display_units_arg(::typeof(get_lifetime), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_lifetime_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = u"NU"
 """Get [`DemandSideTechnology`](@ref) `financial_data`."""
 get_financial_data(value::DemandSideTechnology) = value.financial_data
 """Get [`DemandSideTechnology`](@ref) `requirements`."""
@@ -155,24 +161,24 @@ set_available!(value::DemandSideTechnology, val) = value.available = val
 set_power_systems_type!(value::DemandSideTechnology, val) = value.power_systems_type = val
 """Set [`DemandSideTechnology`](@ref) `region`."""
 set_region!(value::DemandSideTechnology, val) = value.region = val
-"""Set [`DemandSideTechnology`](@ref) `capacity_limits`."""
-set_capacity_limits!(value::DemandSideTechnology, val, unit) = value.capacity_limits = set_value(value, Val(:capacity_limits), val, unit, Val(:mw))
-"""Set [`DemandSideTechnology`](@ref) `unit_size`."""
-set_unit_size!(value::DemandSideTechnology, val, unit) = value.unit_size = set_value(value, Val(:unit_size), val, unit, Val(:mw))
+"""Set [`DemandSideTechnology`](@ref) `capacity_limits` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_capacity_limits!(value::DemandSideTechnology, val) = value.capacity_limits = set_value(value, Val(:capacity_limits), val, Val(:mw))
+"""Set [`DemandSideTechnology`](@ref) `unit_size` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_unit_size!(value::DemandSideTechnology, val) = value.unit_size = set_value(value, Val(:unit_size), val, Val(:mw))
 """Set [`DemandSideTechnology`](@ref) `capital_costs`."""
 set_capital_costs!(value::DemandSideTechnology, val) = value.capital_costs = val
-"""Set [`DemandSideTechnology`](@ref) `operation_costs`."""
-set_operation_costs!(value::DemandSideTechnology, val, unit) = value.operation_costs = set_value(value, Val(:operation_costs), val, unit, Val(:usd_per_mwh))
+"""Set [`DemandSideTechnology`](@ref) `operation_costs` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_operation_costs!(value::DemandSideTechnology, val) = value.operation_costs = set_value(value, Val(:operation_costs), val, Val(:usd_per_mwh))
 """Set [`DemandSideTechnology`](@ref) `min_power`."""
 set_min_power!(value::DemandSideTechnology, val) = value.min_power = val
-"""Set [`DemandSideTechnology`](@ref) `ramp_limits`."""
-set_ramp_limits!(value::DemandSideTechnology, val, unit) = value.ramp_limits = set_value(value, Val(:ramp_limits), val, unit, Val(:mw_per_min))
+"""Set [`DemandSideTechnology`](@ref) `ramp_limits` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_ramp_limits!(value::DemandSideTechnology, val) = value.ramp_limits = set_value(value, Val(:ramp_limits), val, Val(:mw_per_min))
 """Set [`DemandSideTechnology`](@ref) `technology_efficiency`."""
 set_technology_efficiency!(value::DemandSideTechnology, val) = value.technology_efficiency = val
-"""Set [`DemandSideTechnology`](@ref) `price_per_unit`."""
-set_price_per_unit!(value::DemandSideTechnology, val, unit) = value.price_per_unit = set_value(value, Val(:price_per_unit), val, unit, Val(:usd_per_t))
-"""Set [`DemandSideTechnology`](@ref) `lifetime`."""
-set_lifetime!(value::DemandSideTechnology, val, unit) = value.lifetime = set_value(value, Val(:lifetime), val, unit, Val(:yr))
+"""Set [`DemandSideTechnology`](@ref) `price_per_unit` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_price_per_unit!(value::DemandSideTechnology, val) = value.price_per_unit = set_value(value, Val(:price_per_unit), val, Val(:usd_per_t))
+"""Set [`DemandSideTechnology`](@ref) `lifetime` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_lifetime!(value::DemandSideTechnology, val) = value.lifetime = set_value(value, Val(:lifetime), val, Val(:yr))
 """Set [`DemandSideTechnology`](@ref) `financial_data`."""
 set_financial_data!(value::DemandSideTechnology, val) = value.financial_data = val
 """Set [`DemandSideTechnology`](@ref) `requirements`."""
@@ -210,15 +216,15 @@ function to_openapi(value::DemandSideTechnology{T}, refs::OpenAPIRefs) where {T 
         available = get_available(value),
         power_systems_type = string(nameof(T)),
         region = component_ids(refs, get_region(value)),
-        capacity_limits = _minmax_po(get_capacity_limits(value, IS.NU)),
-        unit_size = get_unit_size(value, IS.NU),
+        capacity_limits = _minmax_po(get_capacity_limits(value, u"NU")),
+        unit_size = get_unit_size(value, u"NU"),
         capital_costs = convert_nested_data_to_openapi(get_capital_costs(value)),
-        operation_costs = convert_cost_to_openapi(get_operation_costs(value, IS.NU)),
+        operation_costs = convert_cost_to_openapi(get_operation_costs(value, u"NU")),
         min_power = get_min_power(value),
-        ramp_limits = _updown_po(get_ramp_limits(value, IS.NU)),
+        ramp_limits = _updown_po(get_ramp_limits(value, u"NU")),
         technology_efficiency = get_technology_efficiency(value),
-        price_per_unit = _curve_to_openapi(PI.DemandSideTechnologyPricePerUnit, get_price_per_unit(value, IS.NU)),
-        lifetime = get_lifetime(value, IS.NU),
+        price_per_unit = _curve_to_openapi(PI.DemandSideTechnologyPricePerUnit, get_price_per_unit(value, u"NU")),
+        lifetime = get_lifetime(value, u"NU"),
         financial_data = convert_nested_data_to_openapi(get_financial_data(value)),
     )
 end

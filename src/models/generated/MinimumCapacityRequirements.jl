@@ -52,8 +52,9 @@ get_available(value::MinimumCapacityRequirements) = value.available
 get_min_capacity_mw(value::MinimumCapacityRequirements, units) = InfrastructureSystems._strip_units(get_value(value, Val(:min_capacity_mw), Val(:mw), units))
 """Get [`MinimumCapacityRequirements`](@ref) `min_capacity_mw` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_min_capacity_mw`](@ref)."""
 get_min_capacity_mw_unitful(value::MinimumCapacityRequirements, units) = get_value(value, Val(:min_capacity_mw), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_min_capacity_mw), ::Type{MinimumCapacityRequirements}) = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_min_capacity_mw_unitful), ::Type{MinimumCapacityRequirements}) = InfrastructureSystems.NU
+get_min_capacity_mw(value::MinimumCapacityRequirements) = _units_arg_required(get_min_capacity_mw, Val(:mw))
+InfrastructureSystems.display_units_arg(::typeof(get_min_capacity_mw), ::Type{MinimumCapacityRequirements}) = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_min_capacity_mw_unitful), ::Type{MinimumCapacityRequirements}) = u"NU"
 """Get [`MinimumCapacityRequirements`](@ref) `target_year`."""
 get_target_year(value::MinimumCapacityRequirements) = value.target_year
 """Get [`MinimumCapacityRequirements`](@ref) `ext`."""
@@ -65,8 +66,8 @@ get_internal(value::MinimumCapacityRequirements) = value.internal
 set_name!(value::MinimumCapacityRequirements, val) = value.name = val
 """Set [`MinimumCapacityRequirements`](@ref) `available`."""
 set_available!(value::MinimumCapacityRequirements, val) = value.available = val
-"""Set [`MinimumCapacityRequirements`](@ref) `min_capacity_mw`."""
-set_min_capacity_mw!(value::MinimumCapacityRequirements, val, unit) = value.min_capacity_mw = set_value(value, Val(:min_capacity_mw), val, unit, Val(:mw))
+"""Set [`MinimumCapacityRequirements`](@ref) `min_capacity_mw` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_min_capacity_mw!(value::MinimumCapacityRequirements, val) = value.min_capacity_mw = set_value(value, Val(:min_capacity_mw), val, Val(:mw))
 """Set [`MinimumCapacityRequirements`](@ref) `target_year`."""
 set_target_year!(value::MinimumCapacityRequirements, val) = value.target_year = val
 """Set [`MinimumCapacityRequirements`](@ref) `ext`."""
@@ -90,7 +91,7 @@ function to_openapi(value::MinimumCapacityRequirements, refs::OpenAPIRefs)
         id = get_id(value),
         name = get_name(value),
         available = get_available(value),
-        min_capacity_mw = get_min_capacity_mw(value, IS.NU),
+        min_capacity_mw = get_min_capacity_mw(value, u"NU"),
         target_year = get_target_year(value),
     )
 end

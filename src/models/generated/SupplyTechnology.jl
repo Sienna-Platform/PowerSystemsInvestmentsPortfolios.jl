@@ -130,20 +130,23 @@ get_capital_costs(value::SupplyTechnology) = value.capital_costs
 get_operation_costs(value::SupplyTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:operation_costs), Val(:usd_per_mwh), units))
 """Get [`SupplyTechnology`](@ref) `operation_costs` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_operation_costs`](@ref)."""
 get_operation_costs_unitful(value::SupplyTechnology, units) = get_value(value, Val(:operation_costs), Val(:usd_per_mwh), units)
-InfrastructureSystems.display_units_arg(::typeof(get_operation_costs), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_operation_costs_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
+get_operation_costs(value::SupplyTechnology) = _units_arg_required(get_operation_costs, Val(:usd_per_mwh))
+InfrastructureSystems.display_units_arg(::typeof(get_operation_costs), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_operation_costs_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = u"NU"
 """Get [`SupplyTechnology`](@ref) `unit_size` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_unit_size_unitful`](@ref)."""
 get_unit_size(value::SupplyTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:unit_size), Val(:mw), units))
 """Get [`SupplyTechnology`](@ref) `unit_size` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_unit_size`](@ref)."""
 get_unit_size_unitful(value::SupplyTechnology, units) = get_value(value, Val(:unit_size), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_unit_size), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_unit_size_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
+get_unit_size(value::SupplyTechnology) = _units_arg_required(get_unit_size, Val(:mw))
+InfrastructureSystems.display_units_arg(::typeof(get_unit_size), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_unit_size_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = u"NU"
 """Get [`SupplyTechnology`](@ref) `capacity_limits` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_capacity_limits_unitful`](@ref)."""
 get_capacity_limits(value::SupplyTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:capacity_limits), Val(:mw), units))
 """Get [`SupplyTechnology`](@ref) `capacity_limits` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_capacity_limits`](@ref)."""
 get_capacity_limits_unitful(value::SupplyTechnology, units) = get_value(value, Val(:capacity_limits), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
+get_capacity_limits(value::SupplyTechnology) = _units_arg_required(get_capacity_limits, Val(:mw))
+InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = u"NU"
 """Get [`SupplyTechnology`](@ref) `outage_factor`."""
 get_outage_factor(value::SupplyTechnology) = value.outage_factor
 """Get [`SupplyTechnology`](@ref) `min_generation_fraction`."""
@@ -152,26 +155,30 @@ get_min_generation_fraction(value::SupplyTechnology) = value.min_generation_frac
 get_ramp_limits(value::SupplyTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:ramp_limits), Val(:mw_per_min), units))
 """Get [`SupplyTechnology`](@ref) `ramp_limits` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_ramp_limits`](@ref)."""
 get_ramp_limits_unitful(value::SupplyTechnology, units) = get_value(value, Val(:ramp_limits), Val(:mw_per_min), units)
-InfrastructureSystems.display_units_arg(::typeof(get_ramp_limits), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_ramp_limits_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
+get_ramp_limits(value::SupplyTechnology) = _units_arg_required(get_ramp_limits, Val(:mw_per_min))
+InfrastructureSystems.display_units_arg(::typeof(get_ramp_limits), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_ramp_limits_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = u"NU"
 """Get [`SupplyTechnology`](@ref) `time_limits` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_time_limits_unitful`](@ref)."""
 get_time_limits(value::SupplyTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:time_limits), Val(:min), units))
 """Get [`SupplyTechnology`](@ref) `time_limits` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_time_limits`](@ref)."""
 get_time_limits_unitful(value::SupplyTechnology, units) = get_value(value, Val(:time_limits), Val(:min), units)
-InfrastructureSystems.display_units_arg(::typeof(get_time_limits), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_time_limits_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
+get_time_limits(value::SupplyTechnology) = _units_arg_required(get_time_limits, Val(:min))
+InfrastructureSystems.display_units_arg(::typeof(get_time_limits), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_time_limits_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = u"NU"
 """Get [`SupplyTechnology`](@ref) `start_fuel_mmbtu_per_mw` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_start_fuel_mmbtu_per_mw_unitful`](@ref)."""
 get_start_fuel_mmbtu_per_mw(value::SupplyTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:start_fuel_mmbtu_per_mw), Val(:mmbtu_per_mw), units))
 """Get [`SupplyTechnology`](@ref) `start_fuel_mmbtu_per_mw` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_start_fuel_mmbtu_per_mw`](@ref)."""
 get_start_fuel_mmbtu_per_mw_unitful(value::SupplyTechnology, units) = get_value(value, Val(:start_fuel_mmbtu_per_mw), Val(:mmbtu_per_mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_start_fuel_mmbtu_per_mw), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_start_fuel_mmbtu_per_mw_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
+get_start_fuel_mmbtu_per_mw(value::SupplyTechnology) = _units_arg_required(get_start_fuel_mmbtu_per_mw, Val(:mmbtu_per_mw))
+InfrastructureSystems.display_units_arg(::typeof(get_start_fuel_mmbtu_per_mw), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_start_fuel_mmbtu_per_mw_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = u"NU"
 """Get [`SupplyTechnology`](@ref) `lifetime` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_lifetime_unitful`](@ref)."""
 get_lifetime(value::SupplyTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:lifetime), Val(:yr), units))
 """Get [`SupplyTechnology`](@ref) `lifetime` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_lifetime`](@ref)."""
 get_lifetime_unitful(value::SupplyTechnology, units) = get_value(value, Val(:lifetime), Val(:yr), units)
-InfrastructureSystems.display_units_arg(::typeof(get_lifetime), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_lifetime_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = InfrastructureSystems.NU
+get_lifetime(value::SupplyTechnology) = _units_arg_required(get_lifetime, Val(:yr))
+InfrastructureSystems.display_units_arg(::typeof(get_lifetime), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_lifetime_unitful), ::Type{SupplyTechnology{T}}) where {T <: PSY.Generator} = u"NU"
 """Get [`SupplyTechnology`](@ref) `requirements`."""
 get_requirements(value::SupplyTechnology) = value.requirements
 """Get [`SupplyTechnology`](@ref) `financial_data`."""
@@ -199,24 +206,24 @@ set_cofire_start_limits!(value::SupplyTechnology, val) = value.cofire_start_limi
 set_cofire_level_limits!(value::SupplyTechnology, val) = value.cofire_level_limits = val
 """Set [`SupplyTechnology`](@ref) `capital_costs`."""
 set_capital_costs!(value::SupplyTechnology, val) = value.capital_costs = val
-"""Set [`SupplyTechnology`](@ref) `operation_costs`."""
-set_operation_costs!(value::SupplyTechnology, val, unit) = value.operation_costs = set_value(value, Val(:operation_costs), val, unit, Val(:usd_per_mwh))
-"""Set [`SupplyTechnology`](@ref) `unit_size`."""
-set_unit_size!(value::SupplyTechnology, val, unit) = value.unit_size = set_value(value, Val(:unit_size), val, unit, Val(:mw))
-"""Set [`SupplyTechnology`](@ref) `capacity_limits`."""
-set_capacity_limits!(value::SupplyTechnology, val, unit) = value.capacity_limits = set_value(value, Val(:capacity_limits), val, unit, Val(:mw))
+"""Set [`SupplyTechnology`](@ref) `operation_costs` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_operation_costs!(value::SupplyTechnology, val) = value.operation_costs = set_value(value, Val(:operation_costs), val, Val(:usd_per_mwh))
+"""Set [`SupplyTechnology`](@ref) `unit_size` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_unit_size!(value::SupplyTechnology, val) = value.unit_size = set_value(value, Val(:unit_size), val, Val(:mw))
+"""Set [`SupplyTechnology`](@ref) `capacity_limits` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_capacity_limits!(value::SupplyTechnology, val) = value.capacity_limits = set_value(value, Val(:capacity_limits), val, Val(:mw))
 """Set [`SupplyTechnology`](@ref) `outage_factor`."""
 set_outage_factor!(value::SupplyTechnology, val) = value.outage_factor = val
 """Set [`SupplyTechnology`](@ref) `min_generation_fraction`."""
 set_min_generation_fraction!(value::SupplyTechnology, val) = value.min_generation_fraction = val
-"""Set [`SupplyTechnology`](@ref) `ramp_limits`."""
-set_ramp_limits!(value::SupplyTechnology, val, unit) = value.ramp_limits = set_value(value, Val(:ramp_limits), val, unit, Val(:mw_per_min))
-"""Set [`SupplyTechnology`](@ref) `time_limits`."""
-set_time_limits!(value::SupplyTechnology, val, unit) = value.time_limits = set_value(value, Val(:time_limits), val, unit, Val(:min))
-"""Set [`SupplyTechnology`](@ref) `start_fuel_mmbtu_per_mw`."""
-set_start_fuel_mmbtu_per_mw!(value::SupplyTechnology, val, unit) = value.start_fuel_mmbtu_per_mw = set_value(value, Val(:start_fuel_mmbtu_per_mw), val, unit, Val(:mmbtu_per_mw))
-"""Set [`SupplyTechnology`](@ref) `lifetime`."""
-set_lifetime!(value::SupplyTechnology, val, unit) = value.lifetime = set_value(value, Val(:lifetime), val, unit, Val(:yr))
+"""Set [`SupplyTechnology`](@ref) `ramp_limits` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_ramp_limits!(value::SupplyTechnology, val) = value.ramp_limits = set_value(value, Val(:ramp_limits), val, Val(:mw_per_min))
+"""Set [`SupplyTechnology`](@ref) `time_limits` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_time_limits!(value::SupplyTechnology, val) = value.time_limits = set_value(value, Val(:time_limits), val, Val(:min))
+"""Set [`SupplyTechnology`](@ref) `start_fuel_mmbtu_per_mw` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_start_fuel_mmbtu_per_mw!(value::SupplyTechnology, val) = value.start_fuel_mmbtu_per_mw = set_value(value, Val(:start_fuel_mmbtu_per_mw), val, Val(:mmbtu_per_mw))
+"""Set [`SupplyTechnology`](@ref) `lifetime` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_lifetime!(value::SupplyTechnology, val) = value.lifetime = set_value(value, Val(:lifetime), val, Val(:yr))
 """Set [`SupplyTechnology`](@ref) `requirements`."""
 set_requirements!(value::SupplyTechnology, val) = value.requirements = val
 """Set [`SupplyTechnology`](@ref) `financial_data`."""
@@ -264,15 +271,15 @@ function to_openapi(value::SupplyTechnology{T}, refs::OpenAPIRefs) where {T <: P
         cofire_start_limits = PC.MinMaxByKey(; additional_properties = Dict(string(k) => _minmax_po(v) for (k, v) in get_cofire_start_limits(value))),
         cofire_level_limits = PC.MinMaxByKey(; additional_properties = Dict(string(k) => _minmax_po(v) for (k, v) in get_cofire_level_limits(value))),
         capital_costs = convert_nested_data_to_openapi(get_capital_costs(value)),
-        operation_costs = PI.SupplyTechnologyOperationCosts(convert_cost_to_openapi(get_operation_costs(value, IS.NU))),
-        unit_size = get_unit_size(value, IS.NU),
-        capacity_limits = PI.SupplyTechnologyCapacityLimits(_capacity_bound_po_value(get_capacity_limits(value, IS.NU), refs)),
+        operation_costs = PI.SupplyTechnologyOperationCosts(convert_cost_to_openapi(get_operation_costs(value, u"NU"))),
+        unit_size = get_unit_size(value, u"NU"),
+        capacity_limits = PI.SupplyTechnologyCapacityLimits(_capacity_bound_po_value(get_capacity_limits(value, u"NU"), refs)),
         outage_factor = _outagefactors_po(get_outage_factor(value)),
         min_generation_fraction = get_min_generation_fraction(value),
-        ramp_limits = _updown_po(get_ramp_limits(value, IS.NU)),
-        time_limits = _updown_po(get_time_limits(value, IS.NU)),
-        start_fuel_mmbtu_per_mw = get_start_fuel_mmbtu_per_mw(value, IS.NU),
-        lifetime = get_lifetime(value, IS.NU),
+        ramp_limits = _updown_po(get_ramp_limits(value, u"NU")),
+        time_limits = _updown_po(get_time_limits(value, u"NU")),
+        start_fuel_mmbtu_per_mw = get_start_fuel_mmbtu_per_mw(value, u"NU"),
+        lifetime = get_lifetime(value, u"NU"),
         financial_data = convert_nested_data_to_openapi(get_financial_data(value)),
     )
 end

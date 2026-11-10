@@ -68,7 +68,7 @@ end
 @testset "Technology checking" begin
     port = build_portfolio()
     supply = first(get_technologies(SupplyTechnology, port))
-    set_lifetime!(supply, 0, IS.NU)
+    set_lifetime!(supply, 0u"yr")
 
     @test_logs(
         (:error, r"Technology lifetime must be finite and positive"),
@@ -85,23 +85,23 @@ end
 @testset "Supply validation" begin
     supply = first(get_technologies(SupplyTechnology, build_portfolio()))
 
-    capacity_limits = get_capacity_limits(supply, IS.NU)
-    set_capacity_limits!(supply, (min=-1.0, max=capacity_limits.max), IS.NU)
+    capacity_limits = get_capacity_limits(supply, u"NU")
+    set_capacity_limits!(supply, (min=-1.0u"MW", max=capacity_limits.max * u"MW"))
     @test_logs(
         (:error, r"Supply capacity limits must be nonnegative"),
         min_level = Logging.Error,
         @test(!validate_technology(supply)),
     )
-    set_capacity_limits!(supply, capacity_limits, IS.NU)
+    set_capacity_limits!(supply, map(x -> x * u"MW", capacity_limits))
 
-    unit_size = get_unit_size(supply, IS.NU)
-    set_unit_size!(supply, -1.0, IS.NU)
+    unit_size = get_unit_size(supply, u"NU")
+    set_unit_size!(supply, (-1.0) * u"MW")
     @test_logs(
         (:error, r"Supply unit size must be finite and nonnegative"),
         min_level = Logging.Error,
         @test(!validate_technology(supply)),
     )
-    set_unit_size!(supply, unit_size, IS.NU)
+    set_unit_size!(supply, unit_size * u"MW")
 
     min_generation_fraction = get_min_generation_fraction(supply)
     set_min_generation_fraction!(supply, 1.1)
@@ -161,14 +161,14 @@ end
     add_technology!(port, colocated)
     @test get_technology(typeof(colocated), port, "valid_colocated") === colocated
 
-    inverter_capacity_limits = get_inverter_capacity_limits(colocated, IS.NU)
-    set_inverter_capacity_limits!(colocated, (min=2.0, max=1.0), IS.NU)
+    inverter_capacity_limits = get_inverter_capacity_limits(colocated, u"NU")
+    set_inverter_capacity_limits!(colocated, (min=2.0u"MW", max=1.0u"MW"))
     @test_logs(
         (:error, r"Colocated inverter capacity limits must be in ascending order"),
         min_level = Logging.Error,
         @test(!validate_technology(colocated)),
     )
-    set_inverter_capacity_limits!(colocated, inverter_capacity_limits, IS.NU)
+    set_inverter_capacity_limits!(colocated, map(x -> x * u"MW", inverter_capacity_limits))
 
     set_inverter_efficiency!(colocated, 1.1)
     @test_logs(

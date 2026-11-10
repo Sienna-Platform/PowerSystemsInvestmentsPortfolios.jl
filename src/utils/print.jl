@@ -16,7 +16,7 @@ function Base.show(io::IO, ::MIME"text/plain", ist::Union{Technology, Requiremen
             if ismissing(arg)
                 val = getter_func(ist)
             else
-                val = getter_func(ist, InfrastructureSystems.NU)
+                val = getter_func(ist, u"NU")
             end
         else
             val = getproperty(ist, name)
@@ -90,7 +90,7 @@ function _show_accessor_value(
         # Only swallow the engine's own ErrorExceptions — a MethodError here
         # is a bug.
         try
-            return unitful_func(ist, NU)
+            return unitful_func(ist, u"NU")
         catch err2
             err2 isa ErrorException || rethrow()
             return unitful_func(ist, _cu_fallback(trait_arg))

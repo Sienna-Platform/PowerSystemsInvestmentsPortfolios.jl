@@ -31,36 +31,59 @@ StorageCapitalCost(::Nothing) =
     StorageCapitalCost(LinearCurve(0.0), LinearCurve(0.0), LinearCurve(0.0), 0.0)
 
 """
-Return the `charge_capital_cost` field of [`StorageCapitalCost`](@ref).
+Get [`StorageCapitalCost`](@ref) `charge_capital_cost` (USD/MW), its x-axis in `units`: `u"NU"` for natural units, or e.g. `u"kW"` for USD/kW.
 """
-get_charge_capital_cost(value::StorageCapitalCost) = value.charge_capital_cost
+get_charge_capital_cost(value::StorageCapitalCost, units) =
+    IS._strip_units(get_value(value, Val(:charge_capital_cost), Val(:usd_per_mw), units))
+get_charge_capital_cost(value::StorageCapitalCost) =
+    _units_arg_required(get_charge_capital_cost, Val(:usd_per_mw))
+IS.display_units_arg(::typeof(get_charge_capital_cost), ::Type{StorageCapitalCost}) = u"NU"
 """
-Return the `discharge_capital_cost` field of [`StorageCapitalCost`](@ref).
+Set [`StorageCapitalCost`](@ref) `charge_capital_cost` (USD/MW), a curve in natural units.
 """
-get_discharge_capital_cost(value::StorageCapitalCost) = value.discharge_capital_cost
+set_charge_capital_cost!(value::StorageCapitalCost, val) =
+    value.charge_capital_cost =
+        set_value(value, Val(:charge_capital_cost), val, Val(:usd_per_mw))
 """
-Return the `energy_capital_cost` field of [`StorageCapitalCost`](@ref).
+Get [`StorageCapitalCost`](@ref) `discharge_capital_cost` (USD/MW), its x-axis in `units`: `u"NU"` for natural units, or e.g. `u"kW"` for USD/kW.
 """
-get_energy_capital_cost(value::StorageCapitalCost) = value.energy_capital_cost
+get_discharge_capital_cost(value::StorageCapitalCost, units) =
+    IS._strip_units(get_value(value, Val(:discharge_capital_cost), Val(:usd_per_mw), units))
+get_discharge_capital_cost(value::StorageCapitalCost) =
+    _units_arg_required(get_discharge_capital_cost, Val(:usd_per_mw))
+IS.display_units_arg(::typeof(get_discharge_capital_cost), ::Type{StorageCapitalCost}) =
+    u"NU"
 """
-Return the `interconnection_cost` field of [`StorageCapitalCost`](@ref).
-"""
-get_interconnection_cost(value::StorageCapitalCost) = value.interconnection_cost
-
-"""
-Set the `charge_capital_cost` field of [`StorageCapitalCost`](@ref).
-"""
-set_charge_capital_cost!(value::StorageCapitalCost, val) = value.charge_capital_cost = val
-"""
-Set the `discharge_capital_cost` field of [`StorageCapitalCost`](@ref).
+Set [`StorageCapitalCost`](@ref) `discharge_capital_cost` (USD/MW), a curve in natural units.
 """
 set_discharge_capital_cost!(value::StorageCapitalCost, val) =
-    value.discharge_capital_cost = val
+    value.discharge_capital_cost =
+        set_value(value, Val(:discharge_capital_cost), val, Val(:usd_per_mw))
 """
-Set the `energy_capital_cost` field of [`StorageCapitalCost`](@ref).
+Get [`StorageCapitalCost`](@ref) `energy_capital_cost` (USD/MWh), its x-axis in `units`: `u"NU"` for natural units, or e.g. `u"kW"` for USD/kW.
 """
-set_energy_capital_cost!(value::StorageCapitalCost, val) = value.energy_capital_cost = val
+get_energy_capital_cost(value::StorageCapitalCost, units) =
+    IS._strip_units(get_value(value, Val(:energy_capital_cost), Val(:usd_per_mwh), units))
+get_energy_capital_cost(value::StorageCapitalCost) =
+    _units_arg_required(get_energy_capital_cost, Val(:usd_per_mwh))
+IS.display_units_arg(::typeof(get_energy_capital_cost), ::Type{StorageCapitalCost}) = u"NU"
 """
-Set the `interconnection_cost` field of [`StorageCapitalCost`](@ref).
+Set [`StorageCapitalCost`](@ref) `energy_capital_cost` (USD/MWh), a curve in natural units.
 """
-set_interconnection_cost!(value::StorageCapitalCost, val) = value.interconnection_cost = val
+set_energy_capital_cost!(value::StorageCapitalCost, val) =
+    value.energy_capital_cost =
+        set_value(value, Val(:energy_capital_cost), val, Val(:usd_per_mwh))
+"""
+Get [`StorageCapitalCost`](@ref) `interconnection_cost` (USD/MW) in `units`: `u"NU"` for natural units, or e.g. `USD / u"kW"`.
+"""
+get_interconnection_cost(value::StorageCapitalCost, units) =
+    IS._strip_units(get_value(value, Val(:interconnection_cost), Val(:usd_per_mw), units))
+get_interconnection_cost(value::StorageCapitalCost) =
+    _units_arg_required(get_interconnection_cost, Val(:usd_per_mw))
+IS.display_units_arg(::typeof(get_interconnection_cost), ::Type{StorageCapitalCost}) = u"NU"
+"""
+Set [`StorageCapitalCost`](@ref) `interconnection_cost` (USD/MW) from a units-tagged value (e.g. `50.0USD / u"kW"`).
+"""
+set_interconnection_cost!(value::StorageCapitalCost, val) =
+    value.interconnection_cost =
+        set_value(value, Val(:interconnection_cost), val, Val(:usd_per_mw))

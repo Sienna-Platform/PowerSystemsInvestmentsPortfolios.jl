@@ -86,14 +86,16 @@ get_end_node(value::NodalHVDCTransportTechnology) = value.end_node
 get_capacity_limits(value::NodalHVDCTransportTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:capacity_limits), Val(:mw), units))
 """Get [`NodalHVDCTransportTechnology`](@ref) `capacity_limits` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_capacity_limits`](@ref)."""
 get_capacity_limits_unitful(value::NodalHVDCTransportTechnology, units) = get_value(value, Val(:capacity_limits), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits), ::Type{NodalHVDCTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_unitful), ::Type{NodalHVDCTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
+get_capacity_limits(value::NodalHVDCTransportTechnology) = _units_arg_required(get_capacity_limits, Val(:mw))
+InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits), ::Type{NodalHVDCTransportTechnology{T}}) where {T <: PSY.Device} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_unitful), ::Type{NodalHVDCTransportTechnology{T}}) where {T <: PSY.Device} = u"NU"
 """Get [`NodalHVDCTransportTechnology`](@ref) `unit_size` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_unit_size_unitful`](@ref)."""
 get_unit_size(value::NodalHVDCTransportTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:unit_size), Val(:mw), units))
 """Get [`NodalHVDCTransportTechnology`](@ref) `unit_size` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_unit_size`](@ref)."""
 get_unit_size_unitful(value::NodalHVDCTransportTechnology, units) = get_value(value, Val(:unit_size), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_unit_size), ::Type{NodalHVDCTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_unit_size_unitful), ::Type{NodalHVDCTransportTechnology{T}}) where {T <: PSY.Device} = InfrastructureSystems.NU
+get_unit_size(value::NodalHVDCTransportTechnology) = _units_arg_required(get_unit_size, Val(:mw))
+InfrastructureSystems.display_units_arg(::typeof(get_unit_size), ::Type{NodalHVDCTransportTechnology{T}}) where {T <: PSY.Device} = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_unit_size_unitful), ::Type{NodalHVDCTransportTechnology{T}}) where {T <: PSY.Device} = u"NU"
 """Get [`NodalHVDCTransportTechnology`](@ref) `capital_costs`."""
 get_capital_costs(value::NodalHVDCTransportTechnology) = value.capital_costs
 """Get [`NodalHVDCTransportTechnology`](@ref) `line_loss`."""
@@ -117,10 +119,10 @@ set_power_systems_type!(value::NodalHVDCTransportTechnology, val) = value.power_
 set_start_node!(value::NodalHVDCTransportTechnology, val) = value.start_node = val
 """Set [`NodalHVDCTransportTechnology`](@ref) `end_node`."""
 set_end_node!(value::NodalHVDCTransportTechnology, val) = value.end_node = val
-"""Set [`NodalHVDCTransportTechnology`](@ref) `capacity_limits`."""
-set_capacity_limits!(value::NodalHVDCTransportTechnology, val, unit) = value.capacity_limits = set_value(value, Val(:capacity_limits), val, unit, Val(:mw))
-"""Set [`NodalHVDCTransportTechnology`](@ref) `unit_size`."""
-set_unit_size!(value::NodalHVDCTransportTechnology, val, unit) = value.unit_size = set_value(value, Val(:unit_size), val, unit, Val(:mw))
+"""Set [`NodalHVDCTransportTechnology`](@ref) `capacity_limits` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_capacity_limits!(value::NodalHVDCTransportTechnology, val) = value.capacity_limits = set_value(value, Val(:capacity_limits), val, Val(:mw))
+"""Set [`NodalHVDCTransportTechnology`](@ref) `unit_size` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_unit_size!(value::NodalHVDCTransportTechnology, val) = value.unit_size = set_value(value, Val(:unit_size), val, Val(:mw))
 """Set [`NodalHVDCTransportTechnology`](@ref) `capital_costs`."""
 set_capital_costs!(value::NodalHVDCTransportTechnology, val) = value.capital_costs = val
 """Set [`NodalHVDCTransportTechnology`](@ref) `line_loss`."""
@@ -159,8 +161,8 @@ function to_openapi(value::NodalHVDCTransportTechnology{T}, refs::OpenAPIRefs) w
         power_systems_type = string(nameof(T)),
         start_node = component_id(refs, get_start_node(value)),
         end_node = component_id(refs, get_end_node(value)),
-        capacity_limits = _minmax_po(get_capacity_limits(value, IS.NU)),
-        unit_size = get_unit_size(value, IS.NU),
+        capacity_limits = _minmax_po(get_capacity_limits(value, u"NU")),
+        unit_size = get_unit_size(value, u"NU"),
         capital_costs = convert_nested_data_to_openapi(get_capital_costs(value)),
         line_loss = _curve_to_openapi(PI.NodalHVDCTransportTechnologyLineLoss, get_line_loss(value)),
         financial_data = convert_nested_data_to_openapi(get_financial_data(value)),

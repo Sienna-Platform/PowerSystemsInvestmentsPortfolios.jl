@@ -12,19 +12,8 @@ conversion between natural units and user-specified display units.
 # Unit categories
 # ============================================================
 
-"""
-    ConversionUnits
-
-A `NamedTuple` type `(x_unit, y_unit)` of `Unitful.Units` used to describe the
-two axes of a value curve — `x_unit` for the independent variable (e.g. power or energy)
-and `y_unit` for the dependent variable (e.g. cost). Cost and fuel curves carry their own
-units and do not take it.
-"""
-const ConversionUnits =
-    NamedTuple{(:x_unit, :y_unit), T} where {T <: Tuple{<:Unitful.Units, <:Unitful.Units}}
-
-const _UNIT_AWARE = Union{Technology, Requirement, SupplementalAttribute}
-const _UNIT_OPTIONS = Union{Unitful.Units, ConversionUnits, IS.NaturalUnit}
+const _UNIT_AWARE = Union{Technology, Requirement, SupplementalAttribute, InvestmentCost}
+const _UNIT_OPTIONS = Unitful.Units
 # Operating costs, whose cost and fuel curves carry their own units
 const UnitsCarryingCost = Union{PSY.OperationalCost, IS.ProductionVariableCostCurve}
 
@@ -94,23 +83,18 @@ natural_unit(::EnergyCategory) = natural_unit(POWER) * natural_unit(OPS_TIME)
 natural_unit(::RampingCategory) = u"MW/minute"
 
 natural_unit(::CostCategory) = USD
-natural_unit(::PowerCostCategory) = (x_unit=u"MW", y_unit=USD)
-natural_unit(::EnergyCostCategory) = (x_unit=u"MW" * u"hr", y_unit=USD)
+natural_unit(::PowerCostCategory) = USD / u"MW"
+natural_unit(::EnergyCostCategory) = USD / (u"MW" * u"hr")
 natural_unit(::EnergyCostScalarCategory) = USD / (u"MW" * u"hr")
 
 natural_unit(::FuelCategory) = MMBtu
-natural_unit(::FuelConsumptionEnergyCategory) = (x_unit=u"MW" * u"hr", y_unit=MMBtu)
+natural_unit(::FuelConsumptionEnergyCategory) = MMBtu / (u"MW" * u"hr")
 natural_unit(::FuelConsumptionPowerCategory) = MMBtu / u"MW"
 natural_unit(::EmissionsMassCategory) = Mt
 natural_unit(::EmissionsCostCategory) = USD / tonne
 natural_unit(::EmissionsFuelCategory) = tonne / MMBtu
 natural_unit(::EmissionsEnergyCategory) = Mt / (u"MW" * u"hr")
-natural_unit(::FuelCostCategory) = (x_unit=MMBtu, y_unit=USD)
-
-# --- Return value with its default natural units ---
-function convert_units(c, val::Number, from::UnitCategory, to::IS.NaturalUnit)
-    return val * natural_unit(from)
-end
+natural_unit(::FuelCostCategory) = USD / MMBtu
 
 # --- Convert from natural units to a target Unitful unit ---
 function convert_units(c, val::Number, from::UnitCategory, to::Unitful.Units)
@@ -132,16 +116,16 @@ end
 #######################################################
 # Units-aware get_value / set_value
 #
-# Fields are stored internally in a pre-defined set of natural units (NU). The 4-arg `get_value`
+# Fields are stored internally in a pre-defined set of natural units (u"NU"). The 4-arg `get_value`
 # converts from the default units to a requested target unit.
 #######################################################
 
 val_to_symbol(::Val{T}) where {T} = T
 val_to_string(v::Val) = String(val_to_symbol(v))
 
-# Natural units, `u"NU"` as in PowerSystems or `InfrastructureSystems.NU`, passed as a
-# `from`/`to` argument are the field's internal (natural) units, i.e. no conversion.
-_is_natural(u) = u isa IS.NaturalUnit || u == u"NU"
+# Natural units, `u"NU"` as in PowerSystems, passed as a `from`/`to` argument are the field's
+# internal (natural) units, i.e. no conversion.
+_is_natural(u) = u == u"NU"
 _resolve_nu(u, natural_unit) = _is_natural(u) ? natural_unit : u
 
 """
@@ -167,30 +151,51 @@ end
 
 _get_value(t, field, value::UnitsCarryingCost, ::Val, to) =
     cost_in_units(t, field, value, to)
+_get_value(t, field, value::IS.ValueCurve, from::Val, to) =
+    curve_in_units(value, natural_unit(_unit_category(from)), to)
+_get_value(t, ::Val{:curtailment_cost}, value::IS.IncrementalCurve, from::Val, to) =
+    curtailment_tiers_in_units(value, natural_unit(_unit_category(from)), to)
 
 """
     set_value(t::Technology, field::Val, val, conversion_unit::Val) -> value
 
-Set `t`'s field value, converting from `val`'s units to our default natural units.
-Returns the value in natural units.
+Return `val`, a units-tagged value (e.g. `100.0u"MW"`, or a `NamedTuple` or `Dict` of
+them), in the field's natural units, as PowerSystems setters take it. A curve is given in
+natural units.
 """
+set_value(t::_UNIT_AWARE, field::Val, value, to::Val) =
+    _from_tagged(field, value, natural_unit(_unit_category(to)))
+set_value(t::_UNIT_AWARE, field::Val, value::UnitsCarryingCost, ::Val) =
+    set_cost(t, field, value)
+set_value(t::_UNIT_AWARE, field::Val, value::IS.ValueCurve, ::Val) = value
 
-# ---- From Unitful.Quantity (natural units): inverse conversion ----
-function set_value(
-    t::T,
-    field::U,
-    value,
-    from::_UNIT_OPTIONS,
-    to::Val,
-) where {T <: _UNIT_AWARE, U}
-    base_unit = natural_unit(_unit_category(to))
-    return IS._strip_units(
-        _natural_unit_conversions(t, value, _resolve_nu(from, base_unit), base_unit),
+_from_tagged(field, value::Unitful.Quantity, units) =
+    Unitful.ustrip(Unitful.uconvert(units, value))
+_from_tagged(field, ::Nothing, units) = nothing
+_from_tagged(field, value::NamedTuple, units) =
+    map(v -> _from_tagged(field, v, units), value)
+_from_tagged(field, value::AbstractDict, units) =
+    Dict{keytype(value), MinMax}(k => _from_tagged(field, v, units) for (k, v) in value)
+_from_tagged(field, value::Real, units) = throw(
+    ArgumentError(
+        "set_$(val_to_string(field))! requires a units-tagged value, e.g. " *
+        "`$(value) * $(units)` for natural units.",
+    ),
+)
+
+"""
+Throw the error for a units-aware getter called without a units argument.
+"""
+function _units_arg_required(getter, conversion_unit::Val)
+    name = nameof(getter)
+    throw(
+        ArgumentError(
+            "`$name` requires a units argument: `$name(component, u\"NU\")` for natural " *
+            "units ($(natural_unit(_unit_category(conversion_unit)))), or another unit " *
+            "such as `u\"kW\"`.",
+        ),
     )
 end
-
-set_value(t::_UNIT_AWARE, field, value::UnitsCarryingCost, from::_UNIT_OPTIONS, ::Val) =
-    set_cost(t, field, value, from)
 
 _natural_unit_conversions(base, value::Number, from, to) =
     convert_units(base, value, from, to)

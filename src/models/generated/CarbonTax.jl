@@ -54,8 +54,9 @@ get_target_year(value::CarbonTax) = value.target_year
 get_tax_dollars_per_ton(value::CarbonTax, units) = InfrastructureSystems._strip_units(get_value(value, Val(:tax_dollars_per_ton), Val(:usd_per_t), units))
 """Get [`CarbonTax`](@ref) `tax_dollars_per_ton` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_tax_dollars_per_ton`](@ref)."""
 get_tax_dollars_per_ton_unitful(value::CarbonTax, units) = get_value(value, Val(:tax_dollars_per_ton), Val(:usd_per_t), units)
-InfrastructureSystems.display_units_arg(::typeof(get_tax_dollars_per_ton), ::Type{CarbonTax}) = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_tax_dollars_per_ton_unitful), ::Type{CarbonTax}) = InfrastructureSystems.NU
+get_tax_dollars_per_ton(value::CarbonTax) = _units_arg_required(get_tax_dollars_per_ton, Val(:usd_per_t))
+InfrastructureSystems.display_units_arg(::typeof(get_tax_dollars_per_ton), ::Type{CarbonTax}) = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_tax_dollars_per_ton_unitful), ::Type{CarbonTax}) = u"NU"
 """Get [`CarbonTax`](@ref) `ext`."""
 get_ext(value::CarbonTax) = value.ext
 """Get [`CarbonTax`](@ref) `internal`."""
@@ -67,8 +68,8 @@ set_name!(value::CarbonTax, val) = value.name = val
 set_available!(value::CarbonTax, val) = value.available = val
 """Set [`CarbonTax`](@ref) `target_year`."""
 set_target_year!(value::CarbonTax, val) = value.target_year = val
-"""Set [`CarbonTax`](@ref) `tax_dollars_per_ton`."""
-set_tax_dollars_per_ton!(value::CarbonTax, val, unit) = value.tax_dollars_per_ton = set_value(value, Val(:tax_dollars_per_ton), val, unit, Val(:usd_per_t))
+"""Set [`CarbonTax`](@ref) `tax_dollars_per_ton` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_tax_dollars_per_ton!(value::CarbonTax, val) = value.tax_dollars_per_ton = set_value(value, Val(:tax_dollars_per_ton), val, Val(:usd_per_t))
 """Set [`CarbonTax`](@ref) `ext`."""
 set_ext!(value::CarbonTax, val) = value.ext = val
 """Set [`CarbonTax`](@ref) `internal`."""
@@ -91,6 +92,6 @@ function to_openapi(value::CarbonTax, refs::OpenAPIRefs)
         name = get_name(value),
         available = get_available(value),
         target_year = get_target_year(value),
-        tax_dollars_per_ton = get_tax_dollars_per_ton(value, IS.NU),
+        tax_dollars_per_ton = get_tax_dollars_per_ton(value, u"NU"),
     )
 end

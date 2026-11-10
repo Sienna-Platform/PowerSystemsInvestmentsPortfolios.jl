@@ -21,7 +21,7 @@ for a different unit — the conversion happens on the way *out* (getters) and o
 way *in* (setters):
 
 ```
-                       get_x(component, u"kW")          set_x!(component, val, u"kW")
+                       get_x(component, u"kW")          set_x!(component, val * u"kW")
      stored value  ───────────────────────────▶  kW        kW  ───────────────────────────▶  stored value
      (natural unit)          convert out                            convert in            (natural unit)
 ```
@@ -52,18 +52,23 @@ and are plain fields.
 
 ### Natural units for cost curves
 
-Cost fields carry a value along *two* axes (an independent `x` and a dependent `y`), so their
-units are expressed as a `NamedTuple` rather than a single unit. The corresponding
-[`ConversionUnits`](@ref) natural units are:
+Curve-valued fields are a cost in USD as a function of a quantity. Their accessors take the
+unit of that quantity and convert the curve's x-axis (a curve stored in USD/MWh and read in
+`u"kWh"` is in USD/kWh); the cost axis stays in USD. Incremental and average rate curves
+hold their data in USD per x, so it scales accordingly. A tiered `curtailment_cost` (an
+incremental curve whose breakpoints are fractions of demand) only converts its prices. The
+natural units of each curve are:
 
-| Physical quantity | Natural unit                       | Example fields                    |
-|:----------------- |:---------------------------------- |:--------------------------------- |
-| Power cost        | `(x_unit=u"MW", y_unit=USD)`       | `retirement_cost`, `retrofit_cost` |
-| Energy cost       | `(x_unit=u"MW"*u"hr", y_unit=USD)` | `curtailment_cost`, `shift_cost`  |
+| Physical quantity | Natural unit | Example fields                     |
+|:----------------- |:------------ |:---------------------------------- |
+| Power cost        | USD/MW       | `retirement_cost`, `retrofit_cost` |
+| Energy cost       | USD/MWh      | `curtailment_cost`, `shift_cost`   |
+| Product price     | USD/t        | `price_per_unit`                   |
 
-Capital costs are not unit-aware fields: [`CapitalCost`](@ref) and
-[`StorageCapitalCost`](@ref) hold curves that are always in USD/MW (USD/MWh for storage
-energy).
+Capital costs follow the same rules on the fields of [`CapitalCost`](@ref) and
+[`StorageCapitalCost`](@ref) (a technology's `capital_costs` returns the struct): the
+capital cost curves (USD/MW; USD/MWh for storage energy) convert their x-axis, and
+`interconnection_cost` is a USD/MW rate.
 
 Operating costs (`operation_costs`, `operation_costs_inverter`) are different: their
 `CostCurve`s and `FuelCurve`s carry their own units, as in PowerSystems. Each records the
@@ -77,24 +82,26 @@ converted.
 
 For every field `x` that carries a unit, the struct generator emits three accessors:
 
-| Accessor                          | Returns                                                                  |
-|:--------------------------------- |:------------------------------------------------------------------------ |
-| `get_x(component, units)`         | A **bare number** (or `NamedTuple`/curve) in `units`                     |
-| `get_x_unitful(component, units)` | The same value as a `Unitful.Quantity` (unit attached; not exported)     |
-| `set_x!(component, value, units)` | Stores `value` — interpreted as being in `units` — back in natural units |
+| Accessor                          | Returns                                                              |
+|:--------------------------------- |:-------------------------------------------------------------------- |
+| `get_x(component, units)`         | A **bare number** (or `NamedTuple`/curve) in `units`                 |
+| `get_x_unitful(component, units)` | The same value as a `Unitful.Quantity` (unit attached; not exported) |
+| `set_x!(component, value)`        | Stores a units-tagged `value` (e.g. `250.0u"MW"`) in natural units   |
 
-The `units` argument is always required. Pass `NU` (natural units) to read or write a value
-in the unit it is stored in. `get_x` strips the unit so downstream numeric code is
+As in PowerSystems, getters always take a `units` argument (calling one without it is an
+error that says so) and setters take a units-tagged value (a bare number is an error). Pass
+`u"NU"` to read a value in the unit it is stored in. Curve-valued fields are set
+in natural units, without a tag. `get_x` strips the unit so downstream numeric code is
 unaffected; `get_x_unitful` keeps the `Unitful.Quantity` when you want to carry the unit
 along or convert further.
 
 ```julia
 get_unit_size(supply, u"MW")          # 100.0            :: Float64
 get_unit_size(supply, u"kW")          # 100000.0         :: Float64
-get_unit_size(supply, NU)             # 100.0            :: Float64
+get_unit_size(supply, u"NU")             # 100.0            :: Float64
 PSIP.get_unit_size_unitful(supply, u"MW")  # 100.0 MW    :: Unitful.Quantity
 
-set_unit_size!(supply, 250_000.0, u"kW")   # interprets 250000 kW, stores 250.0 MW
+set_unit_size!(supply, 250_000.0u"kW")     # stores 250.0 MW
 get_unit_size(supply, u"MW")               # 250.0
 ```
 
@@ -102,7 +109,7 @@ get_unit_size(supply, u"MW")               # 250.0
     
     Reading a field with plain property access (`supply.unit_size`) always returns
     the raw value in its **natural unit** — no conversion is applied. Prefer the
-    `get_x(component, NU)` accessor, which does the same without reaching into the struct.
+    `get_x(component, u"NU")` accessor, which does the same without reaching into the struct.
 
 ## Specifying units
 
@@ -195,4 +202,3 @@ preserving its shape.
 
   - [How to work with units](@ref)
   - [`natural_unit`](@ref)
-  - [`ConversionUnits`](@ref)

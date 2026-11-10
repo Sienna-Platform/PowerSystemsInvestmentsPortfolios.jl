@@ -56,16 +56,18 @@ get_available(value::CarbonCaps) = value.available
 get_max_tons_mwh(value::CarbonCaps, units) = InfrastructureSystems._strip_units(get_value(value, Val(:max_tons_mwh), Val(:mt_per_mwh), units))
 """Get [`CarbonCaps`](@ref) `max_tons_mwh` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_max_tons_mwh`](@ref)."""
 get_max_tons_mwh_unitful(value::CarbonCaps, units) = get_value(value, Val(:max_tons_mwh), Val(:mt_per_mwh), units)
-InfrastructureSystems.display_units_arg(::typeof(get_max_tons_mwh), ::Type{CarbonCaps}) = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_max_tons_mwh_unitful), ::Type{CarbonCaps}) = InfrastructureSystems.NU
+get_max_tons_mwh(value::CarbonCaps) = _units_arg_required(get_max_tons_mwh, Val(:mt_per_mwh))
+InfrastructureSystems.display_units_arg(::typeof(get_max_tons_mwh), ::Type{CarbonCaps}) = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_max_tons_mwh_unitful), ::Type{CarbonCaps}) = u"NU"
 """Get [`CarbonCaps`](@ref) `target_year`."""
 get_target_year(value::CarbonCaps) = value.target_year
 """Get [`CarbonCaps`](@ref) `max_mtons` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_max_mtons_unitful`](@ref)."""
 get_max_mtons(value::CarbonCaps, units) = InfrastructureSystems._strip_units(get_value(value, Val(:max_mtons), Val(:mt), units))
 """Get [`CarbonCaps`](@ref) `max_mtons` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_max_mtons`](@ref)."""
 get_max_mtons_unitful(value::CarbonCaps, units) = get_value(value, Val(:max_mtons), Val(:mt), units)
-InfrastructureSystems.display_units_arg(::typeof(get_max_mtons), ::Type{CarbonCaps}) = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_max_mtons_unitful), ::Type{CarbonCaps}) = InfrastructureSystems.NU
+get_max_mtons(value::CarbonCaps) = _units_arg_required(get_max_mtons, Val(:mt))
+InfrastructureSystems.display_units_arg(::typeof(get_max_mtons), ::Type{CarbonCaps}) = u"NU"
+InfrastructureSystems.display_units_arg(::typeof(get_max_mtons_unitful), ::Type{CarbonCaps}) = u"NU"
 """Get [`CarbonCaps`](@ref) `ext`."""
 get_ext(value::CarbonCaps) = value.ext
 """Get [`CarbonCaps`](@ref) `internal`."""
@@ -75,12 +77,12 @@ get_internal(value::CarbonCaps) = value.internal
 set_name!(value::CarbonCaps, val) = value.name = val
 """Set [`CarbonCaps`](@ref) `available`."""
 set_available!(value::CarbonCaps, val) = value.available = val
-"""Set [`CarbonCaps`](@ref) `max_tons_mwh`."""
-set_max_tons_mwh!(value::CarbonCaps, val, unit) = value.max_tons_mwh = set_value(value, Val(:max_tons_mwh), val, unit, Val(:mt_per_mwh))
+"""Set [`CarbonCaps`](@ref) `max_tons_mwh` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_max_tons_mwh!(value::CarbonCaps, val) = value.max_tons_mwh = set_value(value, Val(:max_tons_mwh), val, Val(:mt_per_mwh))
 """Set [`CarbonCaps`](@ref) `target_year`."""
 set_target_year!(value::CarbonCaps, val) = value.target_year = val
-"""Set [`CarbonCaps`](@ref) `max_mtons`."""
-set_max_mtons!(value::CarbonCaps, val, unit) = value.max_mtons = set_value(value, Val(:max_mtons), val, unit, Val(:mt))
+"""Set [`CarbonCaps`](@ref) `max_mtons` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units."""
+set_max_mtons!(value::CarbonCaps, val) = value.max_mtons = set_value(value, Val(:max_mtons), val, Val(:mt))
 """Set [`CarbonCaps`](@ref) `ext`."""
 set_ext!(value::CarbonCaps, val) = value.ext = val
 """Set [`CarbonCaps`](@ref) `internal`."""
@@ -103,8 +105,8 @@ function to_openapi(value::CarbonCaps, refs::OpenAPIRefs)
         id = get_id(value),
         name = get_name(value),
         available = get_available(value),
-        max_tons_mwh = get_max_tons_mwh(value, IS.NU),
+        max_tons_mwh = get_max_tons_mwh(value, u"NU"),
         target_year = get_target_year(value),
-        max_mtons = get_max_mtons(value, IS.NU),
+        max_mtons = get_max_mtons(value, u"NU"),
     )
 end

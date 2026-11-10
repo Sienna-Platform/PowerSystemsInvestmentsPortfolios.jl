@@ -98,13 +98,13 @@
     PSIP.set_outage_factor!(supply, (planned=0.93, forced=0.0))
     PSIP.set_prime_mover_type!(supply, PrimeMovers.OT)
     PSIP.set_capital_costs!(supply, supply_capital)
-    PSIP.set_lifetime!(supply, 35, IS.NU)
+    PSIP.set_lifetime!(supply, 35u"yr")
     PSIP.set_name!(supply, "supply_updated")
     PSIP.set_available!(supply, false)
     PSIP.set_cofire_start_limits!(supply, supply_cofire_start)
     PSIP.set_financial_data!(supply, tech_financial_data)
-    PSIP.set_start_fuel_mmbtu_per_mw!(supply, 1.7, IS.NU)
-    PSIP.set_operation_costs!(supply, thermal_cost, IS.NU)
+    PSIP.set_start_fuel_mmbtu_per_mw!(supply, 1.7 * PSIP.MMBtu / u"MW")
+    PSIP.set_operation_costs!(supply, thermal_cost)
     PSIP.set_fuel!(supply, [ThermalFuels.COAL, ThermalFuels.OTHER])
     PSIP.set_power_systems_type!(supply, "ThermalStandardUpdated")
     PSIP.set_cofire_level_limits!(supply, supply_cofire_level)
@@ -113,23 +113,23 @@
     PSIP.set_ext!(supply, supply_ext)
     PSIP.set_region!(supply, supply_regions)
     PSIP.set_min_generation_fraction!(supply, 0.15)
-    PSIP.set_time_limits!(supply, (up=4.0, down=2.0), IS.NU)
-    PSIP.set_unit_size!(supply, 12.0, IS.NU)
-    PSIP.set_ramp_limits!(supply, (up=0.3, down=0.25), IS.NU)
-    PSIP.set_capacity_limits!(supply, (min=5.0, max=600.0), IS.NU)
+    PSIP.set_time_limits!(supply, (up=4.0u"minute", down=2.0u"minute"))
+    PSIP.set_unit_size!(supply, 12.0u"MW")
+    PSIP.set_ramp_limits!(supply, (up=0.3u"MW/minute", down=0.25u"MW/minute"))
+    PSIP.set_capacity_limits!(supply, (min=5.0u"MW", max=600.0u"MW"))
 
     @test PSIP.get_requirements(supply) === supply_req
     @test PSIP.get_outage_factor(supply) == (planned=0.93, forced=0.0)
     @test PSIP.get_prime_mover_type(supply) == PrimeMovers.OT
     @test PSIP.get_capital_costs(supply) === supply_capital
-    @test PSIP.get_lifetime(supply, IS.NU) == 35
+    @test PSIP.get_lifetime(supply, u"NU") == 35
     @test PSIP.get_name(supply) == "supply_updated"
     @test PSIP.get_id(supply) == 110
     @test !PSIP.get_available(supply)
     @test PSIP.get_cofire_start_limits(supply) === supply_cofire_start
     @test PSIP.get_financial_data(supply) === tech_financial_data
-    @test PSIP.get_start_fuel_mmbtu_per_mw(supply, IS.NU) == 1.7
-    @test IS.compare_values(PSIP.get_operation_costs(supply, IS.NU), thermal_cost)
+    @test PSIP.get_start_fuel_mmbtu_per_mw(supply, u"NU") == 1.7
+    @test IS.compare_values(PSIP.get_operation_costs(supply, u"NU"), thermal_cost)
     @test PSIP.get_fuel(supply) == [ThermalFuels.COAL, ThermalFuels.OTHER]
     @test PSIP.get_power_systems_type(supply) == "ThermalStandardUpdated"
     @test PSIP.get_cofire_level_limits(supply) === supply_cofire_level
@@ -137,10 +137,10 @@
     @test PSIP.get_ext(supply) === supply_ext
     @test PSIP.get_region(supply) === supply_regions
     @test PSIP.get_min_generation_fraction(supply) == 0.15
-    @test PSIP.get_time_limits(supply, IS.NU) == (up=4.0, down=2.0)
-    @test PSIP.get_unit_size(supply, IS.NU) == 12.0
-    @test PSIP.get_ramp_limits(supply, IS.NU) == (up=0.3, down=0.25)
-    @test PSIP.get_capacity_limits(supply, IS.NU) == (min=5.0, max=600.0)
+    @test PSIP.get_time_limits(supply, u"NU") == (up=4.0, down=2.0)
+    @test PSIP.get_unit_size(supply, u"NU") == 12.0
+    @test PSIP.get_ramp_limits(supply, u"NU") == (up=0.3, down=0.25)
+    @test PSIP.get_capacity_limits(supply, u"NU") == (min=5.0, max=600.0)
 
     storage = StorageTechnology{PSY.EnergyReservoirStorage}(
         name="storage",
@@ -151,13 +151,14 @@
         available=true,
         region=[area_a],
     )
-    PSIP.set_capacity_limits_energy!(storage, (min=10.0, max=1000.0), IS.NU)
+    PSIP.set_capacity_limits_energy!(storage, (min=10.0u"MWh", max=1000.0u"MWh"))
     PSIP.set_capital_costs!(
         storage,
         PSIP.StorageCapitalCost(LinearCurve(1.0), LinearCurve(2.0), LinearCurve(3.0), 4.0),
     )
-    @test PSIP.get_capacity_limits_energy(storage, IS.NU) == (min=10.0, max=1000.0)
-    @test PSIP.get_charge_capital_cost(PSIP.get_capital_costs(storage)) == LinearCurve(1.0)
+    @test PSIP.get_capacity_limits_energy(storage, u"NU") == (min=10.0, max=1000.0)
+    @test PSIP.get_charge_capital_cost(PSIP.get_capital_costs(storage), u"NU") ==
+          LinearCurve(1.0)
 
     demand_req = ProjectedDemand{PSY.PowerLoad}(
         name="demand_req",
@@ -165,13 +166,13 @@
         available=true,
         region=[area_a],
     )
-    PSIP.set_peak_demand_mw!(demand_req, 25.0, IS.NU)
-    PSIP.set_max_demand_delay!(demand_req, 120.0, IS.NU)
+    PSIP.set_peak_demand_mw!(demand_req, 25.0u"MW")
+    PSIP.set_max_demand_delay!(demand_req, 120.0u"minute")
     PSIP.set_flexible_fraction!(demand_req, 0.3)
     PSIP.set_shift_efficiency!(demand_req, 0.92)
     PSIP.set_construction_year!(demand_req, 2035)
-    @test PSIP.get_peak_demand_mw(demand_req, IS.NU) == 25.0
-    @test PSIP.get_max_demand_delay(demand_req, IS.NU) == 120.0
+    @test PSIP.get_peak_demand_mw(demand_req, u"NU") == 25.0
+    @test PSIP.get_max_demand_delay(demand_req, u"NU") == 120.0
     @test PSIP.get_flexible_fraction(demand_req) == 0.3
     @test PSIP.get_shift_efficiency(demand_req) == 0.92
     @test PSIP.get_construction_year(demand_req) == 2035
@@ -184,13 +185,14 @@
         financial_data=tech_financial_data,
     )
     demand_side_operation = PSY.LoadCost(CostCurve(LinearCurve(2.0)), 15.0)
-    PSIP.set_capacity_limits!(demand_side, (min=0.0, max=200.0), IS.NU)
-    PSIP.set_operation_costs!(demand_side, demand_side_operation, IS.NU)
+    PSIP.set_capacity_limits!(demand_side, (min=0.0u"MW", max=200.0u"MW"))
+    PSIP.set_operation_costs!(demand_side, demand_side_operation)
     PSIP.set_capital_costs!(demand_side, PSIP.CapitalCost(LinearCurve(900.0), 0.0))
     PSIP.set_technology_efficiency!(demand_side, 50.0)
-    @test PSIP.get_capacity_limits(demand_side, IS.NU) == (min=0.0, max=200.0)
-    @test PSIP.get_fixed(PSIP.get_operation_costs(demand_side, IS.NU)) == 15.0
-    @test PSIP.get_capital_cost(PSIP.get_capital_costs(demand_side)) == LinearCurve(900.0)
+    @test PSIP.get_capacity_limits(demand_side, u"NU") == (min=0.0, max=200.0)
+    @test PSIP.get_fixed(PSIP.get_operation_costs(demand_side, u"NU")) == 15.0
+    @test PSIP.get_capital_cost(PSIP.get_capital_costs(demand_side), u"NU") ==
+          LinearCurve(900.0)
     @test PSIP.get_technology_efficiency(demand_side) == 50.0
 
     agg = AggregateTransportTechnology{PSY.ACBranch}(
@@ -204,7 +206,7 @@
     PSIP.set_end_region!(agg, area_a)
     PSIP.set_capital_costs!(agg, PSIP.CapitalCost(LinearCurve(700.0), 0.0))
     @test PSIP.get_end_region(agg) === area_a
-    @test PSIP.get_capital_cost(PSIP.get_capital_costs(agg)) == LinearCurve(700.0)
+    @test PSIP.get_capital_cost(PSIP.get_capital_costs(agg), u"NU") == LinearCurve(700.0)
 
     ac = NodalACTransportTechnology{PSY.ACBranch}(
         name="ac",
@@ -241,8 +243,8 @@
         supply_technology=supply,
         storage_technology=storage,
     )
-    PSIP.set_inverter_capacity_limits!(colocated, (min=10.0, max=900.0), IS.NU)
-    @test PSIP.get_inverter_capacity_limits(colocated, IS.NU) == (min=10.0, max=900.0)
-    @test PSIP.get_capital_cost(PSIP.get_capital_costs_inverter(colocated)) ==
+    PSIP.set_inverter_capacity_limits!(colocated, (min=10.0u"MW", max=900.0u"MW"))
+    @test PSIP.get_inverter_capacity_limits(colocated, u"NU") == (min=10.0, max=900.0)
+    @test PSIP.get_capital_cost(PSIP.get_capital_costs_inverter(colocated), u"NU") ==
           LinearCurve(70.0)
 end

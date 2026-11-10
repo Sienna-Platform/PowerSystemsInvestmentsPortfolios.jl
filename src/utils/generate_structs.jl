@@ -81,8 +81,9 @@ end
 {{accessor}}(value::{{struct_name}}, units) = InfrastructureSystems._strip_units(get_value(value, Val(:{{name}}), Val({{conversion_unit}}), units))
 {{#create_docstring}}\"\"\"Get [`{{struct_name}}`](@ref) `{{name}}` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`{{accessor}}`](@ref).\"\"\"{{/create_docstring}}
 {{accessor}}_unitful(value::{{struct_name}}, units) = get_value(value, Val(:{{name}}), Val({{conversion_unit}}), units)
-InfrastructureSystems.display_units_arg(::typeof({{accessor}}), ::{{units_type_sig}}){{#units_bound}} where {T <: {{units_bound}}}{{/units_bound}} = InfrastructureSystems.{{display_units}}
-InfrastructureSystems.display_units_arg(::typeof({{accessor}}_unitful), ::{{units_type_sig}}){{#units_bound}} where {T <: {{units_bound}}}{{/units_bound}} = InfrastructureSystems.{{display_units}}
+{{accessor}}(value::{{struct_name}}) = _units_arg_required({{accessor}}, Val({{conversion_unit}}))
+InfrastructureSystems.display_units_arg(::typeof({{accessor}}), ::{{units_type_sig}}){{#units_bound}} where {T <: {{units_bound}}}{{/units_bound}} = {{{display_units}}}
+InfrastructureSystems.display_units_arg(::typeof({{accessor}}_unitful), ::{{units_type_sig}}){{#units_bound}} where {T <: {{units_bound}}}{{/units_bound}} = {{{display_units}}}
 {{/needs_conversion}}
 {{^needs_conversion}}
 {{#create_docstring}}\"\"\"Get [`{{struct_name}}`](@ref) `{{name}}`.\"\"\"{{/create_docstring}}
@@ -92,8 +93,8 @@ InfrastructureSystems.display_units_arg(::typeof({{accessor}}_unitful), ::{{unit
 
 {{#setters}}
 {{#needs_conversion}}
-{{#create_docstring}}\"\"\"Set [`{{struct_name}}`](@ref) `{{name}}`.\"\"\"{{/create_docstring}}
-{{setter}}(value::{{struct_name}}, val, unit) = value.{{name}} = set_value(value, Val(:{{name}}), val, unit, Val({{conversion_unit}}))
+{{#create_docstring}}\"\"\"Set [`{{struct_name}}`](@ref) `{{name}}` from a units-tagged value (e.g. `100.0u"MW"`); a curve is given in natural units.\"\"\"{{/create_docstring}}
+{{setter}}(value::{{struct_name}}, val) = value.{{name}} = set_value(value, Val(:{{name}}), val, Val({{conversion_unit}}))
 {{/needs_conversion}}
 {{^needs_conversion}}
 {{#create_docstring}}\"\"\"Set [`{{struct_name}}`](@ref) `{{name}}`.\"\"\"{{/create_docstring}}
@@ -408,7 +409,7 @@ accessor generation reads or the emitted call is a `MethodError` at run time.
 function openapi_export_getter_call(field)
     name = field["name"]
     if get(field, "needs_conversion", false)
-        return "get_$name(value, IS.NU)"
+        return "get_$name(value, u\"NU\")"
     end
     return "get_$name(value)"
 end
@@ -744,7 +745,7 @@ function generate_invest_structs(directory, data::JSONSchema.Schema; print_resul
                         "create_docstring" => create_docstring,
                         "needs_conversion" => get(param, "needs_conversion", false),
                         "conversion_unit" => conversion_unit,
-                        "display_units" => get(param, "display_units", "NU"),
+                        "display_units" => get(param, "display_units", "u\"NU\""),
                         "units_type_sig" => if haskey(item, "parametric")
                             "Type{$(item["struct_name"]){T}}"
                         else

@@ -1,177 +1,73 @@
 #######################################################
-# Unit-aware methods for FunctionData and ValueCurves, converted from units `from` to
-# units `to`, e.g. a cost (USD) as a function of capacity (MW). Operating costs (cost and
-# fuel curves and their containers) carry their own units and are handled at the end.
+# Unit conversions of curve-valued fields. A value curve is a cost (USD) as a function of a
+# quantity (energy, capacity, product), so converting one only changes its x-axis:
+# `curtailment_cost` stored in USD/MWh and read in `u"kWh"` is in USD/kWh. The y-axis stays
+# in USD. Operating costs (cost and fuel curves and their containers) carry their own units
+# and are handled at the end.
 #######################################################
 
-# A `Val(:conversion_unit)` symbol maps to exactly one category (one Julia
-# method per `Val` type), but some fields share a physical unit with a
-# scalar field while being ValueCurve-typed (e.g. DemandSideTechnology's
-# price_per_unit is USD/t, the same unit as CarbonTax's scalar
-# tax_dollars_per_ton). Rather than mint a second `:usd_per_t`-shaped symbol
-# purely to satisfy the curve machinery's (x_unit, y_unit) pair shape, bridge
-# a bare currency-per-x rate into that pair: y_unit is always USD for these
-# cost categories, so x_unit = USD / rate is recovered exactly, dimensionally.
-function _natural_unit_conversions(
-    base,
-    v::PSY.ValueCurve,
-    from::Unitful.Units,
-    to::Unitful.Units,
+# ---- Scaling a curve's axes ----
+# `kx` and `ky` are the new units per old unit on each axis (x' = kx x, y' = ky y).
+
+scale_axes(fd::LinearFunctionData, kx, ky) =
+    LinearFunctionData(get_proportional_term(fd) * ky / kx, get_constant_term(fd) * ky)
+
+scale_axes(fd::QuadraticFunctionData, kx, ky) = QuadraticFunctionData(
+    get_quadratic_term(fd) * ky / kx^2,
+    get_proportional_term(fd) * ky / kx,
+    get_constant_term(fd) * ky,
 )
-    return _natural_unit_conversions(
-        base,
-        v,
-        (x_unit=USD / from, y_unit=USD),
-        (x_unit=USD / to, y_unit=USD),
-    )
+
+scale_axes(fd::PiecewiseLinearData, kx, ky) =
+    PiecewiseLinearData([(x * kx, y * ky) for (x, y) in get_points(fd)])
+
+scale_axes(fd::PiecewiseStepData, kx, ky) =
+    PiecewiseStepData(get_x_coords(fd) .* kx, get_y_coords(fd) .* ky)
+
+_scale(::Nothing, ::Any) = nothing
+_scale(value::Real, k) = value * k
+
+scale_axes(curve::InputOutputCurve, kx, ky) = InputOutputCurve(
+    scale_axes(get_function_data(curve), kx, ky),
+    _scale(get_input_at_zero(curve), ky),
+)
+
+# The function data of incremental and average rate curves is in y per x
+scale_axes(curve::IncrementalCurve, kx, ky) = IncrementalCurve(
+    scale_axes(get_function_data(curve), kx, ky / kx),
+    _scale(get_initial_input(curve), ky),
+    _scale(get_input_at_zero(curve), ky),
+)
+
+scale_axes(curve::AverageRateCurve, kx, ky) = AverageRateCurve(
+    scale_axes(get_function_data(curve), kx, ky / kx),
+    _scale(get_initial_input(curve), ky),
+    _scale(get_input_at_zero(curve), ky),
+)
+
+# ---- Value-curve fields ----
+# A field's natural unit is its rate (e.g. USD/MWh), so its x-axis is in USD per that rate.
+
+_x_scale(rate::Unitful.Units, units::Unitful.Units) =
+    Unitful.ustrip(Unitful.uconvert(units, 1.0 * (USD / rate)))
+
+function curve_in_units(curve::IS.ValueCurve, rate, units)
+    _is_natural(units) && return curve
+    return scale_axes(curve, _x_scale(rate, units), 1.0)
 end
 
-# ----Function Data----
-function _natural_unit_conversions(
-    base,
-    v::LinearFunctionData,
-    from::ConversionUnits,
-    to::ConversionUnits,
-)
-    from_proportional = from.y_unit / from.x_unit
-    from_constant = from.y_unit
-
-    to_proportional = to.y_unit / to.x_unit
-    to_constant = to.y_unit
-    return LinearFunctionData(
-        IS._strip_units(
-            _natural_unit_conversions(
-                base,
-                v.proportional_term,
-                from_proportional,
-                to_proportional,
-            ),
-        ),
-        IS._strip_units(
-            _natural_unit_conversions(base, v.constant_term, from_constant, to_constant),
-        ),
-    )
+# The tiers of a curtailment cost given as an incremental curve are fractions of demand, so a
+# unit conversion only changes their prices (USD per energy), not their breakpoints
+function curtailment_tiers_in_units(curve::IS.IncrementalCurve, rate, units)
+    _is_natural(units) && return curve
+    return _scale_tier_prices(curve, 1.0 / _x_scale(rate, units))
 end
 
-function _natural_unit_conversions(
-    base,
-    v::QuadraticFunctionData,
-    from::ConversionUnits,
-    to::ConversionUnits,
+_scale_tier_prices(curve::IS.IncrementalCurve, k) = IncrementalCurve(
+    scale_axes(get_function_data(curve), 1.0, k),
+    get_initial_input(curve),
+    get_input_at_zero(curve),
 )
-    from_quadratic = from.y_unit / (from.x_unit^2)
-    from_proportional = from.y_unit / from.x_unit
-    from_constant = from.y_unit
-
-    to_quadratic = to.y_unit / (to.x_unit^2)
-    to_proportional = to.y_unit / to.x_unit
-    to_constant = to.y_unit
-    return QuadraticFunctionData(
-        IS._strip_units(
-            _natural_unit_conversions(base, v.quadratic_term, from_quadratic, to_quadratic),
-        ),
-        IS._strip_units(
-            _natural_unit_conversions(
-                base,
-                v.proportional_term,
-                from_proportional,
-                to_proportional,
-            ),
-        ),
-        IS._strip_units(
-            _natural_unit_conversions(base, v.constant_term, from_constant, to_constant),
-        ),
-    )
-end
-
-function _natural_unit_conversions(
-    base,
-    v::PiecewiseLinearData,
-    from::ConversionUnits,
-    to::ConversionUnits,
-)
-    data = get_points(v)
-    return PiecewiseLinearData([
-        (
-            IS._strip_units(_natural_unit_conversions(base, x, from.x_unit, to.x_unit)),
-            IS._strip_units(_natural_unit_conversions(base, y, from.y_unit, to.y_unit)),
-        ) for (x, y) in data
-    ])
-end
-
-function _natural_unit_conversions(
-    base,
-    v::PiecewiseStepData,
-    from::ConversionUnits,
-    to::ConversionUnits,
-)
-    return PiecewiseStepData(
-        [
-            IS._strip_units(_natural_unit_conversions(base, x, from.x_unit, to.x_unit)) for
-            x in v.x_coords
-        ],
-        [
-            IS._strip_units(
-                _natural_unit_conversions(
-                    base,
-                    y,
-                    from.y_unit / from.x_unit,
-                    to.y_unit / to.x_unit,
-                ),
-            ) for y in v.y_coords
-        ],
-    )
-end
-
-# ---- ValueCurves ----
-function _natural_unit_conversions(
-    base,
-    v::InputOutputCurve,
-    from::ConversionUnits,
-    to::ConversionUnits,
-)
-    return InputOutputCurve(
-        _natural_unit_conversions(base, v.function_data, from, to),
-        isa(v.input_at_zero, Float64) ?
-        IS._strip_units(
-            _natural_unit_conversions(base, v.input_at_zero, from.y_unit, to.y_unit),
-        ) : v.input_at_zero,
-    )
-end
-
-function _natural_unit_conversions(
-    base,
-    v::IncrementalCurve,
-    from::ConversionUnits,
-    to::ConversionUnits,
-)
-    return IncrementalCurve(
-        _natural_unit_conversions(base, v.function_data, from, to),
-        IS._strip_units(
-            _natural_unit_conversions(base, v.initial_input, from.y_unit, to.y_unit),
-        ),
-        IS._strip_units(
-            _natural_unit_conversions(base, v.input_at_zero, from.y_unit, to.y_unit),
-        ),
-    )
-end
-
-function _natural_unit_conversions(
-    base,
-    v::AverageRateCurve,
-    from::ConversionUnits,
-    to::ConversionUnits,
-)
-    return AverageRateCurve(
-        _natural_unit_conversions(base, v.function_data, from, to),
-        IS._strip_units(
-            _natural_unit_conversions(base, v.initial_input, from.y_unit, to.y_unit),
-        ),
-        IS._strip_units(
-            _natural_unit_conversions(base, v.input_at_zero, from.y_unit, to.y_unit),
-        ),
-    )
-end
 
 # ---- Operating costs ----
 # Cost and fuel curves carry their own units (a power basis, and a FuelCurve's fuel unit),
@@ -218,15 +114,7 @@ function cost_in_units(t, field, cost::UnitsCarryingCost, units)
     return convert_fuel_units(cost, units)
 end
 
-function set_cost(t, field, cost::UnitsCarryingCost, units)
-    if !_is_natural(units)
-        throw(
-            ArgumentError(
-                "$(val_to_string(field)) is set in natural units (`u\"NU\"`); its curves " *
-                "carry their own units. Got $units.",
-            ),
-        )
-    end
+function set_cost(t, field, cost::UnitsCarryingCost)
     check_natural_power_units(t, field, cost)
     return cost
 end
@@ -243,32 +131,13 @@ function convert_fuel_units(curve::IS.FuelCurve, units::Unitful.Units)
             ),
         )
     end
-    # Fuel per hour scales with the fuel unit; the energy axis does not change
-    energy = u"MW" * u"hr"
-    from_fuel = (x_unit=energy, y_unit=from)
-    to_fuel = (x_unit=energy, y_unit=units)
+    # Fuel scales with the fuel unit; the power and energy axes do not change
+    ky = Unitful.ustrip(Unitful.uconvert(units, 1.0 * from))
     return FuelCurve(;
-        value_curve=_natural_unit_conversions(
-            nothing,
-            get_value_curve(curve),
-            from_fuel,
-            to_fuel,
-        ),
+        value_curve=scale_axes(get_value_curve(curve), 1.0, ky),
         fuel_units=units,
-        fuel_cost=IS._strip_units(
-            _natural_unit_conversions(
-                nothing,
-                IS.get_fuel_cost(curve),
-                USD / from,
-                USD / units,
-            ),
-        ),
-        startup_fuel_offtake=_natural_unit_conversions(
-            nothing,
-            IS.get_startup_fuel_offtake(curve),
-            (x_unit=u"MW", y_unit=from),
-            (x_unit=u"MW", y_unit=units),
-        ),
+        fuel_cost=IS.get_fuel_cost(curve) / ky,
+        startup_fuel_offtake=scale_axes(IS.get_startup_fuel_offtake(curve), 1.0, ky),
         vom_cost=IS.get_vom_cost(curve),
     )
 end
