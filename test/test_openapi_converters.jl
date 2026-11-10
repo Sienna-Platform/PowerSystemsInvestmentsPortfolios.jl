@@ -261,7 +261,7 @@ end
 @testset "an unregistered reference errors rather than serializing garbage" begin
     refs = PSIP.OpenAPIRefs()
     orphan = PSY.Area(; input_basis=u"CU", name="orphan", base_power=100.0)
-    tech = DemandRequirement{PowerLoad}(;
+    tech = ProjectedDemand{PowerLoad}(;
         name="demand",
         power_systems_type="PowerLoad",
         value_of_lost_load=1e5,

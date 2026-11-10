@@ -288,7 +288,7 @@ end
     add_topology!(port, attached_region)
     add_topology!(port, second_region)
 
-    valid_demand = DemandRequirement{PSY.PowerLoad}(;
+    valid_demand = ProjectedDemand{PSY.PowerLoad}(;
         available=true,
         name="valid_demand",
         power_systems_type="PowerLoad",
@@ -298,7 +298,7 @@ end
     add_technology!(port, valid_demand)
     @test get_technology(typeof(valid_demand), port, "valid_demand") === valid_demand
 
-    duplicate_region_demand = DemandRequirement{PSY.PowerLoad}(;
+    duplicate_region_demand = ProjectedDemand{PSY.PowerLoad}(;
         available=true,
         name="duplicate_region_demand",
         power_systems_type="PowerLoad",
@@ -314,7 +314,7 @@ end
         get_technology(typeof(duplicate_region_demand), port, "duplicate_region_demand"),
     )
 
-    invalid_demand = DemandRequirement{PSY.PowerLoad}(;
+    invalid_demand = ProjectedDemand{PSY.PowerLoad}(;
         available=true,
         name="invalid_demand",
         power_systems_type="PowerLoad",

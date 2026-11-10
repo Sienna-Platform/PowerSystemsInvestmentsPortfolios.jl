@@ -10,38 +10,38 @@ This file is auto-generated. Do not edit.
         available::Bool
         power_systems_type::String
         region::Vector{PSY.Topology}
+        capacity_limits::MinMax
+        unit_size::Float64
+        capital_costs::CapitalCost
+        operation_costs::PSY.LoadCost
+        min_power::Float64
+        ramp_limits::UpDown
         technology_efficiency::Float64
         price_per_unit::PSY.ValueCurve
-        min_power::Float64
-        peak_demand_mw::Float64
-        curtailment_cost::PSY.ValueCurve
-        max_demand_curtailment::Float64
-        max_demand_delay::Float64
-        max_demand_advance::Float64
-        demand_energy_efficiency::Float64
-        shift_variable_cost::PSY.ValueCurve
+        lifetime::Int
+        financial_data::TechnologyFinancialData
         requirements::Vector{Requirement}
         ext::Dict
         internal::InfrastructureSystemsInternal
     end
 
-Represents demand side technologies such as electric vehicles or hydrogen electrolyzers.
+An end-use technology that consumes electricity and can be built, such as hydrogen electrolyzers, direct air capture or industrial heat pumps. Its consumption is a decision, valued by what it produces.
 
 # Arguments
 - `name::String`: The technology name
 - `available::Bool`: Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)
 - `power_systems_type::String`: Corresponding type in PowerSystems.jl to be used in PCM modeling
 - `region::Vector{PSY.Topology}`: (default: `Vector()`) Location where technology is operated
-- `technology_efficiency::Float64`: (default: `0.0`) MWh of electricity per unit of output. Ex: MWh per ton of hydrogen for electrolyzers
-- `price_per_unit::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Price or value per unit of output. Ex: USD per ton of hydrogen for electrolyzers. Units: USD/t.
-- `min_power::Float64`: (default: `0.0`) Minimum operation of demandside unit as a fraction of peak demand
-- `peak_demand_mw::Float64`: (default: `0.0`) Peak demand value in MW
-- `curtailment_cost::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Energy cost of curtailed demand, USD per Mwh
-- `max_demand_curtailment::Float64`: (default: `0.0`) Maximum fraction of demand that can be curtailed
-- `max_demand_delay::Float64`: (default: `0.0`) Maximum number of minutes that demand can be deferred or delayed (minutes). Units: min.
-- `max_demand_advance::Float64`: (default: `0.0`) Maximum number of minutes that demand can be scheduled in advance of the original schedule (minutes). Units: min.
-- `demand_energy_efficiency::Float64`: (default: `0.0`) Energy efficiency associated with time shifting demand. Represents energy losses due to time shifting
-- `shift_variable_cost::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Variable operation and maintenance costs associated with flexible demand deferral/advancement
+- `capacity_limits::MinMax`: (default: `(min = 0.0, max = 1e8)`) Minimum and maximum allowable installed capacity for a technology (MW)
+- `unit_size::Float64`: (default: `0.0`) Used for discrete investment decisions. Size of each unit being built (MW)
+- `capital_costs::CapitalCost`: (default: `CapitalCost(nothing)`) Capital costs for investing in a demand side technology. (USD/MW)
+- `operation_costs::PSY.LoadCost`: (default: `LoadCost(nothing)`) Fixed (USD/MW-year) and variable (USD/MWh consumed) O&M costs
+- `min_power::Float64`: (default: `0.0`) Minimum consumption as a fraction of installed capacity
+- `ramp_limits::UpDown`: (default: `(up=1.0, down=1.0)`) Maximum decrease and increase in consumption between operation periods (MW/min)
+- `technology_efficiency::Float64`: (default: `1.0`) MWh of electricity per unit of product. Ex: MWh per tonne of hydrogen for electrolyzers
+- `price_per_unit::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Price or value per unit of product. Ex: USD per tonne of hydrogen for electrolyzers. Units: USD/t.
+- `lifetime::Int`: (default: `100`) Maximum number of years a technology can be active once installed (years)
+- `financial_data::TechnologyFinancialData`: Struct containing relevant financial information for a technology
 - `requirements::Vector{Requirement}`: (default: `Vector()`) List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology
 - `ext::Dict`: (default: `Dict()`) Optional dictionary to provide additional data
 - `internal::InfrastructureSystemsInternal`: (default: `InfrastructureSystemsInternal()`) (**Do not modify.**) PowerSystemsInvestmentsPortfolios.jl internal reference
@@ -55,26 +55,26 @@ mutable struct DemandSideTechnology{T <: PSY.StaticInjection} <: DemandTechnolog
     power_systems_type::String
     "Location where technology is operated"
     region::Vector{PSY.Topology}
-    "MWh of electricity per unit of output. Ex: MWh per ton of hydrogen for electrolyzers"
-    technology_efficiency::Float64
-    "Price or value per unit of output. Ex: USD per ton of hydrogen for electrolyzers. Units: USD/t."
-    price_per_unit::PSY.ValueCurve
-    "Minimum operation of demandside unit as a fraction of peak demand"
+    "Minimum and maximum allowable installed capacity for a technology (MW)"
+    capacity_limits::MinMax
+    "Used for discrete investment decisions. Size of each unit being built (MW)"
+    unit_size::Float64
+    "Capital costs for investing in a demand side technology. (USD/MW)"
+    capital_costs::CapitalCost
+    "Fixed (USD/MW-year) and variable (USD/MWh consumed) O&M costs"
+    operation_costs::PSY.LoadCost
+    "Minimum consumption as a fraction of installed capacity"
     min_power::Float64
-    "Peak demand value in MW"
-    peak_demand_mw::Float64
-    "Energy cost of curtailed demand, USD per Mwh"
-    curtailment_cost::PSY.ValueCurve
-    "Maximum fraction of demand that can be curtailed"
-    max_demand_curtailment::Float64
-    "Maximum number of minutes that demand can be deferred or delayed (minutes). Units: min."
-    max_demand_delay::Float64
-    "Maximum number of minutes that demand can be scheduled in advance of the original schedule (minutes). Units: min."
-    max_demand_advance::Float64
-    "Energy efficiency associated with time shifting demand. Represents energy losses due to time shifting"
-    demand_energy_efficiency::Float64
-    "Variable operation and maintenance costs associated with flexible demand deferral/advancement"
-    shift_variable_cost::PSY.ValueCurve
+    "Maximum decrease and increase in consumption between operation periods (MW/min)"
+    ramp_limits::UpDown
+    "MWh of electricity per unit of product. Ex: MWh per tonne of hydrogen for electrolyzers"
+    technology_efficiency::Float64
+    "Price or value per unit of product. Ex: USD per tonne of hydrogen for electrolyzers. Units: USD/t."
+    price_per_unit::PSY.ValueCurve
+    "Maximum number of years a technology can be active once installed (years)"
+    lifetime::Int
+    "Struct containing relevant financial information for a technology"
+    financial_data::TechnologyFinancialData
     "List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology"
     requirements::Vector{Requirement}
     "Optional dictionary to provide additional data"
@@ -84,8 +84,8 @@ mutable struct DemandSideTechnology{T <: PSY.StaticInjection} <: DemandTechnolog
 end
 
 
-function DemandSideTechnology{T}(; name, available, power_systems_type, region=Vector(), technology_efficiency=0.0, price_per_unit=LinearCurve(0.0), min_power=0.0, peak_demand_mw=0.0, curtailment_cost=LinearCurve(0.0), max_demand_curtailment=0.0, max_demand_delay=0.0, max_demand_advance=0.0, demand_energy_efficiency=0.0, shift_variable_cost=LinearCurve(0.0), requirements=Vector(), ext=Dict(), internal=InfrastructureSystemsInternal(), ) where T <: PSY.StaticInjection
-    DemandSideTechnology{T}(name, available, power_systems_type, region, technology_efficiency, price_per_unit, min_power, peak_demand_mw, curtailment_cost, max_demand_curtailment, max_demand_delay, max_demand_advance, demand_energy_efficiency, shift_variable_cost, requirements, ext, internal, )
+function DemandSideTechnology{T}(; name, available, power_systems_type, region=Vector(), capacity_limits=(min = 0.0, max = 1e8), unit_size=0.0, capital_costs=CapitalCost(nothing), operation_costs=LoadCost(nothing), min_power=0.0, ramp_limits=(up=1.0, down=1.0), technology_efficiency=1.0, price_per_unit=LinearCurve(0.0), lifetime=100, financial_data, requirements=Vector(), ext=Dict(), internal=InfrastructureSystemsInternal(), ) where T <: PSY.StaticInjection
+    DemandSideTechnology{T}(name, available, power_systems_type, region, capacity_limits, unit_size, capital_costs, operation_costs, min_power, ramp_limits, technology_efficiency, price_per_unit, lifetime, financial_data, requirements, ext, internal, )
 end
 
 """Get [`DemandSideTechnology`](@ref) `name`."""
@@ -96,6 +96,34 @@ get_available(value::DemandSideTechnology) = value.available
 get_power_systems_type(value::DemandSideTechnology) = value.power_systems_type
 """Get [`DemandSideTechnology`](@ref) `region`."""
 get_region(value::DemandSideTechnology) = value.region
+"""Get [`DemandSideTechnology`](@ref) `capacity_limits` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_capacity_limits_unitful`](@ref)."""
+get_capacity_limits(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:capacity_limits), Val(:mw), units))
+"""Get [`DemandSideTechnology`](@ref) `capacity_limits` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_capacity_limits`](@ref)."""
+get_capacity_limits_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:capacity_limits), Val(:mw), units)
+InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+InfrastructureSystems.display_units_arg(::typeof(get_capacity_limits_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+"""Get [`DemandSideTechnology`](@ref) `unit_size` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_unit_size_unitful`](@ref)."""
+get_unit_size(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:unit_size), Val(:mw), units))
+"""Get [`DemandSideTechnology`](@ref) `unit_size` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_unit_size`](@ref)."""
+get_unit_size_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:unit_size), Val(:mw), units)
+InfrastructureSystems.display_units_arg(::typeof(get_unit_size), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+InfrastructureSystems.display_units_arg(::typeof(get_unit_size_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+"""Get [`DemandSideTechnology`](@ref) `capital_costs`."""
+get_capital_costs(value::DemandSideTechnology) = value.capital_costs
+"""Get [`DemandSideTechnology`](@ref) `operation_costs` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_operation_costs_unitful`](@ref)."""
+get_operation_costs(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:operation_costs), Val(:usd_per_mwh), units))
+"""Get [`DemandSideTechnology`](@ref) `operation_costs` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_operation_costs`](@ref)."""
+get_operation_costs_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:operation_costs), Val(:usd_per_mwh), units)
+InfrastructureSystems.display_units_arg(::typeof(get_operation_costs), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+InfrastructureSystems.display_units_arg(::typeof(get_operation_costs_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+"""Get [`DemandSideTechnology`](@ref) `min_power`."""
+get_min_power(value::DemandSideTechnology) = value.min_power
+"""Get [`DemandSideTechnology`](@ref) `ramp_limits` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_ramp_limits_unitful`](@ref)."""
+get_ramp_limits(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:ramp_limits), Val(:mw_per_min), units))
+"""Get [`DemandSideTechnology`](@ref) `ramp_limits` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_ramp_limits`](@ref)."""
+get_ramp_limits_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:ramp_limits), Val(:mw_per_min), units)
+InfrastructureSystems.display_units_arg(::typeof(get_ramp_limits), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+InfrastructureSystems.display_units_arg(::typeof(get_ramp_limits_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
 """Get [`DemandSideTechnology`](@ref) `technology_efficiency`."""
 get_technology_efficiency(value::DemandSideTechnology) = value.technology_efficiency
 """Get [`DemandSideTechnology`](@ref) `price_per_unit` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_price_per_unit_unitful`](@ref)."""
@@ -104,42 +132,14 @@ get_price_per_unit(value::DemandSideTechnology, units) = InfrastructureSystems._
 get_price_per_unit_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:price_per_unit), Val(:usd_per_t), units)
 InfrastructureSystems.display_units_arg(::typeof(get_price_per_unit), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
 InfrastructureSystems.display_units_arg(::typeof(get_price_per_unit_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-"""Get [`DemandSideTechnology`](@ref) `min_power`."""
-get_min_power(value::DemandSideTechnology) = value.min_power
-"""Get [`DemandSideTechnology`](@ref) `peak_demand_mw` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_peak_demand_mw_unitful`](@ref)."""
-get_peak_demand_mw(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:peak_demand_mw), Val(:mw), units))
-"""Get [`DemandSideTechnology`](@ref) `peak_demand_mw` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_peak_demand_mw`](@ref)."""
-get_peak_demand_mw_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:peak_demand_mw), Val(:mw), units)
-InfrastructureSystems.display_units_arg(::typeof(get_peak_demand_mw), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_peak_demand_mw_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-"""Get [`DemandSideTechnology`](@ref) `curtailment_cost` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_curtailment_cost_unitful`](@ref)."""
-get_curtailment_cost(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:curtailment_cost), Val(:usd_per_mwh), units))
-"""Get [`DemandSideTechnology`](@ref) `curtailment_cost` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_curtailment_cost`](@ref)."""
-get_curtailment_cost_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:curtailment_cost), Val(:usd_per_mwh), units)
-InfrastructureSystems.display_units_arg(::typeof(get_curtailment_cost), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_curtailment_cost_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-"""Get [`DemandSideTechnology`](@ref) `max_demand_curtailment`."""
-get_max_demand_curtailment(value::DemandSideTechnology) = value.max_demand_curtailment
-"""Get [`DemandSideTechnology`](@ref) `max_demand_delay` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_max_demand_delay_unitful`](@ref)."""
-get_max_demand_delay(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:max_demand_delay), Val(:min), units))
-"""Get [`DemandSideTechnology`](@ref) `max_demand_delay` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_max_demand_delay`](@ref)."""
-get_max_demand_delay_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:max_demand_delay), Val(:min), units)
-InfrastructureSystems.display_units_arg(::typeof(get_max_demand_delay), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_max_demand_delay_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-"""Get [`DemandSideTechnology`](@ref) `max_demand_advance` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_max_demand_advance_unitful`](@ref)."""
-get_max_demand_advance(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:max_demand_advance), Val(:min), units))
-"""Get [`DemandSideTechnology`](@ref) `max_demand_advance` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_max_demand_advance`](@ref)."""
-get_max_demand_advance_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:max_demand_advance), Val(:min), units)
-InfrastructureSystems.display_units_arg(::typeof(get_max_demand_advance), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_max_demand_advance_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-"""Get [`DemandSideTechnology`](@ref) `demand_energy_efficiency`."""
-get_demand_energy_efficiency(value::DemandSideTechnology) = value.demand_energy_efficiency
-"""Get [`DemandSideTechnology`](@ref) `shift_variable_cost` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_shift_variable_cost_unitful`](@ref)."""
-get_shift_variable_cost(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:shift_variable_cost), Val(:usd_per_mwh), units))
-"""Get [`DemandSideTechnology`](@ref) `shift_variable_cost` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_shift_variable_cost`](@ref)."""
-get_shift_variable_cost_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:shift_variable_cost), Val(:usd_per_mwh), units)
-InfrastructureSystems.display_units_arg(::typeof(get_shift_variable_cost), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
-InfrastructureSystems.display_units_arg(::typeof(get_shift_variable_cost_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+"""Get [`DemandSideTechnology`](@ref) `lifetime` as a bare number in the requested `units` (e.g. domain-provided units such as `MW`). Returns a bare number only when such a method is registered; otherwise returns the quantity wrapper. For the unit-bearing value see [`get_lifetime_unitful`](@ref)."""
+get_lifetime(value::DemandSideTechnology, units) = InfrastructureSystems._strip_units(get_value(value, Val(:lifetime), Val(:yr), units))
+"""Get [`DemandSideTechnology`](@ref) `lifetime` as a unit-bearing quantity in the requested `units` (e.g. `MW`). For a bare number see [`get_lifetime`](@ref)."""
+get_lifetime_unitful(value::DemandSideTechnology, units) = get_value(value, Val(:lifetime), Val(:yr), units)
+InfrastructureSystems.display_units_arg(::typeof(get_lifetime), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+InfrastructureSystems.display_units_arg(::typeof(get_lifetime_unitful), ::Type{DemandSideTechnology{T}}) where {T <: PSY.StaticInjection} = InfrastructureSystems.NU
+"""Get [`DemandSideTechnology`](@ref) `financial_data`."""
+get_financial_data(value::DemandSideTechnology) = value.financial_data
 """Get [`DemandSideTechnology`](@ref) `requirements`."""
 get_requirements(value::DemandSideTechnology) = value.requirements
 """Get [`DemandSideTechnology`](@ref) `ext`."""
@@ -155,26 +155,26 @@ set_available!(value::DemandSideTechnology, val) = value.available = val
 set_power_systems_type!(value::DemandSideTechnology, val) = value.power_systems_type = val
 """Set [`DemandSideTechnology`](@ref) `region`."""
 set_region!(value::DemandSideTechnology, val) = value.region = val
+"""Set [`DemandSideTechnology`](@ref) `capacity_limits`."""
+set_capacity_limits!(value::DemandSideTechnology, val, unit) = value.capacity_limits = set_value(value, Val(:capacity_limits), val, unit, Val(:mw))
+"""Set [`DemandSideTechnology`](@ref) `unit_size`."""
+set_unit_size!(value::DemandSideTechnology, val, unit) = value.unit_size = set_value(value, Val(:unit_size), val, unit, Val(:mw))
+"""Set [`DemandSideTechnology`](@ref) `capital_costs`."""
+set_capital_costs!(value::DemandSideTechnology, val) = value.capital_costs = val
+"""Set [`DemandSideTechnology`](@ref) `operation_costs`."""
+set_operation_costs!(value::DemandSideTechnology, val, unit) = value.operation_costs = set_value(value, Val(:operation_costs), val, unit, Val(:usd_per_mwh))
+"""Set [`DemandSideTechnology`](@ref) `min_power`."""
+set_min_power!(value::DemandSideTechnology, val) = value.min_power = val
+"""Set [`DemandSideTechnology`](@ref) `ramp_limits`."""
+set_ramp_limits!(value::DemandSideTechnology, val, unit) = value.ramp_limits = set_value(value, Val(:ramp_limits), val, unit, Val(:mw_per_min))
 """Set [`DemandSideTechnology`](@ref) `technology_efficiency`."""
 set_technology_efficiency!(value::DemandSideTechnology, val) = value.technology_efficiency = val
 """Set [`DemandSideTechnology`](@ref) `price_per_unit`."""
 set_price_per_unit!(value::DemandSideTechnology, val, unit) = value.price_per_unit = set_value(value, Val(:price_per_unit), val, unit, Val(:usd_per_t))
-"""Set [`DemandSideTechnology`](@ref) `min_power`."""
-set_min_power!(value::DemandSideTechnology, val) = value.min_power = val
-"""Set [`DemandSideTechnology`](@ref) `peak_demand_mw`."""
-set_peak_demand_mw!(value::DemandSideTechnology, val, unit) = value.peak_demand_mw = set_value(value, Val(:peak_demand_mw), val, unit, Val(:mw))
-"""Set [`DemandSideTechnology`](@ref) `curtailment_cost`."""
-set_curtailment_cost!(value::DemandSideTechnology, val, unit) = value.curtailment_cost = set_value(value, Val(:curtailment_cost), val, unit, Val(:usd_per_mwh))
-"""Set [`DemandSideTechnology`](@ref) `max_demand_curtailment`."""
-set_max_demand_curtailment!(value::DemandSideTechnology, val) = value.max_demand_curtailment = val
-"""Set [`DemandSideTechnology`](@ref) `max_demand_delay`."""
-set_max_demand_delay!(value::DemandSideTechnology, val, unit) = value.max_demand_delay = set_value(value, Val(:max_demand_delay), val, unit, Val(:min))
-"""Set [`DemandSideTechnology`](@ref) `max_demand_advance`."""
-set_max_demand_advance!(value::DemandSideTechnology, val, unit) = value.max_demand_advance = set_value(value, Val(:max_demand_advance), val, unit, Val(:min))
-"""Set [`DemandSideTechnology`](@ref) `demand_energy_efficiency`."""
-set_demand_energy_efficiency!(value::DemandSideTechnology, val) = value.demand_energy_efficiency = val
-"""Set [`DemandSideTechnology`](@ref) `shift_variable_cost`."""
-set_shift_variable_cost!(value::DemandSideTechnology, val, unit) = value.shift_variable_cost = set_value(value, Val(:shift_variable_cost), val, unit, Val(:usd_per_mwh))
+"""Set [`DemandSideTechnology`](@ref) `lifetime`."""
+set_lifetime!(value::DemandSideTechnology, val, unit) = value.lifetime = set_value(value, Val(:lifetime), val, unit, Val(:yr))
+"""Set [`DemandSideTechnology`](@ref) `financial_data`."""
+set_financial_data!(value::DemandSideTechnology, val) = value.financial_data = val
 """Set [`DemandSideTechnology`](@ref) `requirements`."""
 set_requirements!(value::DemandSideTechnology, val) = value.requirements = val
 """Set [`DemandSideTechnology`](@ref) `ext`."""
@@ -190,16 +190,16 @@ function from_openapi(po::PI.DemandSideTechnology, refs::OpenAPIRefs)
         available = po.available,
         power_systems_type = po.power_systems_type,
         region = _or_default(resolve_refs(refs, po.region, PSY.Topology), Vector()),
-        technology_efficiency = _or_default(po.technology_efficiency, 0.0),
-        price_per_unit = _or_default(_value_curve_optional(po.price_per_unit), LinearCurve(0.0)),
+        capacity_limits = _or_default(_minmax_from_po(po.capacity_limits), (min = 0.0, max = 1e8)),
+        unit_size = _or_default(po.unit_size, 0.0),
+        capital_costs = _or_default(_nested_optional(po.capital_costs), CapitalCost(nothing)),
+        operation_costs = _or_default(_cost_optional(po.operation_costs), LoadCost(nothing))::PSY.LoadCost,
         min_power = _or_default(po.min_power, 0.0),
-        peak_demand_mw = _or_default(po.peak_demand_mw, 0.0),
-        curtailment_cost = _or_default(_value_curve_optional(po.curtailment_cost), LinearCurve(0.0)),
-        max_demand_curtailment = _or_default(po.max_demand_curtailment, 0.0),
-        max_demand_delay = _or_default(po.max_demand_delay, 0.0),
-        max_demand_advance = _or_default(po.max_demand_advance, 0.0),
-        demand_energy_efficiency = _or_default(po.demand_energy_efficiency, 0.0),
-        shift_variable_cost = _or_default(_value_curve_optional(po.shift_variable_cost), LinearCurve(0.0)),
+        ramp_limits = _or_default(_updown_from_po(po.ramp_limits), (up=1.0, down=1.0)),
+        technology_efficiency = _or_default(po.technology_efficiency, 1.0),
+        price_per_unit = _or_default(_value_curve_optional(po.price_per_unit), LinearCurve(0.0)),
+        lifetime = _or_default(po.lifetime, 100),
+        financial_data = convert_nested_data(po.financial_data),
     )
 end
 
@@ -210,15 +210,15 @@ function to_openapi(value::DemandSideTechnology{T}, refs::OpenAPIRefs) where {T 
         available = get_available(value),
         power_systems_type = string(nameof(T)),
         region = component_ids(refs, get_region(value)),
+        capacity_limits = _minmax_po(get_capacity_limits(value, IS.NU)),
+        unit_size = get_unit_size(value, IS.NU),
+        capital_costs = convert_nested_data_to_openapi(get_capital_costs(value)),
+        operation_costs = convert_cost_to_openapi(get_operation_costs(value, IS.NU)),
+        min_power = get_min_power(value),
+        ramp_limits = _updown_po(get_ramp_limits(value, IS.NU)),
         technology_efficiency = get_technology_efficiency(value),
         price_per_unit = _curve_to_openapi(PI.DemandSideTechnologyPricePerUnit, get_price_per_unit(value, IS.NU)),
-        min_power = get_min_power(value),
-        peak_demand_mw = get_peak_demand_mw(value, IS.NU),
-        curtailment_cost = _curve_to_openapi(PI.DemandSideTechnologyCurtailmentCost, get_curtailment_cost(value, IS.NU)),
-        max_demand_curtailment = get_max_demand_curtailment(value),
-        max_demand_delay = get_max_demand_delay(value, IS.NU),
-        max_demand_advance = get_max_demand_advance(value, IS.NU),
-        demand_energy_efficiency = get_demand_energy_efficiency(value),
-        shift_variable_cost = _curve_to_openapi(PI.DemandSideTechnologyShiftVariableCost, get_shift_variable_cost(value, IS.NU)),
+        lifetime = get_lifetime(value, IS.NU),
+        financial_data = convert_nested_data_to_openapi(get_financial_data(value)),
     )
 end

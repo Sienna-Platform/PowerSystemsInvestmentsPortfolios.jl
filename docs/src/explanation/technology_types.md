@@ -36,7 +36,7 @@ Technology (abstract) <: IS.InfrastructureSystemsComponent
 │   ├── NodalACTransportTechnology{T <: PSY.Device}
 │   └── NodalHVDCTransportTechnology{T <: PSY.Device}
 └── DemandTechnology (abstract)
-    ├── DemandRequirement{T <: PSY.StaticInjection}
+    ├── ProjectedDemand{T <: PSY.StaticInjection}
     └── DemandSideTechnology{T <: PSY.StaticInjection}
 ```
 
@@ -73,16 +73,18 @@ one inverter and grid connection.
 [`NodalACTransportTechnology`](@ref) and [`NodalHVDCTransportTechnology`](@ref) are AC and
 HVDC lines between two buses.
 
-**`DemandTechnology`** covers demand. [`DemandRequirement`](@ref) is load that must be
-served; [`DemandSideTechnology`](@ref) is flexible demand that can be curtailed or shifted.
+**`DemandTechnology`** covers demand. [`ProjectedDemand`](@ref) is an exogenous load that
+must be served, including any flexibility it has: voluntary curtailment and time shifting.
+[`DemandSideTechnology`](@ref) is an end-use technology that can be built, such as a
+hydrogen electrolyzer, whose consumption is a decision valued by what it produces.
 
-## `DemandRequirement`
+## `ProjectedDemand`
 
 !!! note
     
-    [`DemandRequirement`](@ref)`{T}` is a subtype of `DemandTechnology`, **not** a
-    `Requirement`. It is added with `add_technology!`. Its name reflects that it *requires*
-    generation to serve it: it is the demand side of the supply-demand balance.
+    [`ProjectedDemand`](@ref)`{T}` is a subtype of `DemandTechnology`, **not** a
+    `Requirement`. It is added with `add_technology!`: it is the demand side of the
+    supply-demand balance.
 
 ## Co-located Technologies and Masking
 
@@ -98,11 +100,11 @@ model from building the project twice.
 Data about existing units is attached to a technology as `IS.SupplementalAttribute`s rather
 than stored as technologies:
 
-| Type                          | Purpose                                                         |
-|:----------------------------- |:--------------------------------------------------------------- |
-| [`ExistingDevices`](@ref)     | Base system components whose capacity counts for the technology |
-| [`RetirementPotential`](@ref) | Existing units that may be retired, and the cost of retiring    |
-| [`RetrofitPotential`](@ref)   | Existing units that may be retrofitted, and the cost            |
+| Type                          | Purpose                                                                                |
+|:----------------------------- |:-------------------------------------------------------------------------------------- |
+| [`ExistingDevices`](@ref)     | Base system components whose capacity counts for the technology                        |
+| [`RetirementPotential`](@ref) | Existing units that may be retired, and the cost of retiring                           |
+| [`RetrofitPotential`](@ref)   | Links a source technology's retrofittable units to a retrofit option; attached to both |
 
 A technology without an `ExistingDevices` attribute is new ([`is_new`](@ref) returns `true`)
 and has no existing capacity. See
@@ -115,4 +117,4 @@ and has no existing capacity. See
   - [`ColocatedSupplyStorageTechnology`](@ref)
   - [`AggregateTransportTechnology`](@ref)
   - [`NodalACTransportTechnology`](@ref)
-  - [`DemandRequirement`](@ref)
+  - [`ProjectedDemand`](@ref)

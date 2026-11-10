@@ -352,6 +352,15 @@ function convert_cost(po::PC.StorageCost)
     )
 end
 
+function convert_cost(po::PC.LoadCost)
+    return LoadCost(;
+        variable_operation_cost=convert_cost(
+            _require(po.variable_operation_cost, "LoadCost.variable_operation_cost"),
+        ),
+        fixed=_or_default(po.fixed, 0.0),
+    )
+end
+
 # oneOf GenericOperationCost wrapper: what `OpenAPI.from_json` produces for any
 # `operation_costs` field, discriminated on `cost_type`. Unwrap to the concrete variant.
 convert_cost(w::PC.GenericOperationCost) = convert_cost(w.value)

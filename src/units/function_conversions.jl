@@ -325,6 +325,25 @@ end
 
 function _natural_unit_conversions(
     base,
+    v::LoadCost,
+    from::ConversionUnits,
+    to::ConversionUnits,
+)
+    return LoadCost(
+        _natural_unit_conversions(base, v.variable_operation_cost, from, to),
+        IS._strip_units(
+            _natural_unit_conversions(
+                base,
+                v.fixed,
+                from.y_unit / from.x_unit,
+                to.y_unit / to.x_unit,
+            ),
+        ),
+    )
+end
+
+function _natural_unit_conversions(
+    base,
     v::StorageCost,
     from::ConversionUnits,
     to::ConversionUnits,

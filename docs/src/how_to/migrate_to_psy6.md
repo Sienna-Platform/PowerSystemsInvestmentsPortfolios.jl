@@ -55,16 +55,16 @@ The co-located inverter cost, `capital_costs_inverter`, is also a `CapitalCost`.
 
 ## Changed field types and units
 
-| Field                                                         | Change                                                         |
-|:------------------------------------------------------------- |:-------------------------------------------------------------- |
-| `SupplyTechnology.outage_factor`                              | Now `(planned=..., forced=...)`, not a single number           |
-| `SupplyTechnology.time_limits`                                | Minutes, not hours                                             |
-| `StorageTechnology.duration_limits`                           | Minutes, not hours                                             |
-| `DemandSideTechnology.max_demand_delay`, `max_demand_advance` | Minutes                                                        |
-| `CarbonCaps.max_tons_mwh`                                     | Mt/MWh, not tCO₂/MWh                                           |
-| `capacity_limits` (supply, storage)                           | May also be a `Dict{PSY.Topology, MinMax}` for several regions |
-| `RetirementPotential`                                         | New required field `retirement_cost` (USD/MW)                  |
-| `RetrofitPotential`                                           | New fields `retrofit_fraction` and `retrofit_cost` (USD/MW)    |
+| Field                                                    | Change                                                         |
+|:-------------------------------------------------------- |:-------------------------------------------------------------- |
+| `SupplyTechnology.outage_factor`                         | Now `(planned=..., forced=...)`, not a single number           |
+| `SupplyTechnology.time_limits`                           | Minutes, not hours                                             |
+| `StorageTechnology.duration_limits`                      | Minutes, not hours                                             |
+| `ProjectedDemand.max_demand_delay`, `max_demand_advance` | Minutes                                                        |
+| `CarbonCaps.max_tons_mwh`                                | Mt/MWh, not tCO₂/MWh                                           |
+| `capacity_limits` (supply, storage)                      | May also be a `Dict{PSY.Topology, MinMax}` for several regions |
+| `RetirementPotential`                                    | New required field `retirement_cost` (USD/MW)                  |
+| `RetrofitPotential`                                      | New fields `retrofit_efficiency` and `retrofit_cost` (USD/MW)  |
 
 `AggregateRetirementPotential` and `AggregateRetrofitPotential` are removed.
 

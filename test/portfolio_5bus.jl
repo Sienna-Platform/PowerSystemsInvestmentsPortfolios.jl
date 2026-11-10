@@ -317,7 +317,7 @@ function build_portfolio()
 
     retro1 = RetrofitPotential(
         eligible_generators=candidate_thermal,
-        retrofit_fraction=0.5,
+        retrofit_efficiency=0.5,
         retrofit_cost=LinearCurve(0.0),
     )
 
@@ -326,10 +326,8 @@ function build_portfolio()
         retirement_cost=LinearCurve(0.0),
     )
 
-    retro2 = RetrofitPotential(
-        eligible_generators=existing_thermal,
-        retrofit_cost=LinearCurve(0.0),
-    )
+    retro2 =
+        RetrofitPotential(eligible_generators=existing_thermal, retrofit_efficiency=0.9)
 
     retire2 = RetirementPotential(
         eligible_generators=candidate_thermal,
@@ -407,13 +405,15 @@ function build_portfolio()
         #scaling_factor_multiplier=get_peak_load,
     )
 
-    t_demand_b = DemandRequirement{PSY.PowerLoad}(
+    t_demand_b = ProjectedDemand{PSY.PowerLoad}(
         #load_growth=0.05,
         name="demand_b",
         available=true,
         power_systems_type="PowerLoad",
         region=[z1],
-        value_of_lost_load=0.0,
+        value_of_lost_load=10_000.0,
+        peak_demand_mw=120.0,
+        construction_year=2030,
         #peak_load=peak_load,
     )
 
@@ -428,13 +428,12 @@ function build_portfolio()
         #scaling_factor_multiplier=get_peak_load,
     )
 
-    t_demand_c = DemandRequirement{PSY.PowerLoad}(
+    t_demand_c = ProjectedDemand{PSY.PowerLoad}(
         #load_growth=0.05,
         name="demand_c",
         available=true,
         power_systems_type="PowerLoad",
         region=[z1],
-        value_of_lost_load=0.0,
         #peak_load=peak_load,
     )
 
@@ -443,12 +442,11 @@ function build_portfolio()
     ts_demand_d_2028 =
         SingleTimeSeries("ops_peak_load", TimeArray(tstamp_2028_ops, ts_load_d_2028))
 
-    t_demand_d = DemandRequirement{PSY.PowerLoad}(
+    t_demand_d = ProjectedDemand{PSY.PowerLoad}(
         name="demand_d",
         available=true,
         power_systems_type="PowerLoad",
         region=[z2],
-        value_of_lost_load=0.0,
     )
 
     demand_technology = DemandSideTechnology{PSY.PowerLoad}(
@@ -456,6 +454,8 @@ function build_portfolio()
         available=true,
         power_systems_type="PowerLoad",
         region=[z1],
+        capital_costs=CapitalCost(LinearCurve(1000.0), 0.0),
+        financial_data=tech_financials,
     )
 
     ########################
@@ -576,7 +576,9 @@ function build_portfolio()
     #Supplemental attributes
     PSIP.add_supplemental_attribute!(p_5bus, t_th_exp, retro1)
     PSIP.add_supplemental_attribute!(p_5bus, t_th_exp, retire1)
+    # cheap_thermal (the source) can be retrofitted into expensive_thermal (the option)
     PSIP.add_supplemental_attribute!(p_5bus, t_th, retro2)
+    PSIP.add_supplemental_attribute!(p_5bus, t_th_exp, retro2)
     PSIP.add_supplemental_attribute!(p_5bus, t_th, retire2)
     PSIP.add_supplemental_attribute!(p_5bus, t_th, existing)
     PSIP.add_supplemental_attribute!(p_5bus, t_th_exp, existing2)

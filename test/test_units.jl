@@ -157,27 +157,27 @@ hvdc() = NodalHVDCTransportTechnology{PSY.ACBranch}(;
     capital_costs=PSIP.CapitalCost(LinearCurve(1500.0), 0.0),
 )
 
-demand_req() = DemandRequirement{PSY.PowerLoad}(;
+demand_req() = ProjectedDemand{PSY.PowerLoad}(;
     name="dreq",
     available=true,
     power_systems_type=string(PSY.PowerLoad),
-    new_demand_mw=300.0,
+    peak_demand_mw=300.0,
     value_of_lost_load=1e5,
-    unserved_demand_curve=LinearCurve(50.0),
+    curtailment_cost=LinearCurve(50.0),
+    shift_cost=LinearCurve(12.0),
+    max_demand_advance=240.0,
+    max_demand_delay=360.0,
 )
 
 demand_side() = DemandSideTechnology{PSY.PowerLoad}(;
     name="demand_side",
     available=true,
     power_systems_type=string(PSY.PowerLoad),
-    peak_demand_mw=250.0,
+    capacity_limits=(min=0.0, max=250.0),
     # USD/t, not derived: no valid MMBtu->t factor exists (fuel-dependent). Chosen
     # to be plausible for a per-tonne hydrogen output price; see report.
     price_per_unit=LinearCurve(3000.0),
-    curtailment_cost=LinearCurve(30.0),
-    shift_variable_cost=LinearCurve(12.0),
-    max_demand_advance=240.0,
-    max_demand_delay=360.0,
+    financial_data=tech_financials(),
 )
 
 carbon_caps() =
@@ -641,19 +641,19 @@ end
     end
 end
 
-@testset "DemandRequirement getters/setters" begin
+@testset "ProjectedDemand getters/setters" begin
     t = demand_req()
     check_scalar(
-        u -> PSIP.get_new_demand_mw(t, u),
-        (v, u) -> PSIP.set_new_demand_mw!(t, v, u),
+        u -> PSIP.get_peak_demand_mw(t, u),
+        (v, u) -> PSIP.set_peak_demand_mw!(t, v, u),
         u"MW",
         u"kW";
         base=300.0,
         ratio=1000.0,
     )
     check_valuecurve(
-        u -> PSIP.get_unserved_demand_curve(t, u),
-        (v, u) -> PSIP.set_unserved_demand_curve!(t, v, u),
+        u -> PSIP.get_curtailment_cost(t, u),
+        (v, u) -> PSIP.set_curtailment_cost!(t, v, u),
         conversion_unit(u"MW" * u"hr", USD),
         conversion_unit(u"kW" * u"hr", USD);
         prop=50.0,
@@ -666,18 +666,6 @@ end
         USD / (u"kW" * u"hr");
         base=1e5,
         ratio=1e-3,
-    )
-end
-
-@testset "DemandSideTechnology getters/setters" begin
-    t = demand_side()
-    check_scalar(
-        u -> PSIP.get_peak_demand_mw(t, u),
-        (v, u) -> PSIP.set_peak_demand_mw!(t, v, u),
-        u"MW",
-        u"kW";
-        base=250.0,
-        ratio=1000.0,
     )
     check_scalar(
         u -> PSIP.get_max_demand_advance(t, u),
@@ -695,6 +683,13 @@ end
         base=360.0,
         ratio=1 / 60,
     )
+end
+
+@testset "DemandSideTechnology getters/setters" begin
+    t = demand_side()
+    @test PSIP.get_price_per_unit(t, IS.NU) == LinearCurve(3000.0)
+    PSIP.set_capacity_limits!(t, (min=10.0, max=300.0), IS.NU)
+    @test PSIP.get_capacity_limits(t, IS.NU) == (min=10.0, max=300.0)
 end
 
 @testset "Supplemental attribute getters/setters" begin
@@ -859,8 +854,8 @@ end
         checked_fields = [
             ("SupplyTechnology", "time_limits"),
             ("StorageTechnology", "duration_limits"),
-            ("DemandSideTechnology", "max_demand_delay"),
-            ("DemandSideTechnology", "max_demand_advance"),
+            ("ProjectedDemand", "max_demand_delay"),
+            ("ProjectedDemand", "max_demand_advance"),
             ("CarbonCaps", "max_mtons"),
             ("CarbonCaps", "max_tons_mwh"),
             ("DemandSideTechnology", "price_per_unit"),

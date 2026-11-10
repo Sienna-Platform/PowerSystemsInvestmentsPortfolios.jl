@@ -261,6 +261,7 @@ const OPENAPI_COST_TYPES = Set([
     "PSY.ThermalGenerationCost",
     "PSY.RenewableGenerationCost",
     "PSY.StorageCost",
+    "PSY.LoadCost",
     "IS.ProductionVariableCostCurve",
 ])
 

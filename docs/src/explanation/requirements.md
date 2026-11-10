@@ -83,9 +83,9 @@ share at the same level.
 the contributing technologies in the target year — for example an offshore wind target or a
 siting limit.
 
-## DemandRequirement — the Boundary Case
+## ProjectedDemand — the Boundary Case
 
-[`DemandRequirement`](@ref) is a subtype of `DemandTechnology`, **not** `Requirement`. It
+[`ProjectedDemand`](@ref) is a subtype of `DemandTechnology`, **not** `Requirement`. It
 represents load that must be served and is added with `add_technology!`. See
 [Technology Types](@ref).
 

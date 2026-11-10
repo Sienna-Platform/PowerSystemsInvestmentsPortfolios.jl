@@ -74,7 +74,7 @@ t_wind = SupplyTechnology{PSY.RenewableDispatch}(;
 )
 add_technology!(portfolio, t_wind)
 
-t_demand = DemandRequirement{PSY.PowerLoad}(;
+t_demand = ProjectedDemand{PSY.PowerLoad}(;
     name="demand_zone1",
     available=true,
     power_systems_type="PowerLoad",
@@ -317,7 +317,7 @@ println("Operational capacity factor series count: ", length(cf_series))
 # |-------------|-----------|------------------|
 # | `"inv_capex"` | Investment | `SupplyTechnology`, `StorageTechnology`, `TransmissionTechnology` |
 # | `"ops_variable_cap_factor"` | Operational | `SupplyTechnology`, `StorageTechnology`, `TransmissionTechnology` |
-# | `"ops_peak_load"` | Operational | `DemandRequirement` |
+# | `"ops_peak_load"` | Operational | `ProjectedDemand` |
 #
 # Names are conventions understood by `PowerSystemsInvestments.jl`. Non-standard names are
 # ignored by the optimizer unless a formulation explicitly references them.

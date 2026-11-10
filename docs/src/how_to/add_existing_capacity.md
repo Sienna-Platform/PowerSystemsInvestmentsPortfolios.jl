@@ -47,12 +47,13 @@ add_supplemental_attribute!(portfolio, ccgt, retirement)
 ## Retrofit
 
 ```julia
+# ccgt_ccs (the option) is built by converting units of ccgt (the source)
 retrofit = RetrofitPotential(;
     eligible_generators=["gas_2"],
-    retrofit_fraction=0.5,                     # fraction of existing capacity
-    retrofit_cost=LinearCurve(200_000.0),      # USD/MW
+    retrofit_efficiency=0.9,                   # MW of option per MW of source converted
 )
 add_supplemental_attribute!(portfolio, ccgt, retrofit)
+add_supplemental_attribute!(portfolio, ccgt_ccs, retrofit)
 ```
 
 ## Read them back

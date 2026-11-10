@@ -159,24 +159,39 @@
     @test PSIP.get_capacity_limits_energy(storage, IS.NU) == (min=10.0, max=1000.0)
     @test PSIP.get_charge_capital_cost(PSIP.get_capital_costs(storage)) == LinearCurve(1.0)
 
-    demand_req = DemandRequirement{PSY.PowerLoad}(
+    demand_req = ProjectedDemand{PSY.PowerLoad}(
         name="demand_req",
         power_systems_type="PowerLoad",
-        value_of_lost_load=1000.0,
         available=true,
         region=[area_a],
     )
-    PSIP.set_new_demand_mw!(demand_req, 25.0, IS.NU)
-    @test PSIP.get_new_demand_mw(demand_req, IS.NU) == 25.0
+    PSIP.set_peak_demand_mw!(demand_req, 25.0, IS.NU)
+    PSIP.set_max_demand_delay!(demand_req, 120.0, IS.NU)
+    PSIP.set_flexible_fraction!(demand_req, 0.3)
+    PSIP.set_shift_efficiency!(demand_req, 0.92)
+    PSIP.set_construction_year!(demand_req, 2035)
+    @test PSIP.get_peak_demand_mw(demand_req, IS.NU) == 25.0
+    @test PSIP.get_max_demand_delay(demand_req, IS.NU) == 120.0
+    @test PSIP.get_flexible_fraction(demand_req) == 0.3
+    @test PSIP.get_shift_efficiency(demand_req) == 0.92
+    @test PSIP.get_construction_year(demand_req) == 2035
 
     demand_side = DemandSideTechnology{PSY.PowerLoad}(
         name="demand_side",
         power_systems_type="PowerLoad",
         available=true,
         region=[area_a],
+        financial_data=tech_financial_data,
     )
-    PSIP.set_peak_demand_mw!(demand_side, 50.0, IS.NU)
-    @test PSIP.get_peak_demand_mw(demand_side, IS.NU) == 50.0
+    demand_side_operation = PSY.LoadCost(CostCurve(LinearCurve(2.0)), 15.0)
+    PSIP.set_capacity_limits!(demand_side, (min=0.0, max=200.0), IS.NU)
+    PSIP.set_operation_costs!(demand_side, demand_side_operation, IS.NU)
+    PSIP.set_capital_costs!(demand_side, PSIP.CapitalCost(LinearCurve(900.0), 0.0))
+    PSIP.set_technology_efficiency!(demand_side, 50.0)
+    @test PSIP.get_capacity_limits(demand_side, IS.NU) == (min=0.0, max=200.0)
+    @test PSIP.get_fixed(PSIP.get_operation_costs(demand_side, IS.NU)) == 15.0
+    @test PSIP.get_capital_cost(PSIP.get_capital_costs(demand_side)) == LinearCurve(900.0)
+    @test PSIP.get_technology_efficiency(demand_side) == 50.0
 
     agg = AggregateTransportTechnology{PSY.ACBranch}(
         name="agg",

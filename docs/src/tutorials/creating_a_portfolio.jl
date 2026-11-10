@@ -197,11 +197,11 @@ add_technology!(portfolio, t_storage)
 
 # ## Add a Demand Technology
 #
-# [`DemandRequirement{T}`](@ref) represents load that must be served in a region. Despite
-# its name it is a `DemandTechnology`, not a policy `Requirement`, and it carries its load
-# profile as a time series (see [Working With Time Series](@ref)).
+# [`ProjectedDemand{T}`](@ref) represents load that must be served in a region. It is a
+# `DemandTechnology`, not a policy `Requirement`, and it carries its load profile as a time
+# series (see [Working With Time Series](@ref)).
 
-t_demand = DemandRequirement{PSY.PowerLoad}(;
+t_demand = ProjectedDemand{PSY.PowerLoad}(;
     name="demand_zone1",
     available=true,
     power_systems_type="PowerLoad",
@@ -269,7 +269,7 @@ println("Supply technologies: ", length(supply_techs))
 storage_techs = collect(get_technologies(StorageTechnology, portfolio))
 println("Storage technologies: ", length(storage_techs))
 
-demand_techs = collect(get_technologies(DemandRequirement, portfolio))
+demand_techs = collect(get_technologies(ProjectedDemand, portfolio))
 println("Demand technologies: ", length(demand_techs))
 
 # ### Look up a technology by name

@@ -35,6 +35,11 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 # developed on a branch are pinned.
 InfrastructureSystems = {rev = "IS4", url = "https://github.com/Sienna-Platform/InfrastructureSystems.jl"}
 PowerSystems = {rev = "psy6", url = "https://github.com/Sienna-Platform/PowerSystems.jl"}
+# TODO: temporary, until PowerOpenAPIModels jp/investment_refactor (ProjectedDemand) is released
+InfrastructureCoreOpenAPIModels = {path = "../../OpenAPI/PowerOpenAPIModels/InfrastructureCoreOpenAPIModels.jl"}
+InfrastructureTimeSeriesOpenAPIModels = {path = "../../OpenAPI/PowerOpenAPIModels/InfrastructureTimeSeriesOpenAPIModels.jl"}
+PowerCoreOpenAPIModels = {path = "../../OpenAPI/PowerOpenAPIModels/PowerCoreOpenAPIModels.jl"}
+PowerInvestmentsOpenAPIModels = {path = "../../OpenAPI/PowerOpenAPIModels/PowerInvestmentsOpenAPIModels.jl"}
 
 [compat]
 DBInterface = "2.6"

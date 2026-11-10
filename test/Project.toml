@@ -36,6 +36,11 @@ PowerSystemCaseBuilder = {rev = "psy6", url = "https://github.com/Sienna-Platfor
 PowerSystems = {rev = "psy6", url = "https://github.com/Sienna-Platform/PowerSystems.jl.git"}
 PowerSystemsInvestmentsPortfolios = {path = ".."}
 PowerTableDataParser = {rev = "psy6", url = "https://github.com/NLR-Sienna/PowerTableDataParser.jl.git"}
+# TODO: temporary, until PowerOpenAPIModels jp/investment_refactor (ProjectedDemand) is released
+InfrastructureCoreOpenAPIModels = {path = "../../../OpenAPI/PowerOpenAPIModels/InfrastructureCoreOpenAPIModels.jl"}
+InfrastructureTimeSeriesOpenAPIModels = {path = "../../../OpenAPI/PowerOpenAPIModels/InfrastructureTimeSeriesOpenAPIModels.jl"}
+PowerCoreOpenAPIModels = {path = "../../../OpenAPI/PowerOpenAPIModels/PowerCoreOpenAPIModels.jl"}
+PowerInvestmentsOpenAPIModels = {path = "../../../OpenAPI/PowerOpenAPIModels/PowerInvestmentsOpenAPIModels.jl"}
 
 [compat]
 julia = "^1.10"

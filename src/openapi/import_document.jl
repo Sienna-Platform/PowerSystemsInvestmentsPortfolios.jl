@@ -14,7 +14,7 @@ const DOCUMENT_PLAN = [
     (SupplyTechnology, "SupplyTechnology"),
     (StorageTechnology, "StorageTechnology"),
     (ColocatedSupplyStorageTechnology, "ColocatedSupplyStorageTechnology"),
-    (DemandRequirement, "DemandRequirement"),
+    (ProjectedDemand, "ProjectedDemand"),
     (DemandSideTechnology, "DemandSideTechnology"),
     (AggregateTransportTechnology, "AggregateTransportTechnology"),
     (NodalACTransportTechnology, "NodalACTransportTechnology"),

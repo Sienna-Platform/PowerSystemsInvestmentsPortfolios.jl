@@ -34,7 +34,7 @@ flexible.
 
 | Physical quantity   | Natural unit (stored) | Example fields                                                             |
 |:------------------- |:--------------------- |:-------------------------------------------------------------------------- |
-| Power               | `u"MW"`               | `unit_size`, `capacity_limits`, `new_demand_mw`, `min_capacity_mw`         |
+| Power               | `u"MW"`               | `unit_size`, `capacity_limits`, `peak_demand_mw`, `min_capacity_mw`        |
 | Energy              | `u"MW*hr"`            | `unit_size_energy`, `capacity_limits_energy`                               |
 | Voltage             | `u"kV"`               | `voltage`                                                                  |
 | Impedance           | `u"Ω"`                | `resistance`, `reactance`                                                  |
@@ -56,10 +56,10 @@ Cost fields carry a value along *two* axes (an independent `x` and a dependent `
 units are expressed as a `NamedTuple` rather than a single unit. The corresponding
 [`ConversionUnits`](@ref) natural units are:
 
-| Physical quantity | Natural unit                       | Example fields                                                                             |
-|:----------------- |:---------------------------------- |:------------------------------------------------------------------------------------------ |
-| Power cost        | `(x_unit=u"MW", y_unit=USD)`       | `retirement_cost`, `retrofit_cost`                                                         |
-| Energy cost       | `(x_unit=u"MW"*u"hr", y_unit=USD)` | `operation_costs`, `operation_costs_inverter`, `unserved_demand_curve`, `curtailment_cost` |
+| Physical quantity | Natural unit                       | Example fields                                                                  |
+|:----------------- |:---------------------------------- |:------------------------------------------------------------------------------- |
+| Power cost        | `(x_unit=u"MW", y_unit=USD)`       | `retirement_cost`, `retrofit_cost`                                              |
+| Energy cost       | `(x_unit=u"MW"*u"hr", y_unit=USD)` | `operation_costs`, `operation_costs_inverter`, `curtailment_cost`, `shift_cost` |
 
 Capital costs are not unit-aware fields: [`CapitalCost`](@ref) and
 [`StorageCapitalCost`](@ref) hold curves that are always in USD/MW (USD/MWh for storage
