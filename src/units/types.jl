@@ -8,8 +8,4 @@ using InfrastructureSystems.CommodityUnits: USD, MMBtu
 @unit tonne "tonne" tonne 1e3u"kg" false
 @unit Mt "Mt" Mt 1e6 * tonne false
 
-# Re-export common Unitful units for power systems
 const MW = u"MW"
-const kV = u"kV"
-const OHMS = u"Ω"
-const SIEMENS = u"S"

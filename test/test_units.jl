@@ -258,12 +258,9 @@ end
     @test PSIP.natural_unit(PSIP.OPS_TIME) == u"hr"
     @test PSIP.natural_unit(PSIP.INV_TIME) == u"yr"
     @test PSIP.natural_unit(PSIP.MINUTE_TIME) == u"minute"
-    @test PSIP.natural_unit(PSIP.COST) == USD
-    @test PSIP.natural_unit(PSIP.FUEL) == MMBtu
     # Custom composite units added on this branch.
     @test PSIP.natural_unit(PSIP.EMISSIONS_MASS) == Mt
     @test PSIP.natural_unit(PSIP.EMISSIONS_COST) == USD / tonne
-    @test PSIP.natural_unit(PSIP.EMISSIONS_FUEL) == tonne / MMBtu
     @test PSIP.natural_unit(PSIP.EMISSIONS_ENERGY) == Mt / (u"MW" * u"hr")
     @test PSIP.natural_unit(PSIP.RAMPING) == u"MW" / u"minute"
     @test PSIP.natural_unit(PSIP.FUEL_CONSUMPTION_POWER) == MMBtu / u"MW"
@@ -271,24 +268,21 @@ end
     # Cost rates; a value curve's x-axis is USD per its rate
     @test PSIP.natural_unit(PSIP.POWER_COST) == USD / u"MW"
     @test PSIP.natural_unit(PSIP.ENERGY_COST) == USD / (u"MW" * u"hr")
-    @test PSIP.natural_unit(PSIP.FUEL_COST) == USD / MMBtu
 
     # _unit_category resolves the schema tokens used by the generated code.
     @test PSIP._unit_category(Val(:mw)) === PSIP.POWER
     @test PSIP._unit_category(Val(:mwh)) === PSIP.ENERGY
     @test PSIP._unit_category(Val(:kv)) === PSIP.VOLTAGE
     @test PSIP._unit_category(Val(:ohm)) === PSIP.IMPEDANCE
-    @test PSIP._unit_category(Val(:hr)) === PSIP.OPS_TIME
     @test PSIP._unit_category(Val(:min)) === PSIP.MINUTE_TIME
     @test PSIP._unit_category(Val(:yr)) === PSIP.INV_TIME
     @test PSIP._unit_category(Val(:mw_per_min)) === PSIP.RAMPING
     @test PSIP._unit_category(Val(:mmbtu_per_mw)) === PSIP.FUEL_CONSUMPTION_POWER
     @test PSIP._unit_category(Val(:usd_per_mw)) === PSIP.POWER_COST
     @test PSIP._unit_category(Val(:usd_per_mwh)) === PSIP.ENERGY_COST
-    @test PSIP._unit_category(Val(:usd_per_mmbtu)) === PSIP.FUEL_COST
+    @test PSIP._unit_category(Val(:usd_per_mwh_scalar)) === PSIP.ENERGY_COST
     @test PSIP._unit_category(Val(:mt)) === PSIP.EMISSIONS_MASS
     @test PSIP._unit_category(Val(:usd_per_t)) === PSIP.EMISSIONS_COST
-    @test PSIP._unit_category(Val(:t_per_mmbtu)) === PSIP.EMISSIONS_FUEL
     @test PSIP._unit_category(Val(:mt_per_mwh)) === PSIP.EMISSIONS_ENERGY
 end
 

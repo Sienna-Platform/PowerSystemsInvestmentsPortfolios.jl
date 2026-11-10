@@ -152,9 +152,9 @@ promote and convert correctly.
 ## Unit categories and `natural_unit`
 
 Internally, each unit token used by a field (for example `:mw`, `:usd_per_mwh`,
-`:t_per_mmbtu`) maps to a **`UnitCategory`** — a small singleton type that names a
+`:mt_per_mwh`) maps to a **`UnitCategory`** — a small singleton type that names a
 physical quantity. The exported physical categories are `POWER`, `ENERGY`,
-`VOLTAGE`, `IMPEDANCE`, `ADMITTANCE`, `CURRENT`, `OPS_TIME`, and `INV_TIME` (see the
+`VOLTAGE`, `IMPEDANCE`, `OPS_TIME`, and `INV_TIME` (see the
 [Public API Reference](@ref) for their docstrings). Duration fields in minutes use the
 internal `MINUTE_TIME` category.
 
@@ -181,15 +181,12 @@ When you call an accessor, the request passes through three layers:
     It dispatches on the value type:
     
       + scalars go straight to `convert_units` (a thin wrapper over `Unitful.uconvert`);
-      + compound fields (`MinMax`, `UpDown`, `InOut`, start-up stages) convert each
-        component;
-      + `FunctionData`, `ValueCurve`, `CostCurve`, `FuelCurve`, and `OperationalCost`
-        structures convert each of their coefficients along the correct axis, so a
-        whole cost curve can be re-expressed in new units in one call.
-
-This means a single getter call can convert an entire nested cost structure — for
-example turning a `ThermalGenerationCost` from USD/MWh into USD/kWh — while
-preserving its shape.
+      + compound fields (`MinMax`, `UpDown`, and per-topology `Dict`s of them) convert
+        each component;
+      + value curves rescale their x-axis (`scale_axes`), and operating costs return as
+        stored or with their fuel converted (`cost_in_units`).
+    
+    Setters take units-tagged values, which `set_value` converts to natural units.
 
 !!! note
     
