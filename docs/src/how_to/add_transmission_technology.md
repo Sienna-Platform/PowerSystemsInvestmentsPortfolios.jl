@@ -13,7 +13,7 @@ PSIP provides three transmission technology types:
   - [`NodalHVDCTransportTechnology`](@ref) — an HVDC link between two buses.
 
 The endpoints are topology components that must already be in the portfolio (see
-[Define Regions and Topology](@ref)).
+[Define Zones and Nodes](@ref)).
 
 ## When to use each
 

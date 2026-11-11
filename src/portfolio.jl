@@ -937,56 +937,45 @@ function has_technology(
     return IS.has_component(T, portfolio.data.components, name)
 end
 
-###########################
-######### Regions #########
-###########################
+############################
+######### Topology #########
+############################
 
 """
 Attach a PowerSystems topology component (`Area`, `LoadZone`, bus, arc, ...) to the
 portfolio. The component is stored in the portfolio's base system; callers never need to
-reach into `base_system` directly.
+reach into `base_system` directly. Zones are the portfolio's aggregation type
+([`get_zone_type`](@ref)) and nodes are `ACBus`es; build them with `Area(name)`,
+`LoadZone(name)` or `ACBus(name; zone, reference)`.
 
-The portfolio's convention is natural units, but `Area`/`LoadZone` (and other system-base
-topology) store `peak_active_power`/`peak_reactive_power` internally in device base. To keep
-the natural-units contract, pass those fields as `add_topology!` keyword arguments in
-natural units (MW / MVAr) rather than to the raw `PSY.*` constructor: they are applied
-through the units-tagged setters *after* attachment, once the system base power is synced. A
-nonzero power value left on the raw constructor is device-base and triggers a warning.
+`Area`/`LoadZone` store their peak powers per unit of the system base power, which a
+component only knows once it is attached. Set peak powers after adding the component, with
+the units-tagged PowerSystems setters (`set_peak_active_power!(zone, 250.0u"MW")`); a
+nonzero peak power set before attachment triggers a warning. A bus numbered 0 (the default
+of `ACBus(name)`) is given the next free bus number.
 
 Throws `IS.InvalidValue` if a region with the same id is already attached (unless
 `skip_validation=true`), and `ArgumentError` if the component's name is already stored for its
-concrete type, any PowerSystems rule is violated, or a power keyword is given for a topology
-type that has no such (system-base) field.
+concrete type or any PowerSystems rule is violated.
 
 # Examples
 
 ```julia
-portfolio = Portfolio(...)
+add_topology!(portfolio, ACBus("bus_1"; base_voltage=138.0))
 
-# Add a bus (no power fields; base_voltage is natural kV).
-add_topology!(portfolio, ACBus(; name="bus_1", base_voltage=138.0, ...))
-
-# Add an Area with its peak power in natural units (MW / MVAr).
-add_topology!(
-    portfolio,
-    PSY.Area(; name="west", input_basis=u"NU");
-    peak_active_power=250.0,
-    peak_reactive_power=50.0,
-)
-
-# Add many at once.
-foreach(x -> add_topology!(portfolio, x), buses)
+west = Area("west")
+add_topology!(portfolio, west)
+set_peak_active_power!(west, 250.0u"MW")
 ```
 """
 function add_topology!(
     portfolio::Portfolio,
     topology::PSY.Topology;
-    peak_active_power=nothing,
-    peak_reactive_power=nothing,
     skip_validation=false,
     kwargs...,
 )
-    _check_topology_power_units(topology, peak_active_power, peak_reactive_power)
+    _warn_unattached_peak_power(topology)
+    _assign_bus_number!(portfolio, topology)
     skip_validation = _validate_or_skip!(portfolio, topology, skip_validation)
     PSY.add_component!(
         portfolio.base_system,
@@ -994,53 +983,25 @@ function add_topology!(
         skip_validation=skip_validation,
         kwargs...,
     )
-    # Attachment has synced the system base power, so the units-tagged setters can now
-    # convert these natural-units (MW / MVAr) values into the component's device-base storage.
-    isnothing(peak_active_power) ||
-        PSY.set_peak_active_power!(topology, peak_active_power * PSY.MW)
-    isnothing(peak_reactive_power) ||
-        PSY.set_peak_reactive_power!(topology, peak_reactive_power * PSY.MVAr)
     return
 end
 
-# Guard the natural-units power keywords of `add_topology!`. They only apply to system-base
-# topology (`Area`, `LoadZone`, ...) whose power fields per-unitize against the system base;
-# for anything else they are meaningless and rejected. When the keyword is omitted but the
-# raw constructor already stored a nonzero (device-base) power, warn: that value is not in
-# the natural units the portfolio otherwise uses.
-function _check_topology_power_units(topology, peak_active_power, peak_reactive_power)
-    is_system_base = PSY.base_power_kind(topology) isa PSY.SystemBasePower
-    if !is_system_base
-        if !isnothing(peak_active_power) || !isnothing(peak_reactive_power)
-            throw(
-                ArgumentError(
-                    "peak_active_power / peak_reactive_power keywords are only valid for " *
-                    "system-base topology (e.g. Area, LoadZone); got $(typeof(topology)).",
-                ),
-            )
-        end
-        return
-    end
-    for (field, provided) in (
-        (:peak_active_power, peak_active_power),
-        (:peak_reactive_power, peak_reactive_power),
-    )
-        isnothing(provided) || continue
+# A peak power set on system-base topology before attachment was converted with the
+# component's own base power, which may not be the system's
+function _warn_unattached_peak_power(topology::PSY.Topology)
+    PSY.base_power_kind(topology) isa PSY.SystemBasePower || return
+    for field in (:peak_active_power, :peak_reactive_power)
         hasproperty(topology, field) || continue
-        getproperty(topology, field) == 0 && continue
+        iszero(getproperty(topology, field)) && continue
         @warn(
-            "add_topology!: $(summary(topology)) was constructed with a nonzero $field " *
-            "that is stored in device base, not the natural units the portfolio uses. " *
-            "Pass $field in natural units (MW / MVAr) as an add_topology! keyword instead.",
+            "add_topology!: $(summary(topology)) has a nonzero $field set before it was " *
+            "attached, when its system base power was not known. Set it after adding the " *
+            "component, e.g. `set_$(field)!(topology, value * u\"MW\")`.",
             maxlog = 1,
         )
     end
     return
 end
-
-# Backwards-compatible alias for the older "region" naming.
-add_region!(portfolio::Portfolio, topology::PSY.Topology; kwargs...) =
-    add_topology!(portfolio, topology; kwargs...)
 
 """
 Returns an iterator of the portfolio's topology components of type `T` (concrete or
@@ -1057,10 +1018,6 @@ function get_topologies(::Type{T}, portfolio::Portfolio) where {T <: PSY.Topolog
     return PSY.get_components(T, portfolio.base_system)
 end
 
-# Backwards-compatible alias for the older "region" naming.
-get_regions(::Type{T}, portfolio::Portfolio) where {T <: PSY.Topology} =
-    get_topologies(T, portfolio)
-
 """
 Get the topology component of type `T` with `name`. Returns `nothing` if none matches. If
 `T` is abstract then names across all subtypes of `T` must be unique.
@@ -1075,14 +1032,6 @@ function get_topology(
 ) where {T <: PSY.Topology}
     return PSY.get_component(T, portfolio.base_system, name)
 end
-
-# Backwards-compatible alias for the older "region" naming. Adds a method to the existing
-# `get_region` generic (whose other methods are per-technology accessors).
-get_region(
-    ::Type{T},
-    portfolio::Portfolio,
-    name::AbstractString,
-) where {T <: PSY.Topology} = get_topology(T, portfolio, name)
 
 """
 Remove a topology component from the portfolio's base system.

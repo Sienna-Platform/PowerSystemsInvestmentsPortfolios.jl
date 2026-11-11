@@ -13,7 +13,7 @@ PSIP has two demand technology types, both added with [`add_technology!`](@ref):
     hydrogen electrolyzer, whose consumption is valued by what it produces.
 
 The examples below assume a portfolio with an `Area` named `west` already added (see
-[Define Regions and Topology](@ref)).
+[Define Zones and Nodes](@ref)).
 
 ## Load from the base system
 

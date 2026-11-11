@@ -4,7 +4,10 @@ module PowerSystemsInvestmentsPortfolios
 
 import InfrastructureSystems
 # TODO: Some of these re-exports may cause name collisions with PowerSystems
+# `get_name` extends InfrastructureSystems' (and so PowerSystems') function, so one `get_name`
+# names technologies, requirements and PowerSystems topology alike
 import InfrastructureSystems:
+    get_name,
     from_json,
     serialize,
     has_time_series,
@@ -100,7 +103,6 @@ export StorageCapitalCost
 
 export get_name
 export get_description
-export get_regions
 export get_topologies
 export get_topology
 export get_technologies
@@ -138,8 +140,14 @@ export remove_technology!
 export get_subcomponents
 export get_masked_technologies
 export is_masked
-export add_region!
 export add_topology!
+export get_zone_type
+export get_zones
+export get_zone
+export get_nodes
+export get_node
+export get_lines
+export get_model_topologies
 export remove_topology!
 export add_requirement!
 export add_time_series!
@@ -227,6 +235,7 @@ include("units/conversions.jl")
 include("units/function_conversions.jl")
 
 include("portfolio.jl")
+include("topology.jl")
 include("openapi/cost_conversion.jl")
 include("openapi/export_cost_conversion.jl")
 include("openapi/sqlite_load.jl")

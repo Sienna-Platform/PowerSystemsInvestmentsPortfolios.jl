@@ -16,11 +16,14 @@ components a `PowerSystems.jl` `System` uses:
 | `PSY.ACBus`       | A node in a nodal model                                    |
 | `PSY.Arc`         | A connection between two buses in the base system          |
 
-These components live in the portfolio's **base system**. [`add_topology!`](@ref) stores a
-component there, and [`get_topologies`](@ref) and [`get_topology`](@ref) read it back. Because
-the portfolio and the base system share the same objects, a technology located in `Area`
-"West" and an existing generator on a bus in "West" refer to the same region — there is no
-name matching between two separate sets of regions.
+These components live in the portfolio's **base system**. A **zone** is the portfolio's
+aggregation type ([`get_zone_type`](@ref), `Area` by default) and a **node** is an `ACBus`;
+they are built with `Area(name)`, `LoadZone(name)` or `ACBus(name; zone)`, added with
+[`add_topology!`](@ref) like any other topology, and read back with [`get_zones`](@ref) /
+[`get_nodes`](@ref) (see [Define Zones and Nodes](@ref)); [`get_topologies`](@ref) reads
+other topology. Because the portfolio and the base system share the same objects, a
+technology located in `Area` "West" and an existing generator on a bus in "West" refer to the
+same region — there is no name matching between two separate sets of regions.
 
 PSIP re-exports these types, so they can be used without the `PSY.` prefix.
 
@@ -73,7 +76,7 @@ such as a bus `base_voltage` in natural units (kV), consistent with the rest of 
 
 ## See Also
 
-  - [Define Regions and Topology](@ref)
+  - [Define Zones and Nodes](@ref)
   - [`add_topology!`](@ref)
   - [`AggregateTransportTechnology`](@ref)
   - [`NodalACTransportTechnology`](@ref)

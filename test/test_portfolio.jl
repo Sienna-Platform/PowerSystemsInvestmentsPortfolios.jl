@@ -234,10 +234,10 @@ end
     PSIP.add_topology!(port, load_zone)
     PSIP.add_topology!(port, node)
 
-    regions = collect(PSIP.get_regions(PSY.Topology, port))
+    regions = collect(PSIP.get_topologies(PSY.Topology, port))
     @test length(regions) == 3
-    @test PSIP.get_region(PSY.Area, port, "zone_test") === zone
-    @test PSIP.get_region(PSY.ACBus, port, "node_test") === node
+    @test PSIP.get_topology(PSY.Area, port, "zone_test") === zone
+    @test PSIP.get_topology(PSY.ACBus, port, "node_test") === node
 
     req = CarbonTax(name="req_test", available=true)
     PSIP.add_requirement!(port, req)

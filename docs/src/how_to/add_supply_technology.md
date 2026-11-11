@@ -18,7 +18,7 @@ renewable, or hydro — that can be built in a capacity expansion model.
 ## Minimal working example
 
 The example below adds a wind supply technology to a portfolio. The region must be added to
-the portfolio before the technology (see [Define Regions and Topology](@ref)).
+the portfolio before the technology (see [Define Zones and Nodes](@ref)).
 
 ```julia
 using PowerSystemsInvestmentsPortfolios

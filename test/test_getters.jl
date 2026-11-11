@@ -349,7 +349,7 @@ end
         inverter_supply_ratio=1.0,
         capital_costs_inverter=PSIP.CapitalCost(LinearCurve(0.0), 0.0),
         available=true,
-        region=[get_region(PSY.Area, p_5bus, "Zone_1")],
+        region=[get_topology(PSY.Area, p_5bus, "Zone_1")],
         supply_technology=supply_ref,
         storage_technology=storage_ref,
     )

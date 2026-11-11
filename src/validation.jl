@@ -282,7 +282,7 @@ validate_technology_with_portfolio(::Technology, ::Portfolio) = true
 
 function _validate_unique_region_id(region::PSY.Topology, portfolio::Portfolio)
     region_id = get_id(region)
-    for stored_region in get_regions(PSY.Topology, portfolio)
+    for stored_region in get_topologies(PSY.Topology, portfolio)
         if get_id(stored_region) == region_id
             @error(
                 "Region ID is already attached to the portfolio",

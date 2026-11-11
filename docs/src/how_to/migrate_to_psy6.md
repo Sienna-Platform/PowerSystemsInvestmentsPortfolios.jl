@@ -18,17 +18,18 @@ zone = Zone(; name="West", id=1)
 add_region!(portfolio, zone)
 
 # After
-zone = Area(; name="West", input_basis=u"NU")   # or LoadZone; ACBus for nodal models
+zone = Area("West")   # the portfolio's aggregation type, Area by default
 add_topology!(portfolio, zone)
+add_topology!(portfolio, ACBus("bus1"; zone=zone, reference=true))
 ```
 
   - `region` fields are `Vector{PSY.Topology}`.
   - `AggregateTransportTechnology` endpoints are `PSY.AggregationTopology`;
     `NodalACTransportTechnology` and `NodalHVDCTransportTechnology` endpoints are `PSY.Bus`.
   - Topology must be added before a technology that references it.
-  - `add_region!`, `get_regions`, and `get_region` remain as aliases.
+  - `add_region!` and `get_regions` are removed; use [`add_topology!`](@ref) to add zones and nodes, and [`get_zones`](@ref) / [`get_nodes`](@ref) (or [`get_topologies`](@ref) for other topology) to read them.
 
-See [Define Regions and Topology](@ref).
+See [Define Zones and Nodes](@ref).
 
 ## The `id` field is removed
 

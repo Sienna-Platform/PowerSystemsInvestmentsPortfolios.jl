@@ -362,7 +362,7 @@ end
         min_level = Logging.Error,
         @test_throws(IS.InvalidValue, add_topology!(port, duplicate_region_id)),
     )
-    @test isnothing(get_region(PSY.ACBus, port, "duplicate_region_id"))
+    @test isnothing(get_topology(PSY.ACBus, port, "duplicate_region_id"))
 end
 
 @testset "Transport validation" begin
