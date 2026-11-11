@@ -1,29 +1,21 @@
-function _serialize_schedule(schedule::InvestmentScheduleResults)
-    start_dates = Vector{String}()
-    end_dates = Vector{String}()
-    capacity_data = Vector{Vector{Dict{String, Any}}}()
-    for (period, investments) in schedule.results
-        push!(start_dates, string(period[1]))
-        push!(end_dates, string(period[2]))
+# The schedule is carried opaquely by the document: a list per field of the schedule, each
+# decision an object with its type and fields. Year keys are written as strings.
+_serialize_schedule(schedule::InvestmentScheduleResults) = Dict{String, Any}(
+    string(field) => [_serialize_decision(d) for d in getfield(schedule, field)] for
+    field in fieldnames(InvestmentScheduleResults)
+)
 
-        installation_list = Vector{Dict{String, Any}}()
-        for (technology, capacity) in investments
-            installation = Dict{String, Any}(
-                "technology" => string(nameof(technology[1])),
-                "parameter" => string(nameof((only(technology[1].parameters)))),
-                "name" => technology[2],
-                "installations" => capacity,
-            )
-            push!(installation_list, installation)
-        end
-        push!(capacity_data, installation_list)
-    end
-    return Dict{String, Any}(
-        "start_dates" => start_dates,
-        "end_dates" => end_dates,
-        "results" => capacity_data,
-    )
-end
+_serialize_decision(decision::InvestmentDecision) = Dict{String, Any}(
+    "type" => string(nameof(typeof(decision))),
+    (
+        string(field) => _schedule_json(getfield(decision, field)) for
+        field in fieldnames(typeof(decision))
+    )...,
+)
+
+_schedule_json(values::Dict) = Dict(string(k) => _schedule_json(v) for (k, v) in values)
+_schedule_json(value) = value
+
 """
 Write a `Type`-valued field, such as `Portfolio.aggregation`, in the `"Module.Type"` form
 [`_deserialize_type_name`](@ref) requires.

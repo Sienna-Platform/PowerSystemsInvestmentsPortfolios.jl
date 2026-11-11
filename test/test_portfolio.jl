@@ -149,9 +149,7 @@ end
     @test PSIP.get_inflation_rate(port_fin) == 0.03
     @test PSIP.get_interest_rate(port_fin) == 0.06
 
-    schedule = InvestmentScheduleResults(
-        Dict{Int, Dict{Tuple{Type{<:Technology}, String}, Float64}}(),
-    )
+    schedule = InvestmentScheduleResults()
     PSIP.set_investment_schedule!(port_fin, schedule)
     @test PSIP.get_investment_schedule(port_fin) === schedule
 

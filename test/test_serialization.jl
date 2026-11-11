@@ -67,11 +67,10 @@ function _build_roundtrip_portfolio()
     PSIP.add_time_series!(port, gen, ts; features=Dict("year" => "2024", "rep_day" => 1))
 
     # An investment schedule (model output).
-    schedule = InvestmentScheduleResults(
-        Dict(
-            (Date("2030-01-01"), Date("2034-12-01")) =>
-                Dict((SupplyTechnology{ThermalStandard}, "gen1") => 123.45),
-        ),
+    schedule = InvestmentScheduleResults()
+    add_decision!(
+        schedule,
+        CapacityBuild(; technology="gen1", capacity=Dict("West" => Dict(2030 => 123.45))),
     )
     PSIP.set_investment_schedule!(port, schedule)
 
@@ -115,9 +114,8 @@ function _check_roundtrip_portfolio(port2)
     # Investment schedule
     sched2 = PSIP.get_investment_schedule(port2)
     @test sched2 !== nothing
-    key = (Date("2030-01-01"), Date("2034-12-01"))
-    @test haskey(sched2.results, key)
-    @test sched2.results[key][(SupplyTechnology{ThermalStandard}, "gen1")] == 123.45
+    build2 = get_decision(sched2, CapacityBuild, "gen1")
+    @test build2.capacity == Dict("West" => Dict(2030 => 123.45))
 
     # Base system
     bsys2 = PSIP.get_base_system(port2)
@@ -461,20 +459,53 @@ function _build_wide_roundtrip_portfolio()
         )
     end
 
-    PSIP.set_investment_schedule!(
-        portfolio,
-        InvestmentScheduleResults(
-            Dict(
-                (Date("2030-01-01"), Date("2034-12-31")) => Dict(
-                    (SupplyTechnology{PSY.ThermalStandard}, "rt_multifuel") => 120.0,
-                    (
-                        StorageTechnology{PSY.EnergyReservoirStorage},
-                        "rt_storage_optionals",
-                    ) => (power=10.0, energy=40.0),
-                ),
+    # Every kind of decision and value: several regions, units, devices
+    schedule = InvestmentScheduleResults()
+    for decision in (
+        CapacityBuild(;
+            technology="rt_multifuel",
+            capacity=Dict(
+                "West" => Dict(2030 => 120.0, 2035 => 30.0),
+                "East" => Dict(2035 => 5.0),
             ),
+            units=Dict("West" => Dict(2030 => 4, 2035 => 1), "East" => Dict(2035 => 1)),
+        ),
+        StorageBuild(;
+            technology="rt_storage_optionals",
+            region="West",
+            power=Dict(2030 => 10.0),
+            energy=Dict(2030 => 40.0),
+            units=Dict(2030 => 2),
+        ),
+        LineBuild(;
+            technology="rt_line",
+            start_region="West",
+            end_region="East",
+            capacity=Dict(2035 => 300.0),
+            units=Dict(2035 => 3),
+        ),
+        Retrofit(;
+            source="rt_coal",
+            option="rt_coal_ccs",
+            converted=Dict(2035 => 200.0),
+            retrofitted=Dict(2035 => 170.0),
+            devices=Dict(2035 => ["coal_1", "coal_2"]),
+        ),
+        Retirement(;
+            technology="rt_coal",
+            capacity=Dict(2030 => 50.0, 2040 => 100.0),
+            planned=Dict(2030 => 50.0),
+            devices=Dict(2030 => ["coal_3"], 2040 => String[]),
+        ),
+        DemandProjection(;
+            technology="rt_demand",
+            region="West",
+            peak=Dict(2030 => 100.0, 2035 => 110.5),
         ),
     )
+        add_decision!(schedule, decision)
+    end
+    PSIP.set_investment_schedule!(portfolio, schedule)
 
     # The colocated technology goes last: adding it masks the supply and storage it owns, and
     # those two carry a supplemental attribute, time series and a requirement membership that
@@ -546,17 +577,15 @@ _roundtrip_time_series(portfolio) = sort!(
     by=string,
 )
 
-# A document stores installations as an object, so the key order of a NamedTuple does not
-# survive a round trip. Compare them as Dicts.
-_roundtrip_installations(x::NamedTuple) = Dict(pairs(x))
-_roundtrip_installations(x) = x
+# Decisions compare by identity, so compare their types and field values
+_roundtrip_decision(d) =
+    (typeof(d), Tuple(getfield(d, field) for field in fieldnames(typeof(d))))
 
 function _roundtrip_schedule(portfolio)
-    results = PSIP.get_investment_schedule(portfolio).results
+    schedule = PSIP.get_investment_schedule(portfolio)
     return Dict(
-        period =>
-            Dict(key => _roundtrip_installations(value) for (key, value) in capacities) for
-        (period, capacities) in results
+        field => _roundtrip_decision.(getfield(schedule, field)) for
+        field in fieldnames(InvestmentScheduleResults)
     )
 end
 

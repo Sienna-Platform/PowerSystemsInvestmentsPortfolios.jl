@@ -633,34 +633,36 @@ function _ts_row_wire_dict(row)
     return dict
 end
 
-function _deserialize_schedule(raw::Dict)
-    schedule = Dict()
-    for (i, start_date) in enumerate(raw["start_dates"])
-        end_date = raw["end_dates"][i]
-        period_tuple = (Dates.Date(start_date), Dates.Date(end_date))
+# Inverse of `_serialize_schedule`
+const _SCHEDULE_DECISION_TYPES = Dict(
+    string(nameof(T)) => T for T in
+    (CapacityBuild, StorageBuild, LineBuild, Retrofit, Retirement, DemandProjection)
+)
 
-        schedule[period_tuple] = Dict()
-        for capacity in raw["results"][i]
-            technology_type = getproperty(
-                PowerSystemsInvestmentsPortfolios,
-                Symbol(capacity["technology"]),
-            )
-            parameter = getproperty(PowerSystems, Symbol(capacity["parameter"]))
-            technology_tuple = (technology_type{parameter}, capacity["name"])
+_deserialize_schedule(raw::Dict) = InvestmentScheduleResults(;
+    (
+        field => [_deserialize_decision(d) for d in raw[string(field)]] for
+        field in fieldnames(InvestmentScheduleResults) if haskey(raw, string(field))
+    )...,
+)
 
-            if capacity["installations"] isa Dict
-                capacity_tuple = NamedTuple(
-                    (Symbol(key), value) for (key, value) in capacity["installations"]
-                )
-                schedule[period_tuple][technology_tuple] = capacity_tuple
-            else
-                schedule[period_tuple][technology_tuple] = capacity["installations"]
-            end
-        end
-    end
-
-    return InvestmentScheduleResults(schedule)
+function _deserialize_decision(raw::AbstractDict)
+    T = _SCHEDULE_DECISION_TYPES[raw["type"]]
+    return T(;
+        (
+            field => _schedule_value(fieldtype(T, field), raw[string(field)]) for
+            field in fieldnames(T) if haskey(raw, string(field))
+        )...,
+    )
 end
+
+_schedule_value(::Type{Dict{Int, V}}, raw) where {V} =
+    Dict{Int, V}(parse(Int, string(k)) => _schedule_value(V, v) for (k, v) in raw)
+_schedule_value(::Type{Dict{String, V}}, raw) where {V} =
+    Dict{String, V}(string(k) => _schedule_value(V, v) for (k, v) in raw)
+_schedule_value(::Type{Vector{String}}, raw) = String[string(v) for v in raw]
+_schedule_value(::Type{String}, raw) = string(raw)
+_schedule_value(::Type{T}, raw) where {T <: Real} = T(raw)
 
 """
 Resolve a `"Module.Type"` string (as written by [`_serialize_type_name`](@ref)) back to the

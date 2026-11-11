@@ -77,3 +77,15 @@ IS.InfrastructureSystemsType
 ├── PortfolioFinancialData
 └── InvestmentScheduleResults
 ```
+
+## Investment schedule
+
+```
+InvestmentDecision (abstract)
+├── CapacityBuild        # supply and demand side technologies
+├── StorageBuild
+├── LineBuild
+├── Retrofit
+├── Retirement
+└── DemandProjection     # projected peaks of ProjectedDemands
+```
