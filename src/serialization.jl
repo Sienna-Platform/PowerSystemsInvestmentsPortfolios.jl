@@ -628,7 +628,8 @@ function build_model_struct(
         serialized !== nothing && haskey(serialized, "outage_factors") ||
             error("SupplyTechnology requires explicit planned/forced outage_factors")
         vals[:outage_factors] = IS.deserialize(
-            fieldtype(struct_type, :outage_factors), serialized["outage_factors"],
+            fieldtype(struct_type, :outage_factors),
+            serialized["outage_factors"],
         )
     end
     # The generated OpenAPI storage schema predates StorageCapitalCost.
