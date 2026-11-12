@@ -7,7 +7,7 @@ This file is auto-generated. Do not edit.
 """
     mutable struct NodalACTransportTechnology{T <: PSY.Device} <: TransmissionTechnology
         requirements::Vector{Requirement}
-        capital_costs::PSY.ValueCurve
+        capital_costs::CapitalCost
         available::Bool
         name::String
         end_node::Node
@@ -28,7 +28,7 @@ Nodal representation of candidate AC transmission lines between two regions.
 
 # Arguments
 - `requirements::Vector{Requirement}`: (default: `Vector()`) List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology
-- `capital_costs::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Cost of adding new capacity to the nodal transmission line (USD/MW).
+- `capital_costs::CapitalCost`: (default: `CapitalCost(nothing)`) Cost of adding new capacity to the nodal transmission line (USD/MW).
 - `available::Bool`: Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)
 - `name::String`: Name
 - `end_node::Node`: End node for transport technology
@@ -48,7 +48,7 @@ mutable struct NodalACTransportTechnology{T <: PSY.Device} <: TransmissionTechno
     "List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology"
     requirements::Vector{Requirement}
     "Cost of adding new capacity to the nodal transmission line (USD/MW)."
-    capital_costs::PSY.ValueCurve
+    capital_costs::CapitalCost
     "Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)"
     available::Bool
     "Name"
@@ -80,7 +80,7 @@ mutable struct NodalACTransportTechnology{T <: PSY.Device} <: TransmissionTechno
 end
 
 
-function NodalACTransportTechnology{T}(; requirements=Vector(), capital_costs=LinearCurve(0.0), available, name, end_node, id, financial_data, start_node, power_systems_type, internal=InfrastructureSystemsInternal(), ext=Dict(), reactance=1.0, resistance=1.0, voltage=230.0, unit_size=1.0, capacity_limits=(min=0, max=1e8), ) where T <: PSY.Device
+function NodalACTransportTechnology{T}(; requirements=Vector(), capital_costs=CapitalCost(nothing), available, name, end_node, id, financial_data, start_node, power_systems_type, internal=InfrastructureSystemsInternal(), ext=Dict(), reactance=1.0, resistance=1.0, voltage=230.0, unit_size=1.0, capacity_limits=(min=0, max=1e8), ) where T <: PSY.Device
     NodalACTransportTechnology{T}(requirements, capital_costs, available, name, end_node, id, financial_data, start_node, power_systems_type, internal, ext, reactance, resistance, voltage, unit_size, capacity_limits, )
 end
 

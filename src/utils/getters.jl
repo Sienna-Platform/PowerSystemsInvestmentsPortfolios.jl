@@ -37,12 +37,21 @@ get_parameter_type(::Type{DemandRequirement{T}}) where {T} = T
 get_parameter_type(t::DemandSideTechnology{T}) where {T} = T
 get_parameter_type(::Type{DemandSideTechnology{T}}) where {T} = T
 
+# Capacity (MW, in natural units) that one base-system component contributes to the existing
+# capacity of a technology: maximum active power for injection devices, maximum output for
+# storage, and thermal rating for branches.
+_existing_capacity(c::PSY.StaticInjection) = PSY.get_max_active_power(c)
+_existing_capacity(c::PSY.Storage) = PSY.get_output_active_power_limits(c).max
+_existing_capacity(c::PSY.Branch) = PSY.get_rating(c)
+
 """
 Calculates the amount of existing capacity (in MW) associated with a given Technology in the Portfolio.
 Technology must have an ExistingDevices supplemental attribute attached to it to be non-zero.
 This attribute contains a list of names of existing assets in the base system that correspond to this technology.
-For StorageTechnology, this function returns existing charge/discharge capacity in MW. See
-[`get_existing_capacity_mwh`](@ref) for existing energy capacity in MWh.
+For generators this is the maximum active power, not the MVA rating. For StorageTechnology,
+this function returns existing discharge capacity in MW; see
+[`get_existing_capacity_mwh`](@ref) for existing energy capacity in MWh. For
+TransmissionTechnology it is the thermal rating.
 
 # Arguments
 
@@ -80,7 +89,7 @@ function get_existing_capacity_mw(
         end
 
         existing_capacity = with_units_base(get_base_system(p), "NATURAL_UNITS") do
-            sum(PSY.get_rating(t) for t in comp)
+            sum(_existing_capacity(c) for c in comp)
         end
 
         return existing_capacity

@@ -7,9 +7,9 @@ This file is auto-generated. Do not edit.
 """
     mutable struct SupplyTechnology{T <: PSY.Generator} <: ResourceTechnology
         requirements::Vector{Requirement}
-        outage_factor::Float64
+        outage_factors::OutageFactors
         prime_mover_type::PrimeMovers
-        capital_costs::PSY.ValueCurve
+        capital_costs::CapitalCost
         lifetime::Int
         available::Bool
         co2::Dict{ThermalFuels, Float64}
@@ -36,9 +36,9 @@ Candidate generation technology for a region. Can represent either a thermal or 
 
 # Arguments
 - `requirements::Vector{Requirement}`: (default: `Vector()`) List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology
-- `outage_factor::Float64`: (default: `1.0`) Derating factor to account for planned or forced outages of a technology. Fraction of hours in a year where technology is unavailable.
+- `outage_factors::OutageFactors`: (default: `(planned=0.0, forced=0.0)`) Derating factor to account for planned or forced outages of a technology. Fraction of hours in a year where technology is unavailable.
 - `prime_mover_type::PrimeMovers`: (default: `PrimeMovers.OT`) Prime mover for generator
-- `capital_costs::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Capital costs for investing in a technology. (USD/MW)
+- `capital_costs::CapitalCost`: (default: `CapitalCost(nothing)`) Capital costs for investing in a technology. (USD/MW)
 - `lifetime::Int`: (default: `100`) Maximum number of years a technology can be active once installed (years)
 - `available::Bool`: (default: `True`) Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)
 - `co2::Dict{ThermalFuels, Float64}`: (default: `Dict()`) Carbon Intensity of fuel
@@ -64,11 +64,11 @@ mutable struct SupplyTechnology{T <: PSY.Generator} <: ResourceTechnology
     "List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology"
     requirements::Vector{Requirement}
     "Derating factor to account for planned or forced outages of a technology. Fraction of hours in a year where technology is unavailable."
-    outage_factor::Float64
+    outage_factors::OutageFactors
     "Prime mover for generator"
     prime_mover_type::PrimeMovers
     "Capital costs for investing in a technology. (USD/MW)"
-    capital_costs::PSY.ValueCurve
+    capital_costs::CapitalCost
     "Maximum number of years a technology can be active once installed (years)"
     lifetime::Int
     "Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)"
@@ -112,14 +112,14 @@ mutable struct SupplyTechnology{T <: PSY.Generator} <: ResourceTechnology
 end
 
 
-function SupplyTechnology{T}(; requirements=Vector(), outage_factor=1.0, prime_mover_type=PrimeMovers.OT, capital_costs=LinearCurve(0.0), lifetime=100, available=True, co2=Dict(), name, id, cofire_start_limits=Dict(), financial_data, start_fuel_mmbtu_per_mw=0.0, operation_costs=ThermalGenerationCost(nothing), fuel=[ThermalFuels.OTHER], power_systems_type, cofire_level_limits=Dict(), internal=InfrastructureSystemsInternal(), ext=Dict(), region=Vector(), min_generation_fraction=0.0, time_limits=(up=1.0, down=1.0), unit_size=0.0, ramp_limits=(up=1.0, down=1.0), capacity_limits=(min=0, max=1e8), ) where T <: PSY.Generator
-    SupplyTechnology{T}(requirements, outage_factor, prime_mover_type, capital_costs, lifetime, available, co2, name, id, cofire_start_limits, financial_data, start_fuel_mmbtu_per_mw, operation_costs, fuel, power_systems_type, cofire_level_limits, internal, ext, region, min_generation_fraction, time_limits, unit_size, ramp_limits, capacity_limits, )
+function SupplyTechnology{T}(; requirements=Vector(), outage_factors=(planned=0.0, forced=0.0), prime_mover_type=PrimeMovers.OT, capital_costs=CapitalCost(nothing), lifetime=100, available=True, co2=Dict(), name, id, cofire_start_limits=Dict(), financial_data, start_fuel_mmbtu_per_mw=0.0, operation_costs=ThermalGenerationCost(nothing), fuel=[ThermalFuels.OTHER], power_systems_type, cofire_level_limits=Dict(), internal=InfrastructureSystemsInternal(), ext=Dict(), region=Vector(), min_generation_fraction=0.0, time_limits=(up=1.0, down=1.0), unit_size=0.0, ramp_limits=(up=1.0, down=1.0), capacity_limits=(min=0, max=1e8), ) where T <: PSY.Generator
+    SupplyTechnology{T}(requirements, outage_factors, prime_mover_type, capital_costs, lifetime, available, co2, name, id, cofire_start_limits, financial_data, start_fuel_mmbtu_per_mw, operation_costs, fuel, power_systems_type, cofire_level_limits, internal, ext, region, min_generation_fraction, time_limits, unit_size, ramp_limits, capacity_limits, )
 end
 
 """Get [`SupplyTechnology`](@ref) `requirements`."""
 get_requirements(value::SupplyTechnology) = value.requirements
-"""Get [`SupplyTechnology`](@ref) `outage_factor`."""
-get_outage_factor(value::SupplyTechnology) = value.outage_factor
+"""Get [`SupplyTechnology`](@ref) `outage_factors`."""
+get_outage_factors(value::SupplyTechnology) = value.outage_factors
 """Get [`SupplyTechnology`](@ref) `prime_mover_type`."""
 get_prime_mover_type(value::SupplyTechnology) = value.prime_mover_type
 """Get [`SupplyTechnology`](@ref) `capital_costs`."""
@@ -167,8 +167,8 @@ get_capacity_limits(value::SupplyTechnology) = value.capacity_limits
 
 """Set [`SupplyTechnology`](@ref) `requirements`."""
 set_requirements!(value::SupplyTechnology, val) = value.requirements = val
-"""Set [`SupplyTechnology`](@ref) `outage_factor`."""
-set_outage_factor!(value::SupplyTechnology, val) = value.outage_factor = val
+"""Set [`SupplyTechnology`](@ref) `outage_factors`."""
+set_outage_factors!(value::SupplyTechnology, val) = value.outage_factors = val
 """Set [`SupplyTechnology`](@ref) `prime_mover_type`."""
 set_prime_mover_type!(value::SupplyTechnology, val) = value.prime_mover_type = val
 """Set [`SupplyTechnology`](@ref) `capital_costs`."""
