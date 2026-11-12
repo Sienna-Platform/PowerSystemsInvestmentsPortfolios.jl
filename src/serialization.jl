@@ -501,7 +501,10 @@ function deserialize_attributes(
 
         api_attr = deserialize_openapi_struct(type, attr_dict)
         attr = build_model_struct(
-            api_attr, portfolio, attr_dict["__metadata__"]; serialized=attr_dict,
+            api_attr,
+            portfolio,
+            attr_dict["__metadata__"];
+            serialized=attr_dict,
         )
 
         uuid = IS.get_uuid(attr)
