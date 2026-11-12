@@ -595,7 +595,9 @@ function deserialize_components!(portfolio::Portfolio, raw)
 end
 
 function build_model_struct(
-    base_struct, portfolio::Portfolio, metadata::Dict{String, Any};
+    base_struct,
+    portfolio::Portfolio,
+    metadata::Dict{String, Any};
     serialized=nothing,
 )
     vals = Dict{Symbol, Any}()
