@@ -182,7 +182,8 @@ function serialize(technology::T) where {T <: _CONTAINS_SHOULD_ENCODE}
         name in fieldnames(typeof(api_struct))
     )
     if technology isa StorageTechnology
-        for field in ("capital_costs_energy", "capital_costs_charge", "capital_costs_discharge")
+        for field in
+            ("capital_costs_energy", "capital_costs_charge", "capital_costs_discharge")
             delete!(data, field)
         end
         data["capital_costs_storage"] = serialize(get_capital_costs_storage(technology))
