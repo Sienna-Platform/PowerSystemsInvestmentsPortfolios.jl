@@ -54,11 +54,10 @@
         available=true,
         region=[zone_a],
     )
-    demand_requirement = DemandRequirement{PSY.PowerLoad}(
+    demand_requirement = ProjectedDemand{PSY.PowerLoad}(
         name="demand_requirement",
         id=12,
         power_systems_type="PowerLoad",
-        value_of_lost_load=1000.0,
         available=true,
         region=[zone_a],
     )
@@ -68,6 +67,7 @@
         power_systems_type="PowerLoad",
         available=true,
         region=[zone_a],
+        financial_data=tech_financial_data,
     )
     aggregate_transport = AggregateTransportTechnology{PSY.ACBranch}(
         name="aggregate_transport",
@@ -113,7 +113,7 @@
     @test supply isa ResourceTechnology
     @test storage isa StorageTechnology{PSY.EnergyReservoirStorage}
     @test storage isa ResourceTechnology
-    @test demand_requirement isa DemandRequirement{PSY.PowerLoad}
+    @test demand_requirement isa ProjectedDemand{PSY.PowerLoad}
     @test demand_requirement isa DemandTechnology
     @test demand_side isa DemandSideTechnology{PSY.PowerLoad}
     @test demand_side isa DemandTechnology

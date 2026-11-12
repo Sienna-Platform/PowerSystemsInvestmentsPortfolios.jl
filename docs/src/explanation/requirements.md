@@ -74,10 +74,6 @@ Several requirement types accept `eligible_regions` and `eligible_resources` vec
 
 Both fields allow one requirement object to target a specific subset of the modeled system without creating separate requirement objects for each region or resource class.
 
-## DemandRequirement — the Boundary Case
-
-[`DemandRequirement`](@ref) is a subtype of `DemandTechnology`, **not** `Requirement`. It represents a load that must be served and is added via `add_technology!`. Despite its name, it participates in the model as a technology (a demand-side resource) rather than as a policy constraint. See the [Technology Types](@ref "Technology Types") explanation for details.
-
 ## See Also
 
   - [`Requirement`](@ref)

@@ -274,7 +274,7 @@ function from_dict(
     base_system = PSY.System(base_system_file)
 
     internal = IS.deserialize(InfrastructureSystemsInternal, raw["internal"])
-    aggregation = PSY.ACBus
+    aggregation = getproperty(PSY, Symbol(IS.strip_module_name(raw["aggregation"])))
     investment_schedule = get(raw, "investment_schedule", nothing)
     if !isnothing(investment_schedule)
         investment_schedule = deserialize(InvestmentScheduleResults, investment_schedule)
@@ -574,11 +574,12 @@ function deserialize_components!(portfolio::Portfolio, raw)
                 handle_deserialization_special_cases!(component, type)
                 #TODO: See if component cache is needed
                 api_component = deserialize_openapi_struct(type, component)
-                model_component =
-                    build_model_struct(
-                        api_component, portfolio, component["__metadata__"];
-                        serialized=component,
-                    )
+                model_component = build_model_struct(
+                    api_component,
+                    portfolio,
+                    component["__metadata__"];
+                    serialized=component,
+                )
 
                 #TODO: skip_validation currently set to true, review the IS validation
                 IS.add_component!(portfolio.data, model_component; skip_validation=true)
