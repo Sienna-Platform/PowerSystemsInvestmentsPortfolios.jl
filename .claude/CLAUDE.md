@@ -28,7 +28,7 @@ Module file `src/PowerSystemsInvestmentsPortfolios.jl` defines all exports and f
 - `time_mapping.jl` — `TimeMapping`, `InvestmentIntervals`, `OperationalPeriods`.
 - `openapi/` — the serde layer, see "Serialization" below.
 - `db_parser.jl` — submodule `DBParser`; `database_to_portfolio` reads a SiennaGridDB-style SQLite DB into a `Portfolio`.
-- `update_system.jl` — `update_system_with_nodal_results!` writes investment results back onto a `PSY.System`.
+- `update_system.jl` — `build_operational_system(portfolio, schedule, year; retirement_order=oldest_first)` returns a copy of the base system with the schedule's decisions up to `year`, for a production cost model (nodal portfolios only). Technologies with `ExistingDevices` change those devices (builds scale them; retirements and retrofits mark whole units unavailable, listed `devices` first, then `retirement_order`, scaling the last one down; demands scale their loads to `get_projected_peak`); others get new devices (`units` per node, a parallel `Line` per unit of a discrete line, a `PowerLoad` per new demand). Scaling multiplies every field in `SIZE_FIELDS` (raw per-unit fields; flagged for review). New renewables and loads copy the technology's chronological profile, `"max_active_power"` / `"demand"` with no features. `restamp_time_series!` moves every `SingleTimeSeries` to the target year (leap days dropped or repeated) and removes forecasts.
 - `utils/getters.jl`, `utils/print.jl` — shared accessors and `show` formatting.
 
 ## Serialization — `to_file` / `from_file`

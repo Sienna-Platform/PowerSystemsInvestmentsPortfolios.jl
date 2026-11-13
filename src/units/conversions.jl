@@ -73,13 +73,6 @@ natural_unit(::EmissionsEnergyCategory) = Mt / (u"MW" * u"hr")
 convert_units(c, val::Number, from::Unitful.Units, to::Unitful.Units) =
     uconvert(to, val * from)
 
-#######################################################
-# Units-aware get_value / set_value
-#
-# Fields are stored internally in a pre-defined set of natural units (u"NU"). The 4-arg `get_value`
-# converts from the default units to a requested target unit.
-#######################################################
-
 val_to_symbol(::Val{T}) where {T} = T
 val_to_string(v::Val) = String(val_to_symbol(v))
 
@@ -160,10 +153,8 @@ end
 _natural_unit_conversions(base, value::Number, from, to) =
     convert_units(base, value, from, to)
 
-# ---- Nothing passthrough ----
-_natural_unit_conversions(base, ::Nothing, ::Any, ::Any) = nothing
+    _natural_unit_conversions(base, ::Nothing, ::Any, ::Any) = nothing
 
-# ---- Compound field types ----
 _natural_unit_conversions(base, v::MinMax, from, to) = (
     min=_natural_unit_conversions(base, v.min, from, to),
     max=_natural_unit_conversions(base, v.max, from, to),
@@ -174,7 +165,6 @@ _natural_unit_conversions(base, v::UpDown, from, to) = (
     down=_natural_unit_conversions(base, v.down, from, to),
 )
 
-# ---- Dict-valued fields (e.g. capacity limits keyed by topology) ----
 _natural_unit_conversions(base, v::Dict, cu, u) =
     Dict(k => _natural_unit_conversions(base, val, cu, u) for (k, val) in v)
 

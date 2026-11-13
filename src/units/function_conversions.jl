@@ -97,8 +97,8 @@ const _FUEL_DIMENSIONS =
     (Unitful.dimension(u"J"), Unitful.dimension(u"m^3"), Unitful.dimension(u"kg"))
 
 """
-Return an operating cost in `units`: natural units return it as stored, and a fuel unit
-(e.g. `MMBtu`) converts the fuel of its fuel curves. Cost curves have no fuel to convert.
+Return an operating cost in `units`: natural units return it as stored. FuelCurves accept 
+a fuel unit (e.g. `MMBtu`) to convert the fuel values.
 """
 function cost_in_units(t, field, cost::UnitsCarryingCost, units)
     check_natural_power_units(t, field, cost)

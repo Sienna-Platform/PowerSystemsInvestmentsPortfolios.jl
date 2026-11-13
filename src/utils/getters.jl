@@ -155,7 +155,8 @@ function get_existing_capacity_mwh(p::Portfolio, t::StorageTechnology)
             @error "Not all names in ExistingDevices matched generators in the base system"
         end
 
-        return sum(PSY.get_storage_capacity(t, u"MW*h") for t in comp)
+        # PowerSystems puts storage capacity in the power category: in MW it reads in MWh
+        return sum(PSY.get_storage_capacity(t, u"MW") for t in comp)
     else
         return 0.0
     end

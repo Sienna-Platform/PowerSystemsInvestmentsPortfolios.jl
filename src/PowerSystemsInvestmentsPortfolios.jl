@@ -196,7 +196,10 @@ export get_fixed_cost_charge
 export get_fixed_cost_discharge
 export get_wacc
 
-export update_system_with_nodal_results!
+export build_operational_system
+export oldest_first
+export restamp_time_series
+export restamp_time_series!
 
 const PSY = PowerSystems
 const IS = InfrastructureSystems
