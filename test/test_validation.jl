@@ -136,7 +136,7 @@ end
         inverter_efficiency=0.96,
         power_systems_type="RenewableDispatch",
         inverter_supply_ratio=1.0,
-        capital_costs_inverter=LinearCurve(0.0),
+        capital_costs_inverter=CapitalCost(LinearCurve(0.0), 0.0),
         available=true,
         region=RegionTopology[attached_region],
     )

@@ -7,7 +7,7 @@ This file is auto-generated. Do not edit.
 """
     mutable struct NodalHVDCTransportTechnology{T <: PSY.Device} <: TransmissionTechnology
         requirements::Vector{Requirement}
-        capital_costs::PSY.ValueCurve
+        capital_costs::CapitalCost
         available::Bool
         name::String
         end_node::RegionTopology
@@ -26,7 +26,7 @@ A nodal representation of candidate HVDC transmission lines between two regions.
 
 # Arguments
 - `requirements::Vector{Requirement}`: (default: `Vector()`) List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology
-- `capital_costs::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Cost of adding new capacity to the nodal transmission line. (USD/MW)
+- `capital_costs::CapitalCost`: (default: `CapitalCost(nothing)`) Cost of adding new capacity to the nodal transmission line. (USD/MW)
 - `available::Bool`: Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)
 - `name::String`: Name
 - `end_node::RegionTopology`: End node for transport technology
@@ -44,7 +44,7 @@ mutable struct NodalHVDCTransportTechnology{T <: PSY.Device} <: TransmissionTech
     "List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology"
     requirements::Vector{Requirement}
     "Cost of adding new capacity to the nodal transmission line. (USD/MW)"
-    capital_costs::PSY.ValueCurve
+    capital_costs::CapitalCost
     "Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)"
     available::Bool
     "Name"
@@ -72,7 +72,7 @@ mutable struct NodalHVDCTransportTechnology{T <: PSY.Device} <: TransmissionTech
 end
 
 
-function NodalHVDCTransportTechnology{T}(; requirements=Vector(), capital_costs=LinearCurve(0.0), available, name, end_node, id, financial_data, start_node, power_systems_type, internal=InfrastructureSystemsInternal(), ext=Dict(), unit_size=1, line_loss=LinearCurve(0.0), capacity_limits=(min=0, max=1e8), ) where T <: PSY.Device
+function NodalHVDCTransportTechnology{T}(; requirements=Vector(), capital_costs=CapitalCost(nothing), available, name, end_node, id, financial_data, start_node, power_systems_type, internal=InfrastructureSystemsInternal(), ext=Dict(), unit_size=1, line_loss=LinearCurve(0.0), capacity_limits=(min=0, max=1e8), ) where T <: PSY.Device
     NodalHVDCTransportTechnology{T}(requirements, capital_costs, available, name, end_node, id, financial_data, start_node, power_systems_type, internal, ext, unit_size, line_loss, capacity_limits, )
 end
 

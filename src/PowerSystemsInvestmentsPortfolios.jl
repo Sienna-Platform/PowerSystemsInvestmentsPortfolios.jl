@@ -21,7 +21,19 @@ import InfrastructureSystems:
     LinearCurve,
     InfrastructureSystemsComponent,
     InfrastructureSystemsType,
-    get_available
+    get_available,
+    DeviceParameter
+
+#################################################################################
+
+using DocStringExtensions
+
+@template (FUNCTIONS, METHODS) = """
+                                 $(TYPEDSIGNATURES)
+                                 $(DOCSTRING)
+                                 """
+
+#################################################################################
 
 # Using PowerSystems in order to support deserializing with PSY parametric typing
 using PowerSystems
@@ -132,6 +144,10 @@ export MinMax
 export InOut
 export UpDown
 export set_units_base_system!
+export CapitalCost
+export InvestmentCost
+export StorageCapitalCost
+export OutageFactors
 
 export show_region_topology_table
 
@@ -170,6 +186,10 @@ using .APIServer
 
 include("definitions.jl")
 
+include("models/cost_functions/investment_cost.jl")
+include("models/cost_functions/CapitalCost.jl")
+include("models/cost_functions/StorageCapitalCost.jl")
+
 include("models/requirements.jl")
 include("models/technologies.jl")
 include("models/regions.jl")
@@ -192,12 +212,5 @@ else
 end
 include("utils/getters.jl")
 include("update_system.jl")
-
-using DocStringExtensions
-
-@template (FUNCTIONS, METHODS) = """
-                                 $(TYPEDSIGNATURES)
-                                 $(DOCSTRING)
-                                 """
 
 end
