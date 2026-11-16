@@ -139,12 +139,8 @@
         region=[zone_a],
     )
     storage_req = Requirement[req_a]
-    storage_capital = StorageCapitalCost(
-        LinearCurve(15.0),
-        LinearCurve(18.0),
-        LinearCurve(11.0),
-        2.0,
-    )
+    storage_capital =
+        StorageCapitalCost(LinearCurve(15.0), LinearCurve(18.0), LinearCurve(11.0), 2.0)
     storage_internal = IS.InfrastructureSystemsInternal()
     storage_ext = Dict("storage" => "meta")
     storage_regions = RegionTopology[zone_b]
@@ -483,12 +479,8 @@
         start_up=0.4,
         shut_down=0.2,
     )
-    colocated_capital_storage = StorageCapitalCost(
-        LinearCurve(200.0),
-        LinearCurve(210.0),
-        LinearCurve(90.0),
-        6.0,
-    )
+    colocated_capital_storage =
+        StorageCapitalCost(LinearCurve(200.0), LinearCurve(210.0), LinearCurve(90.0), 6.0)
     colocated_capital_wind = CapitalCost(LinearCurve(150.0), 7.0)
     colocated_capital_solar = CapitalCost(LinearCurve(130.0), 8.0)
     colocated_capital_inverter = CapitalCost(LinearCurve(70.0), 9.0)
