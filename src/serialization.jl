@@ -574,11 +574,12 @@ function deserialize_components!(portfolio::Portfolio, raw)
                 handle_deserialization_special_cases!(component, type)
                 #TODO: See if component cache is needed
                 api_component = deserialize_openapi_struct(type, component)
-                model_component =
-                    build_model_struct(
-                        api_component, portfolio, component["__metadata__"];
-                        serialized=component,
-                    )
+                model_component = build_model_struct(
+                    api_component,
+                    portfolio,
+                    component["__metadata__"];
+                    serialized=component,
+                )
 
                 #TODO: skip_validation currently set to true, review the IS validation
                 IS.add_component!(portfolio.data, model_component; skip_validation=true)
