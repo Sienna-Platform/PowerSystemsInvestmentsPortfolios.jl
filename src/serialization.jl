@@ -17,12 +17,24 @@ const SYSTEM_KWARGS = Set((
     :name,
     :description,
 ))
+# Fields of the generated OpenAPI co-located struct that PSIP stores as
+# capital_costs_storage and operation_costs_storage.
+const _COLOCATED_LEGACY_STORAGE_FIELDS = (
+    :capital_costs_energy,
+    :capital_costs_power,
+    :operation_costs_energy,
+    :operation_costs_power,
+)
 const ENCODED_FIELDS = Set((
     :duration_limits,
     :capacity_limits,
     :capacity_limits_energy,
     :capacity_limits_discharge,
     :capacity_limits_charge,
+    :capacity_limits_solar,
+    :capacity_limits_wind,
+    :capacity_power_limits,
+    :capacity_energy_limits,
     :angle_limits,
     :co2,
     :fuel,
@@ -39,6 +51,7 @@ const ENCODED_FIELDS = Set((
     :start_node,
     :end_node,
     :efficiency,
+    :efficiency_storage,
     :ramp_limits,
     :time_limits,
     :eligible_regions,
@@ -169,6 +182,10 @@ function serialize(technology::T) where {T <: _CONTAINS_SHOULD_ENCODE}
            field in (:capital_costs_energy, :capital_costs_charge, :capital_costs_discharge)
             continue
         end
+        if technology isa ColocatedSupplyStorageTechnology &&
+           field in _COLOCATED_LEGACY_STORAGE_FIELDS
+            continue
+        end
         if field in ENCODED_FIELDS
             value = serialize_custom_types(field, technology)
         else
@@ -187,6 +204,12 @@ function serialize(technology::T) where {T <: _CONTAINS_SHOULD_ENCODE}
             delete!(data, field)
         end
         data["capital_costs_storage"] = serialize(get_capital_costs_storage(technology))
+    elseif technology isa ColocatedSupplyStorageTechnology
+        for field in _COLOCATED_LEGACY_STORAGE_FIELDS
+            delete!(data, string(field))
+        end
+        data["capital_costs_storage"] = serialize(get_capital_costs_storage(technology))
+        data["operation_costs_storage"] = serialize(get_operation_costs_storage(technology))
     elseif technology isa SupplyTechnology
         delete!(data, "outage_factor")
         data["outage_factors"] = serialize(get_outage_factors(technology))
@@ -650,6 +673,30 @@ function build_model_struct(
             )
         end
     end
+    # The generated OpenAPI co-located schema has separate power and energy costs.
+    if struct_type <: ColocatedSupplyStorageTechnology
+        energy = pop!(vals, :capital_costs_energy)
+        power = pop!(vals, :capital_costs_power)
+        pop!(vals, :operation_costs_energy)
+        power_cost = pop!(vals, :operation_costs_power)
+        if serialized !== nothing && haskey(serialized, "capital_costs_storage")
+            vals[:capital_costs_storage] =
+                IS.deserialize(StorageCapitalCost, serialized["capital_costs_storage"])
+        else
+            vals[:capital_costs_storage] = StorageCapitalCost(
+                LinearCurve(0.0),
+                power === nothing ? LinearCurve(0.0) : power,
+                energy === nothing ? LinearCurve(0.0) : energy,
+                0.0,
+            )
+        end
+        if serialized !== nothing && haskey(serialized, "operation_costs_storage")
+            vals[:operation_costs_storage] =
+                IS.deserialize(StorageCost, serialized["operation_costs_storage"])
+        elseif power_cost !== nothing
+            vals[:operation_costs_storage] = power_cost
+        end
+    end
     if !hasfield(struct_type, :id)
         delete!(vals, :id)
     end
@@ -786,6 +833,10 @@ function deserialize_custom_types(name, base_struct::OpenAPI.APIModel, portfolio
         :capacity_limits_discharge,
         :capacity_limits_charge,
         :capacity_limits_energy,
+        :capacity_limits_solar,
+        :capacity_limits_wind,
+        :capacity_power_limits,
+        :capacity_energy_limits,
         :duration_limits,
         :angle_limits,
     ]
@@ -795,7 +846,7 @@ function deserialize_custom_types(name, base_struct::OpenAPI.APIModel, portfolio
         else
             val = (min=data["min"], max=data["max"])
         end
-    elseif name == :efficiency
+    elseif name in [:efficiency, :efficiency_storage]
         data = getfield(base_struct, name)
         val = (in=data["in"], out=data["out"])
     elseif name in [:ramp_limits, :time_limits]
