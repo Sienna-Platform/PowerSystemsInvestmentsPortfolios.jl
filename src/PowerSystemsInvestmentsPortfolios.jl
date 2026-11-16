@@ -66,7 +66,7 @@ export NodalACTransportTechnology
 export AggregateTransportTechnology
 export NodalHVDCTransportTechnology
 export StorageTechnology
-export DemandRequirement
+export ProjectedDemand
 export DemandSideTechnology
 export RetirementPotential
 export AggregateRetirementPotential
@@ -138,6 +138,7 @@ export add_supplemental_attribute!
 export remove_supplemental_attribute!
 export get_supplemental_attribute
 export get_supplemental_attributes
+export get_associated_technologies
 export to_json
 export from_json
 export MinMax
@@ -153,6 +154,7 @@ export show_region_topology_table
 
 export get_existing_capacity_mw
 export get_existing_capacity_mwh
+export get_retrofit_capacity_mw
 export is_new
 export get_heat_rate
 export get_fuel_cost

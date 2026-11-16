@@ -22,7 +22,7 @@ The database parser maps SiennaGridDB relational tables to PSIP types:
 | `generation_units` rows         | [`ExistingDevices`](@ref) supplemental attribute |
 | `storage_units` rows            | [`StorageTechnology`](@ref)                      |
 | `transport_technologies` rows   | [`AggregateTransportTechnology`](@ref)           |
-| `loads` rows                    | [`DemandRequirement`](@ref)                      |
+| `loads` rows                    | [`ProjectedDemand`](@ref)                        |
 | `time_series_associations` rows | InfrastructureSystems time series attachments    |
 
 ## How to invoke it
@@ -61,7 +61,7 @@ Note that the parser's SQL queries are tightly coupled to the current SiennaGrid
   - [`SupplyTechnology`](@ref)
   - [`StorageTechnology`](@ref)
   - [`AggregateTransportTechnology`](@ref)
-  - [`DemandRequirement`](@ref)
+  - [`ProjectedDemand`](@ref)
   - [`add_technology!`](@ref)
   - [`add_region!`](@ref)
   - [`add_requirement!`](@ref)

@@ -274,7 +274,7 @@ function from_dict(
     base_system = PSY.System(base_system_file)
 
     internal = IS.deserialize(InfrastructureSystemsInternal, raw["internal"])
-    aggregation = PSY.ACBus
+    aggregation = getproperty(PSY, Symbol(IS.strip_module_name(raw["aggregation"])))
     investment_schedule = get(raw, "investment_schedule", nothing)
     if !isnothing(investment_schedule)
         investment_schedule = deserialize(InvestmentScheduleResults, investment_schedule)
