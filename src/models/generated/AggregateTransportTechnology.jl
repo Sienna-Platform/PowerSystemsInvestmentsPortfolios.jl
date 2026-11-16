@@ -8,7 +8,7 @@ This file is auto-generated. Do not edit.
     mutable struct AggregateTransportTechnology{T <: PSY.Device} <: TransmissionTechnology
         requirements::Vector{Requirement}
         start_region::RegionTopology
-        capital_costs::PSY.ValueCurve
+        capital_costs::CapitalCost
         available::Bool
         name::String
         id::Int64
@@ -27,7 +27,7 @@ An aggregated representation of a transmission interchange between two regions.
 # Arguments
 - `requirements::Vector{Requirement}`: (default: `Vector()`) List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology
 - `start_region::RegionTopology`: Start region for transport technology
-- `capital_costs::PSY.ValueCurve`: (default: `LinearCurve(0.0)`) Cost of adding new capacity to the nodal transmission line. (USD/MW)
+- `capital_costs::CapitalCost`: (default: `CapitalCost(nothing)`) Cost of adding new capacity to the nodal transmission line. (USD/MW)
 - `available::Bool`: Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)
 - `name::String`: Name
 - `id::Int64`: Numerical Index for AC transport technologies
@@ -46,7 +46,7 @@ mutable struct AggregateTransportTechnology{T <: PSY.Device} <: TransmissionTech
     "Start region for transport technology"
     start_region::RegionTopology
     "Cost of adding new capacity to the nodal transmission line. (USD/MW)"
-    capital_costs::PSY.ValueCurve
+    capital_costs::CapitalCost
     "Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)"
     available::Bool
     "Name"
@@ -72,7 +72,7 @@ mutable struct AggregateTransportTechnology{T <: PSY.Device} <: TransmissionTech
 end
 
 
-function AggregateTransportTechnology{T}(; requirements=Vector(), start_region, capital_costs=LinearCurve(0.0), available, name, id, end_region, financial_data, power_systems_type, internal=InfrastructureSystemsInternal(), ext=Dict(), unit_size=1, line_loss=0.0, capacity_limits=(min=0, max=1e8), ) where T <: PSY.Device
+function AggregateTransportTechnology{T}(; requirements=Vector(), start_region, capital_costs=CapitalCost(nothing), available, name, id, end_region, financial_data, power_systems_type, internal=InfrastructureSystemsInternal(), ext=Dict(), unit_size=1, line_loss=0.0, capacity_limits=(min=0, max=1e8), ) where T <: PSY.Device
     AggregateTransportTechnology{T}(requirements, start_region, capital_costs, available, name, id, end_region, financial_data, power_systems_type, internal, ext, unit_size, line_loss, capacity_limits, )
 end
 
