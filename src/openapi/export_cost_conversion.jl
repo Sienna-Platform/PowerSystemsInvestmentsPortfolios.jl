@@ -357,17 +357,9 @@ function convert_nested_data_to_openapi(fd::TechnologyFinancialData)
         debt_rate=get_debt_rate(fd),
         return_on_equity=get_return_on_equity(fd),
         tax_rate=get_tax_rate(fd),
-    )
-end
-
-function convert_nested_data_to_openapi(fd::PortfolioFinancialData)
-    # TODO: Remove id field from this struct
-    return PI.PortfolioFinancialData(;
-        id=1e6,
-        base_year=fd.base_year,
-        discount_rate=fd.discount_rate,
-        inflation_rate=fd.inflation_rate,
-        interest_rate=fd.interest_rate,
+        discount_rate=get_discount_rate(fd),
+        inflation_rate=get_inflation_rate(fd),
+        interest_rate=get_interest_rate(fd),
     )
 end
 

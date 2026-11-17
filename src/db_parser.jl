@@ -84,6 +84,7 @@ import ..PowerSystemsInvestmentsPortfolios:
     RegionTopology,
     ExistingDevices,
     TechnologyFinancialData,
+    set_base_system!,
     SupplyTechnology,
     StorageTechnology,
     DemandRequirement,
@@ -104,7 +105,8 @@ import ..PowerSystemsInvestmentsPortfolios:
     get_fixed_cost,
     get_variable_cost,
     get_operation_costs,
-    get_base_year,
+    get_technology_base_year,
+    get_financial_data,
     get_existing_capacity_mw,
     get_existing_devices,
     get_supplemental_attributes,
@@ -243,7 +245,8 @@ const PRIME_MOVER_TO_TIMESERIES = Dict(
     [PrimeMovers.CC, ThermalFuels.OTHER] => "NGCC",
 )
 
-# Remove later, or make this optional later depending on what is in the dataset
+# The database stores no financial data, so every technology gets its own copy of these
+# defaults, rates included.
 const DEFAULT_FINANCIAL_DATA = TechnologyFinancialData(;
     capital_recovery_period=30,
     technology_base_year=2025,
@@ -251,6 +254,9 @@ const DEFAULT_FINANCIAL_DATA = TechnologyFinancialData(;
     debt_rate=0.07,
     return_on_equity=0.1,
     tax_rate=0.257,
+    discount_rate=0.07,
+    inflation_rate=0.02,
+    interest_rate=0.05,
 )
 
 # RTS database was written in PSY5 and so some definitions have changed in PSY6,
@@ -261,39 +267,24 @@ const PSY6_MAPPING = Dict("Transformer2W" => "TwoWindingTransformer")
 
 """
 The following function imports from the database and generates the structs for a portfolio.
-Portfolio-level financial data is not stored in the database and must be provided separately.
-See `PortfolioFinancialData`(@ref) for more details.
+Financial data is not stored in the database: every technology gets its own copy of
+`DEFAULT_FINANCIAL_DATA`; set per-technology values on the result if needed.
+The model base year is set on the investment model, not the portfolio.
 
 # Arguments
 
   - `database_filepath::AbstractString`: The path to the SQLite database file
-  - `discount_rate::Float64`: The discount rate for the portfolio
-  - `inflation_rate::Float64`: The inflation rate for the portfolio
-  - `interest_rate::Float64`: The interest rate for the portfolio
-  - `base_year::Int64`: The base year for the portfolio
   - `aggregation::Type{<:Union{PSY.ACBus, PSY.AggregationTopology}}`: (default: `PSY.ACBus`) The aggregation level for the portfolio. Defaults to a nodal aggregation level
   - `system::PSY.System`: (default: `PSY.System(100.0)`) The base power system for the portfolio
 """
 function database_to_portfolio(
-    database_filepath::AbstractString,
-    discount_rate::Float64,
-    inflation_rate::Float64,
-    interest_rate::Float64,
-    base_year::Int64;
+    database_filepath::AbstractString;
     aggregation::Type{<:Union{PSY.ACBus, PSY.AggregationTopology}}=DEFAULT_AGGREGATION,
     system::PSY.System=PSY.System(100.0),
 )
-    portfolio = Portfolio(
-        aggregation,
-        base_year,
-        discount_rate,
-        inflation_rate,
-        interest_rate;
-        base_system=system,
-    )
-    portfolio = database_to_structs(database_filepath, portfolio)
-
-    return portfolio
+    portfolio = Portfolio(aggregation)
+    set_base_system!(portfolio, system)
+    return database_to_structs(database_filepath, portfolio)
 end
 
 function database_to_structs(db_path::AbstractString, portfolio::Portfolio)
@@ -638,7 +629,7 @@ function add_aggregate_lines!(
             available=component_attr["available"],
             base_power=100.0,
             power_systems_type=string(nameof(ACBranch)),
-            financial_data=DEFAULT_FINANCIAL_DATA,
+            financial_data=deepcopy(DEFAULT_FINANCIAL_DATA),
             start_region=collect(
                 IS.get_components(
                     x -> get_id(x) == area_from_id,
@@ -678,7 +669,7 @@ function add_nodal_lines!(
             name=string(rec.arc_id) * "_newline",
             available=true,
             power_systems_type=string(nameof(ACBranch)),
-            financial_data=DEFAULT_FINANCIAL_DATA,
+            financial_data=deepcopy(DEFAULT_FINANCIAL_DATA),
             start_node=get_region(Node, portfolio, balancing_topology_from),
             end_node=get_region(Node, portfolio, balancing_topology_to),
             reactance=component_attr["reactance"],
@@ -717,7 +708,7 @@ function add_technologies!(
                 prime_mover_type=get(PRIME_MOVER_MAPPING, rec.prime_mover, PrimeMovers.OT),
                 storage_tech=get(STORAGE_MAPPING, rec.fuel, StorageTech.OTHER_THERM),
                 region=regions,
-                financial_data=DEFAULT_FINANCIAL_DATA,
+                financial_data=deepcopy(DEFAULT_FINANCIAL_DATA),
                 available=true,
                 power_systems_type=string(nameof(parametric)),
                 operation_costs=StorageCost(),
@@ -734,7 +725,7 @@ function add_technologies!(
                 fuel=[get(FUEL_MAPPING, rec.fuel, ThermalFuels.OTHER)],
                 co2=Dict(get(FUEL_MAPPING, rec.fuel, ThermalFuels.OTHER) => 0.0),
                 region=regions,
-                financial_data=DEFAULT_FINANCIAL_DATA,
+                financial_data=deepcopy(DEFAULT_FINANCIAL_DATA),
                 available=true,
                 power_systems_type=string(nameof(parametric)),
                 operation_costs=ThermalGenerationCost(
@@ -1009,7 +1000,7 @@ function add_generation_units!(
                 prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers.Value, rec.prime_mover),
                 fuel=[fuel],
                 region=regions,
-                financial_data=DEFAULT_FINANCIAL_DATA,
+                financial_data=deepcopy(DEFAULT_FINANCIAL_DATA),
                 available=true,
                 power_systems_type=string(nameof(component_type)),
                 operation_costs=ops_cost,
@@ -1122,7 +1113,7 @@ function add_storage_units!(
             prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers.Value, rec.prime_mover),
             storage_tech=PSY.StorageTech.Value(component_attr["storage_technology_type"]),
             region=regions,
-            financial_data=DEFAULT_FINANCIAL_DATA,
+            financial_data=deepcopy(DEFAULT_FINANCIAL_DATA),
             available=true,
             power_systems_type=string(nameof(component_type)),
             operation_costs=ops_cost,
@@ -1367,7 +1358,7 @@ function add_system_lines!(
                 name=rec.name,
                 available=true,
                 power_systems_type=string(nameof(component_type)),
-                financial_data=DEFAULT_FINANCIAL_DATA,
+                financial_data=deepcopy(DEFAULT_FINANCIAL_DATA),
                 start_node=get_region(Node, portfolio, balancing_topology_from),
                 end_node=get_region(Node, portfolio, balancing_topology_to),
                 reactance=component_attr["x"],
@@ -1396,7 +1387,7 @@ function add_system_lines!(
                 name=rec.name * "_new",
                 available=true,
                 power_systems_type=string(nameof(component_type)),
-                financial_data=DEFAULT_FINANCIAL_DATA,
+                financial_data=deepcopy(DEFAULT_FINANCIAL_DATA),
                 start_node=get_region(Node, portfolio, balancing_topology_from),
                 end_node=get_region(Node, portfolio, balancing_topology_to),
                 reactance=component_attr["x"],
@@ -1423,7 +1414,7 @@ function add_system_lines!(
                 name=string(area_list[1]) * "_" * string(area_list[2]),
                 available=true,
                 power_systems_type=string(nameof(ACBranch)),
-                financial_data=DEFAULT_FINANCIAL_DATA,
+                financial_data=deepcopy(DEFAULT_FINANCIAL_DATA),
                 start_region=get_region(Zone, portfolio, area_list[1]),
                 end_region=get_region(Zone, portfolio, area_list[2]),
                 capital_costs=LinearCurve(1e5),
@@ -1469,7 +1460,8 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
                     )
                 ]
                 ts_data = TimeSeries.TimeArray(timestamps, values)
-                cost_year = get_base_year(portfolio)
+                # Costs are read at the year the technology's cost data is reported in.
+                cost_year = get_technology_base_year(get_financial_data(tech))
                 cost_data[ts_association.name] =
                     first(TimeSeries.values(ts_data[Dates.DateTime(cost_year, 1, 1)]))
 

@@ -34,6 +34,8 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 # The OpenAPI model packages are registered (0.2), so only the two Sienna packages still
 # developed on a branch are pinned.
 InfrastructureSystems = {rev = "IS4", url = "https://github.com/Sienna-Platform/InfrastructureSystems.jl"}
+# Until the schema release registers these models with per-technology rates.
+PowerInvestmentsOpenAPIModels = {rev = "rh/remove-portfolio-financial-data", subdir = "PowerInvestmentsOpenAPIModels.jl", url = "https://github.com/Sienna-Platform/PowerOpenAPIModels.git"}
 PowerSystems = {rev = "psy6", url = "https://github.com/Sienna-Platform/PowerSystems.jl"}
 
 [compat]

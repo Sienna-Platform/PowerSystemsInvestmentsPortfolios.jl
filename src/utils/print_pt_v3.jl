@@ -45,16 +45,6 @@ function show_portfolio_table(io::IO, p::Portfolio; kwargs...)
         "Description" isnothing(get_description(p)) ? "" : get_description(p)
         "Aggregation" string(p.aggregation)
     ]
-    fd = get_financial_data(p)
-    if !isnothing(fd)
-        table = vcat(
-            table,
-            Any[
-                "Base Year" string(fd.base_year)
-                "Discount Rate" string(fd.discount_rate)
-            ],
-        )
-    end
     PrettyTables.pretty_table(
         io,
         table;

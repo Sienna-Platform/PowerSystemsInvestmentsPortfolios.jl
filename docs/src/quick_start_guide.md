@@ -27,7 +27,7 @@ CurrentModule = PowerSystemsInvestmentsPortfolios
 | Demand                   | [`DemandRequirement`](@ref), [`DemandSideTechnology`](@ref)                                                                                                                                                           |
 | Policy requirements      | [`CarbonCaps`](@ref), [`CarbonTax`](@ref), [`CapacityReserveMargin`](@ref), [`EnergyShareRequirements`](@ref), [`MinimumCapacityRequirements`](@ref), [`MaximumCapacityRequirements`](@ref), [`HourlyMatching`](@ref) |
 | Existing capacity        | [`ExistingDevices`](@ref), [`RetirementPotential`](@ref), [`RetrofitPotential`](@ref)                                                                                                                                 |
-| Costs and financial data | [`CapitalCost`](@ref), [`StorageCapitalCost`](@ref), [`PortfolioFinancialData`](@ref), [`TechnologyFinancialData`](@ref)                                                                                              |
+| Costs and financial data | [`CapitalCost`](@ref), [`StorageCapitalCost`](@ref), [`TechnologyFinancialData`](@ref)                                                                                                                                |
 
 ## Related Packages
 
@@ -46,9 +46,8 @@ import PowerSystemsInvestmentsPortfolios as PSIP
 import PowerSystems as PSY
 using PowerSystems: LinearCurve, CostCurve, RenewableGenerationCost
 
-# Create a portfolio from an existing system, with financial parameters
-portfolio =
-    Portfolio(base_sys; financial_data=PortfolioFinancialData(2030, 0.07, 0.025, 0.05))
+# Create a portfolio from an existing system
+portfolio = Portfolio(base_sys)
 
 # Add a planning zone to the portfolio's topology
 west = Area(; name="West", input_basis=u"NU")
@@ -62,6 +61,9 @@ fin = TechnologyFinancialData(;
     debt_rate=0.07,
     return_on_equity=0.10,
     tax_rate=0.257,
+    discount_rate=0.07,
+    inflation_rate=0.025,
+    interest_rate=0.05,
 )
 
 wind = SupplyTechnology{PSY.RenewableDispatch}(;

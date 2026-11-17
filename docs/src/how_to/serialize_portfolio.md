@@ -55,7 +55,7 @@ copying it, and rejects later writes to the time series.
   - **Supplemental attributes** — `ExistingDevices`, `RetirementPotential`,
     `RetrofitPotential`, and their attachments
   - **Time series** — stored in HDF5 beside the document, never inside it
-  - **Metadata and financial data** — name, description, and `PortfolioFinancialData`
+  - **Metadata** — name, description, and data source
 
 The parts of a [`ColocatedSupplyStorageTechnology`](@ref) are written as ordinary
 technologies and are masked again when the file is read.

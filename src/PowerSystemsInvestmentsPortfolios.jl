@@ -89,7 +89,6 @@ export HourlyMatching
 export EnergyShareRequirements
 export MinimumCapacityRequirements
 export MaximumCapacityRequirements
-export PortfolioFinancialData
 export InvestmentScheduleResults
 export TechnologyFinancialData
 export TimeMapping
@@ -115,7 +114,6 @@ export has_requirement
 export get_ext
 export get_description
 export get_financial_data
-export get_base_year
 export get_inflation_rate
 export get_interest_rate
 export get_discount_rate
@@ -123,7 +121,6 @@ export get_investment_schedule
 export get_base_system
 export set_description!
 export set_name!
-export set_base_year!
 export set_inflation_rate!
 export set_interest_rate!
 export set_discount_rate!
