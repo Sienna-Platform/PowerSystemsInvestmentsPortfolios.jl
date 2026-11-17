@@ -1577,7 +1577,7 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
             ts = SingleTimeSeries(
                 "capacity_factor",
                 ts_array;
-                unit_system=IS.CU,
+                per_unit_of="base_power",
                 quantity_kind="active_power",
             )
             add_time_series!(portfolio, tech, ts)
@@ -1598,7 +1598,7 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
         ts = SingleTimeSeries(
             "demand",
             ts_array;
-            unit_system=IS.CU,
+            per_unit_of="base_power",
             quantity_kind="active_power",
         )
         add_time_series!(portfolio, demand, ts)
@@ -1611,21 +1611,22 @@ end
 #############################################################################
 
 """
-`unit_system` / `quantity_kind` / `units` for a series the database normalized against an
+`per_unit_of` / `quantity_kind` / `units` for a series the database normalized against an
 accessor on its owner.
 
 The `scaling_factor_multiplier` column holds a serialized function reference; every read used
 to multiply the stored values by it. Nothing rescales on retrieval now, so the declaration
-carries that meaning instead: `IS.CU` says the values are per unit on the owner's own base,
-and `quantity_kind` names the quantity they scale to. A per-unit basis is not a units label,
-so `units` stays `nothing`.
+carries that meaning instead: `per_unit_of = "base_power"` says the values are per unit on
+the owner's own base, and `quantity_kind` names the quantity they scale to. A per-unit basis
+is not a units label, so `units` stays `nothing`. Every mapped quantity is a power, which
+PowerSystems takes in CU only as a fraction of `base_power`.
 
 Errors on a multiplier with no mapping rather than leaving the quantity unstated: the values
 are per unit either way, and a consumer that cannot tell what of is stuck.
 """
 function normalized_series_declaration(raw_multiplier)
     if ismissing(raw_multiplier) || isnothing(raw_multiplier)
-        return (unit_system=nothing, quantity_kind=nothing, units=nothing)
+        return (per_unit_of=nothing, quantity_kind=nothing, units=nothing)
     end
     accessor = JSON3.read(raw_multiplier, Dict{String, Any})["__metadata__"]["function"]
     if !haskey(MULTIPLIER_QUANTITY_KINDS, accessor)
@@ -1635,7 +1636,7 @@ function normalized_series_declaration(raw_multiplier)
         )
     end
     return (
-        unit_system=IS.CU,
+        per_unit_of="base_power",
         quantity_kind=MULTIPLIER_QUANTITY_KINDS[accessor],
         units=nothing,
     )
@@ -1686,7 +1687,7 @@ function deserialize_time_series(db, row)
         values;
         units=declaration.units,
         quantity_kind=declaration.quantity_kind,
-        unit_system=declaration.unit_system,
+        per_unit_of=declaration.per_unit_of,
     )
 end
 
