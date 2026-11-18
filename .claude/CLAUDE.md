@@ -1,6 +1,9 @@
 # PowerSystemsInvestmentsPortfolios.jl — Claude Guide
 
-Platform-wide Sienna conventions (performance, type stability, formatter, environments, code style) live in the `sienna-psy6` skill — invoke it when it is installed. This file is repo-specific and does not restate them.
+This file is repo-specific. The shared Sienna rules load from the import below; the `sienna-dev` skill holds the cross-package
+context; the `sienna-dev` and `sienna-reviewer` subagents implement and review.
+
+@Sienna.md
 
 ## Purpose & place in the stack
 
@@ -108,7 +111,7 @@ container (the analogue of PSY's `System`); technology types are concrete and **
 - **Name shadowing with PSY.** PSIP is `using PowerSystems`, but a generated accessor with the same name as a PSY one (`get_curtailment_cost`, `get_fuel_cost`, `get_fuel`, `get_prime_mover_type`, ...) defines a *new PSIP function* that shadows PSY's rather than extending it. Call PSY/IS accessors on PSY objects qualified (`PSY.get_curtailment_cost(cost)`, `IS.get_fuel_cost(curve)`).
 - **No duplicate definitions.** Julia refuses to precompile a module that defines the same method twice, and a duplicate `const` silently takes the last value. When porting code from PSY, check the target file does not already hold it.
 - **psy6 units are Unitful.** PSY constructors (`Area`, `LoadZone`, `ACBus`, generators, storage, branches, `TransformerCircuit`) require `input_basis = u"CU"` or `u"NU"` — a Unitful unit, not the `CU`/`NU` marker objects, which now serve only `to_file`'s `units` mode and cost curves' type parameter. `@u_str` only finds those units when the `PerUnit` unit module is **bound by name in the calling module**: the main module gets it from `using PowerSystems`, but a submodule that imports selectively (`DBParser`) needs `import PowerSystems: PerUnit`, or `u"CU"` fails at precompile. `db_parser.jl` passes `u"NU"` for topology (raw DB values) and `u"CU"` where it has already divided by a base power. PSY getters and setters take Unitful units too (`PSY.get_rating(gen, u"MW")`, `set_rating!(gen, x * MW)`); bare floats are rejected.
-- Use `get_*` accessors, not dot access, in user-facing code. PO (platform model) structs are the exception — they are accessed with dot notation in the converters.
+- PO (platform model) structs are the exception to the `get_*` accessor rule: the converters use dot access on them.
 - Several existing fields use `Union{Nothing, T}` (e.g. `investment_schedule`). This predates the prefer-predicate guidance; do not propagate the pattern into new code.
 - **Known open issue:** `db_parser.jl` still references the removed `RegionTopology`/`Zone`/`Node` types (load-time "undeclared binding" warnings), so the parser's zone/node paths are broken until they are mapped onto PSY topology types. `test/test_parser.jl` has no testsets, so nothing catches it.
 
@@ -139,4 +142,4 @@ Test notes:
 
 - **ReTest stops the whole run at the first failing testset** — whether from an exception outside a `@test` or an ordinary failed `@test` — so one broken testset hides every testset after it. When the suite stops early, run testsets one by one (`retest(mod, id)` for `id in 1:N`, catching each throw) to get the full failure list. `retest(mod; dry=true)` lists the registered testsets with their ids.
 - Top-level testset descriptions must be **unique** across all test files — ReTest silently keeps only the last of a duplicate name.
-- The runner pulls test data from the `CaseData` artifact in `test/Artifacts.toml` and runs Aqua checks (unbound args, undefined exports, ambiguities, stale/compat deps) at module load. Test deps live in `test/Project.toml`; always use `--project=test`. Uses `PowerSystemCaseBuilder` — don't mutate a cached system without `deepcopy`.
+- The runner pulls test data from the `CaseData` artifact in `test/Artifacts.toml` and runs Aqua checks (unbound args, undefined exports, ambiguities, stale/compat deps) at module load.
