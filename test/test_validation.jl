@@ -11,6 +11,9 @@
         debt_rate=0.05,
         return_on_equity=0.12,
         tax_rate=0.21,
+        discount_rate=0.07,
+        inflation_rate=0.025,
+        interest_rate=0.05,
     )
     storage_defaults = (;
         available=true,
@@ -126,6 +129,9 @@ end
         debt_rate=0.05,
         return_on_equity=0.12,
         tax_rate=0.21,
+        discount_rate=0.07,
+        inflation_rate=0.025,
+        interest_rate=0.05,
     )
     supply_ref = SupplyTechnology{PSY.RenewableDispatch}(;
         name="colocated_supply_ref",
@@ -421,6 +427,9 @@ end
         debt_rate=0.05,
         return_on_equity=0.12,
         tax_rate=0.21,
+        discount_rate=0.07,
+        inflation_rate=0.025,
+        interest_rate=0.05,
     )
     transport_defaults = (; available=true, power_systems_type="ACBranch", financial_data)
 

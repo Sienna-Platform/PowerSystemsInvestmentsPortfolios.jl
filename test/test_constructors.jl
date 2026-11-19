@@ -6,6 +6,9 @@
         debt_rate=0.05,
         return_on_equity=0.08,
         tax_rate=0.21,
+        discount_rate=0.07,
+        inflation_rate=0.025,
+        interest_rate=0.05,
     )
 
     zone_a = PSY.Area(; input_basis=u"CU", name="zone_a", base_power=100.0)

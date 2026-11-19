@@ -274,7 +274,7 @@ function add_renewable_timeseries!(
     renewable_ts = PSY.SingleTimeSeries(;
         name="max_active_power",                      # Standard PowerSystems time series name
         data=ts_array,                                 # Capacity factor time series data
-        unit_system=IS.CU,                             # Values are per unit on the generator's base
+        per_unit_of="base_power",                      # Values are per unit on the generator's base
         quantity_kind="active_power",                  # ...of active power
     )
 

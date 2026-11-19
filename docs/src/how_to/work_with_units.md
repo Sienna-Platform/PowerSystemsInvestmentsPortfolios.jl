@@ -30,6 +30,9 @@ fin = TechnologyFinancialData(;
     debt_rate=0.06,
     return_on_equity=0.12,
     tax_rate=0.21,
+    discount_rate=0.07,
+    inflation_rate=0.025,
+    interest_rate=0.05,
 )
 
 supply = SupplyTechnology{PSY.ThermalStandard}(;

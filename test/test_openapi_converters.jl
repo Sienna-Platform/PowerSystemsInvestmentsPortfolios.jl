@@ -56,6 +56,9 @@ end
         debt_rate=0.05,
         return_on_equity=0.1,
         tax_rate=0.21,
+        discount_rate=0.08,
+        inflation_rate=0.02,
+        interest_rate=0.04,
     )
     po = PSIP.convert_nested_data_to_openapi(fd)
     round_tripped = PSIP.convert_nested_data(po)
@@ -67,6 +70,9 @@ end
     @test PSIP.get_debt_rate(round_tripped) == 0.05
     @test PSIP.get_return_on_equity(round_tripped) == 0.1
     @test PSIP.get_tax_rate(round_tripped) == 0.21
+    @test PSIP.get_discount_rate(round_tripped) == 0.08
+    @test PSIP.get_inflation_rate(round_tripped) == 0.02
+    @test PSIP.get_interest_rate(round_tripped) == 0.04
 end
 
 @testset "compound PO constructors" begin
@@ -151,6 +157,9 @@ end
             debt_rate=0.05,
             return_on_equity=0.1,
             tax_rate=0.21,
+            discount_rate=0.07,
+            inflation_rate=0.025,
+            interest_rate=0.05,
         ),
         capital_costs=PSIP.CapitalCost(LinearCurve(1000.0), 0.0),
     )
@@ -186,6 +195,9 @@ end
             debt_rate=0.05,
             return_on_equity=0.1,
             tax_rate=0.21,
+            discount_rate=0.07,
+            inflation_rate=0.025,
+            interest_rate=0.05,
         ),
     )
     refs[10] = tech
@@ -237,6 +249,9 @@ end
             debt_rate=0.05,
             return_on_equity=0.1,
             tax_rate=0.21,
+            discount_rate=0.07,
+            inflation_rate=0.025,
+            interest_rate=0.05,
         ),
     )
     refs[40] = tech
@@ -289,6 +304,9 @@ end
             debt_rate=0.05,
             return_on_equity=0.1,
             tax_rate=0.21,
+            discount_rate=0.07,
+            inflation_rate=0.025,
+            interest_rate=0.05,
         ),
     )
     refs[20] = tech
@@ -359,6 +377,9 @@ end
         debt_rate=0.05,
         return_on_equity=0.1,
         tax_rate=0.21,
+        discount_rate=0.07,
+        inflation_rate=0.025,
+        interest_rate=0.05,
     )
     supply = SupplyTechnology{ThermalStandard}(;
         name="default_available_supply",
@@ -403,10 +424,7 @@ end
     @test PSIP._serialize_type_name(PSY.Area) == "PowerSystems.Area"
 
     for aggregation in (PSY.ACBus, PSY.Area)
-        portfolio = Portfolio(
-            aggregation;
-            financial_data=PortfolioFinancialData(2024, 0.07, 0.025, 0.05),
-        )
+        portfolio = Portfolio(aggregation)
         PSIP.add_topology!(
             portfolio,
             PSY.Area(; input_basis=u"CU", name="zone_a", base_power=100.0),

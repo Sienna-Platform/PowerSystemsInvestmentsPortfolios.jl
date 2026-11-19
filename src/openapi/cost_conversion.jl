@@ -377,15 +377,9 @@ function convert_nested_data(po::PI.TechnologyFinancialData)
         debt_rate=po.debt_rate,
         return_on_equity=po.return_on_equity,
         tax_rate=po.tax_rate,
-    )
-end
-
-function convert_nested_data(po::PI.PortfolioFinancialData)
-    return PortfolioFinancialData(
-        po.base_year,
-        po.discount_rate,
-        po.inflation_rate,
-        po.interest_rate,
+        discount_rate=po.discount_rate,
+        inflation_rate=po.inflation_rate,
+        interest_rate=po.interest_rate,
     )
 end
 

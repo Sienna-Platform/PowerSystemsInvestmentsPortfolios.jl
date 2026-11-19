@@ -47,20 +47,10 @@ sys = build_system(PSITestSystems, "c_sys5_re")
 # ## Create the Portfolio
 #
 # [`Portfolio`](@ref) is PSIP's central container — analogous to `System` in PSY. Here we
-# pass the base system and the portfolio-level financial parameters as a
-# [`PortfolioFinancialData`](@ref):
-#
-# - `base_year` — the year all costs are converted to
-# - `discount_rate` — rate used to discount future costs to the base year
-# - `inflation_rate` — annual inflation applied to costs over time
-# - `interest_rate` — nominal interest rate used for financing calculations
+# pass the base system. Financial parameters live on each technology (see below), and the
+# base year that costs are discounted to is set on the investment model.
 
-portfolio = Portfolio(sys; financial_data=PortfolioFinancialData(
-    2025,   # base_year
-    0.07,   # discount_rate
-    0.05,   # inflation_rate
-    0.03,   # interest_rate
-))
+portfolio = Portfolio(sys)
 
 # ## Define the Topology
 #
@@ -91,6 +81,9 @@ tech_financials = TechnologyFinancialData(;
     debt_rate=0.07,
     return_on_equity=0.10,
     tax_rate=0.257,
+    discount_rate=0.07,
+    inflation_rate=0.025,
+    interest_rate=0.05,
 )
 
 # ## Add Supply Technologies
@@ -116,7 +109,7 @@ t_thermal = SupplyTechnology{PSY.ThermalStandard}(;
         interconnection_cost=0.0,
     ),
     operation_costs=ThermalGenerationCost(;
-        variable_operation_cost=FuelCurve(LinearCurve(10.5), 1.12),
+        variable_operation_cost=FuelCurve(LinearCurve(10.5), MMBtu, 1.12),
         fixed=0.0,
         start_up=0.0,
         shut_down=0.0,
