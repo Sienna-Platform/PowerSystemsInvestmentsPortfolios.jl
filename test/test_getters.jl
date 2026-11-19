@@ -74,7 +74,7 @@ end
     # c_sys5_bat's battery is rated 400 MW, charges and discharges at up to 200 MW and stores
     # 400 MWh.
     sys = build_system(PSITestSystems, "c_sys5_bat"; skip_serialization=true)
-    p = Portfolio(PSY.ACBus, sys, 2025, 0.07, 0.02, 0.05)
+    p = Portfolio(sys)
     battery = only(PSY.get_components(PSY.EnergyReservoirStorage, sys))
     storage = StorageTechnology{PSY.EnergyReservoirStorage}(;
         name="battery",
@@ -88,6 +88,9 @@ end
             debt_rate=0.07,
             return_on_equity=0.1,
             tax_rate=0.257,
+            discount_rate=0.07,
+            inflation_rate=0.02,
+            interest_rate=0.05,
         ),
     )
     add_technology!(p, storage)
