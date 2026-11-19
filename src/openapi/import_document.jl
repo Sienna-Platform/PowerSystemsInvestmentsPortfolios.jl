@@ -316,9 +316,6 @@ function from_openapi(
     schedule = _resolve_investment_schedule(doc)
     isnothing(schedule) || set_investment_schedule!(portfolio, schedule)
 
-    isnothing(doc.financial_data) ||
-        set_financial_data!(portfolio, convert_nested_data(doc.financial_data))
-
     if isnothing(time_series_storage_path) && !isempty(doc.time_series_associations)
         throw(
             IS.DataFormatError(

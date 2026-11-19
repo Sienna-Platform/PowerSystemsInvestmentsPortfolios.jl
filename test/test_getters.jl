@@ -98,6 +98,39 @@ end
     @test get_existing_capacity_mwh(p_5bus, storage) == 0.0
 end
 
+@testset "existing storage capacity" begin
+    # c_sys5_bat's battery is rated 400 MW, charges and discharges at up to 200 MW and stores
+    # 400 MWh.
+    sys = build_system(PSITestSystems, "c_sys5_bat"; skip_serialization=true)
+    p = Portfolio(sys)
+    battery = only(PSY.get_components(PSY.EnergyReservoirStorage, sys))
+    storage = StorageTechnology{PSY.EnergyReservoirStorage}(;
+        name="battery",
+        power_systems_type="EnergyReservoirStorage",
+        available=true,
+        region=PSY.Topology[PSY.get_bus(battery)],
+        financial_data=TechnologyFinancialData(;
+            capital_recovery_period=30,
+            technology_base_year=2025,
+            debt_fraction=0.5,
+            debt_rate=0.07,
+            return_on_equity=0.1,
+            tax_rate=0.257,
+            discount_rate=0.07,
+            inflation_rate=0.02,
+            interest_rate=0.05,
+        ),
+    )
+    add_technology!(p, storage)
+    PSIP.add_supplemental_attribute!(
+        p,
+        storage,
+        ExistingDevices(; existing_devices=[PSY.get_name(battery)]),
+    )
+    @test get_existing_capacity_mw(p, storage) == 200.0
+    @test get_existing_capacity_mwh(p, storage) == 400.0
+end
+
 @testset "get_peak_demand_mw" begin
     p_5bus = build_portfolio()
     demand_b = get_technology(ProjectedDemand{PowerLoad}, p_5bus, "demand_b")
@@ -254,6 +287,9 @@ end
         debt_rate=0.07,
         return_on_equity=0.1,
         tax_rate=0.257,
+        discount_rate=0.07,
+        inflation_rate=0.025,
+        interest_rate=0.05,
     )
     expected = 0.5 * 0.07 * (1.0 - 0.257) + 0.5 * 0.1
     @test get_wacc(fd) ≈ expected
@@ -263,6 +299,12 @@ end
     thermal = get_technology(SupplyTechnology{ThermalStandard}, p_5bus, "cheap_thermal")
     @test get_wacc(PSIP.get_financial_data(thermal)) ≈ expected
 
+    set_discount_rate!(fd, 0.05)
+    set_inflation_rate!(fd, 0.02)
+    set_interest_rate!(fd, 0.04)
+    @test (get_discount_rate(fd), get_inflation_rate(fd), get_interest_rate(fd)) ==
+          (0.05, 0.02, 0.04)
+
     # All-equity (debt_fraction = 0): WACC = Re
     fd_equity = TechnologyFinancialData(
         capital_recovery_period=20,
@@ -271,6 +313,9 @@ end
         debt_rate=0.05,
         return_on_equity=0.12,
         tax_rate=0.21,
+        discount_rate=0.07,
+        inflation_rate=0.025,
+        interest_rate=0.05,
     )
     @test get_wacc(fd_equity) ≈ 0.12
 
@@ -282,6 +327,9 @@ end
         debt_rate=0.06,
         return_on_equity=0.1,
         tax_rate=0.25,
+        discount_rate=0.07,
+        inflation_rate=0.025,
+        interest_rate=0.05,
     )
     @test get_wacc(fd_debt) ≈ 0.06 * (1.0 - 0.25)
 
@@ -293,6 +341,9 @@ end
         debt_rate=0.05,
         return_on_equity=0.1,
         tax_rate=0.21,
+        discount_rate=0.07,
+        inflation_rate=0.025,
+        interest_rate=0.05,
     )
     @test_throws ErrorException get_wacc(fd_invalid)
 end
@@ -326,6 +377,9 @@ end
         debt_rate=0.07,
         return_on_equity=0.1,
         tax_rate=0.257,
+        discount_rate=0.07,
+        inflation_rate=0.025,
+        interest_rate=0.05,
     )
     supply_ref = SupplyTechnology{PSY.RenewableDispatch}(;
         name="colo_edge_supply_ref",
@@ -398,7 +452,7 @@ end
     @test peak isa Float64
     @test peak > 0.0
     # scale_conforming_load on a non-new, conforming demand exercises the else branch
-    scaled = PSIP.scale_conforming_load(demand_b, p_5bus, 2030)
+    scaled = PSIP.scale_conforming_load(demand_b, p_5bus, 2030, 2025)
     @test scaled isa Float64
     @test scaled ≈ peak   # growth_rate defaults to 0
 
@@ -425,5 +479,5 @@ end
     )
     @test get_peak_demand_mw(p_5bus, demand_d) == 0.0
     PSIP.set_conformity!(demand_d, PSY.LoadConformity.NON_CONFORMING)
-    @test PSIP.scale_conforming_load(demand_d, p_5bus, 2030) == 0.0  # non-conforming path
+    @test PSIP.scale_conforming_load(demand_d, p_5bus, 2030, 2025) == 0.0  # non-conforming path
 end

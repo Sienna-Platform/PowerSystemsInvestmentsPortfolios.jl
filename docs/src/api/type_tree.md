@@ -74,6 +74,5 @@ IS.DeviceParameter
     └── TechnologyFinancialData
 
 IS.InfrastructureSystemsType
-├── PortfolioFinancialData
 └── InvestmentScheduleResults
 ```

@@ -37,6 +37,9 @@ fin = TechnologyFinancialData(;
     debt_rate=0.05,
     return_on_equity=0.12,
     tax_rate=0.21,
+    discount_rate=0.07,
+    inflation_rate=0.025,
+    interest_rate=0.05,
 )
 
 wind = SupplyTechnology{PSY.RenewableDispatch}(;
@@ -75,7 +78,7 @@ ccgt = SupplyTechnology{PSY.ThermalStandard}(;
         interconnection_cost=50_000.0,          # USD/MW
     ),
     operation_costs=ThermalGenerationCost(;
-        variable_operation_cost=FuelCurve(LinearCurve(6.5), 3.5),
+        variable_operation_cost=FuelCurve(LinearCurve(6.5), MMBtu, 3.5),
         fixed=12_000.0,
         start_up=0.0,
         shut_down=0.0,

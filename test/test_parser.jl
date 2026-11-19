@@ -1,13 +1,6 @@
 # @testset "Test parser" begin
 #     db_path = joinpath(DATA_DIR, "RTS_inputs/rts_psy5.sqlite")
-#     portfolio = PSIP.DBParser.database_to_portfolio(
-#         db_path,
-#         0.07,
-#         0.03,
-#         0.03,
-#         2025;
-#         aggregation=PSY.ACBus,
-#     )
+#     portfolio = PSIP.DBParser.database_to_portfolio(db_path; aggregation=PSY.ACBus)
 #     base_system = get_base_system(portfolio)
 
 #     @test isa(portfolio, PSIP.Portfolio)

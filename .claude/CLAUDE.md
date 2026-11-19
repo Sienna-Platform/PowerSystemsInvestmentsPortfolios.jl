@@ -1,6 +1,9 @@
 # PowerSystemsInvestmentsPortfolios.jl — Claude Guide
 
-Platform-wide Sienna conventions (performance, type stability, formatter, environments, code style) live in the `sienna-psy6` skill — invoke it when it is installed. This file is repo-specific and does not restate them.
+This file is repo-specific. The shared Sienna rules load from the import below; the `sienna-dev` skill holds the cross-package
+context; the `sienna-dev` and `sienna-reviewer` subagents implement and review.
+
+@Sienna.md
 
 ## Purpose & place in the stack
 
@@ -8,7 +11,7 @@ This is a **data package** — the data-model layer for power-systems capacity-e
 
 Dependency facts verified in `Project.toml` (this is the psy6 line — the two Sienna packages still developed on a branch, IS and PSY, are pinned through `[sources]`; everything else resolves from the General registry):
 
-- Builds on **InfrastructureSystems.jl** (`IS4` branch) — `Portfolio`, `PortfolioFinancialData`, and the technology abstract types subtype `IS.InfrastructureSystemsType` / `IS.InfrastructureSystemsComponent`. The container stores an `IS.SystemData` and an `IS.InfrastructureSystemsInternal`. IS also owns the Sienna archive container (`IS.create_sienna_archive` / `IS.extract_sienna_archive`) and the InfraStore time-series store.
+- Builds on **InfrastructureSystems.jl** (`IS4` branch) — `Portfolio` and the technology abstract types subtype `IS.InfrastructureSystemsType` / `IS.InfrastructureSystemsComponent`. The container stores an `IS.SystemData` and an `IS.InfrastructureSystemsInternal`. IS also owns the Sienna archive container (`IS.create_sienna_archive` / `IS.extract_sienna_archive`) and the InfraStore time-series store.
 - Builds on **PowerSystems.jl** (`psy6` branch) — aliased `const PSY`. The `Portfolio` wraps a base `PSY.System`, generated technology structs are parameterized on PSY types (e.g. `SupplyTechnology{T <: PSY.Generator}`), and PSY is `using`-imported so PSY parametric types resolve by name. `ThermalFuels`, `PrimeMovers`, `StorageTech`, every `PSY.Topology` type (`Topology`, `AggregationTopology`, `Area`, `LoadZone`, `Arc`, `Bus`, `ACBus`, `DCBus`), what constructing them needs (`PerUnit` — the unit module behind `u"CU"`/`u"NU"` — and `ACBusTypes`), and the `CU`/`NU` markers `to_file` takes (`SU` deliberately not, since PSIP has no system-base representation) are re-exported from PSY — the same bindings, so `using` both packages does not clash. `test_portfolio.jl` walks the `Topology` type tree, so a topology type PSY adds later fails the suite until it is re-exported here too.
 - Builds on the **platform OpenAPI model packages** (registered, `0.2`, generated from SiennaSchemas 0.2 in the `PowerOpenAPIModels` monorepo): `PowerInvestmentsOpenAPIModels` (`PI` — the investment transport structs **and** `PortfolioDocument` / `read_portfolio_document`; the generic document API — `write_document`, `validate_document`, `add_component!`, `reserve_ids!`, schema-version checks — is defined in `IC` and reachable as `PI.x`), `PowerCoreOpenAPIModels` (`PC` — shared value types: curves, costs, enums, `MinMax`), `InfrastructureCoreOpenAPIModels` (`IC` — `Absent`, `OneOfAPIModel`, `encode`, `SchemaVersionError`), and `InfrastructureTimeSeriesOpenAPIModels` (`PTS`). PSIP does **not** depend on the umbrella `PowerOpenAPIModels` package: since 0.2 the documents live with their domain (`SystemDocument` in `PC`, `PortfolioDocument` in `PI`), and the old `PD` alias is gone. Do not re-add the umbrella, or the Dynamics/Operations packages, as dependencies — they were only ever listed to carry `[sources]` pins.
 - Other deps: SQLite/DBInterface/DataFrames (the database parser), JSON/JSON3/JSONSchema/OpenAPI/Mustache (struct generation + serialization), TimeSeries/TimeZones (time series).
@@ -19,7 +22,7 @@ Module file `src/PowerSystemsInvestmentsPortfolios.jl` defines all exports and f
 
 - `definitions.jl` — module-wide constants/enums.
 - `models/technologies.jl` — abstract type tree: `Technology <: IS.InfrastructureSystemsComponent`, with `ResourceTechnology`, `TransmissionTechnology`, `DemandTechnology <: Technology`, plus shared `get_*` accessors on `Technology`.
-- `models/regions.jl` — topology is plain `PSY.Topology` (areas, load zones, buses, arcs) living in the base system; the old PSIP-local `RegionTopology`/`Zone`/`Node` types are gone. `models/requirements.jl` (`Requirement`), `models/financial_data/` (`PortfolioFinancialData`, `TechnologyFinancialData`), `models/cost_functions/` (`CapitalCost`, `StorageCapitalCost`).
+- `models/regions.jl` — topology is plain `PSY.Topology` (areas, load zones, buses, arcs) living in the base system; the old PSIP-local `RegionTopology`/`Zone`/`Node` types are gone. `models/requirements.jl` (`Requirement`), `models/financial_data/` (`TechnologyFinancialData`, which carries each technology's discount, inflation, and interest rates; a portfolio holds no financial data and the base year belongs to the investment model), `models/cost_functions/` (`CapitalCost`, `StorageCapitalCost`).
 - `models/generated/` — **auto-generated** concrete technology/requirement/supplemental-attribute structs (see below). `includes.jl` (also generated) `include`s every struct file and exports its accessors/setters.
 - `units/` — PSIP's units layer (`natural_unit`, `ConversionUnits`, the unit-aware `get_x(value, units)` / `set_x!(value, val, units)` accessors).
 - `investment_schedule.jl` — `InvestmentScheduleResults` (model-output container held by a `Portfolio`).
@@ -141,4 +144,4 @@ Test notes:
 
 - **ReTest stops the whole run at the first failing testset** — whether from an exception outside a `@test` or an ordinary failed `@test` — so one broken testset hides every testset after it. When the suite stops early, run testsets one by one (`retest(mod, id)` for `id in 1:N`, catching each throw) to get the full failure list. `retest(mod; dry=true)` lists the registered testsets with their ids.
 - Top-level testset descriptions must be **unique** across all test files — ReTest silently keeps only the last of a duplicate name.
-- The runner pulls test data from the `CaseData` artifact in `test/Artifacts.toml` and runs Aqua checks (unbound args, undefined exports, ambiguities, stale/compat deps) at module load. Test deps live in `test/Project.toml`; always use `--project=test`. Uses `PowerSystemCaseBuilder` — don't mutate a cached system without `deepcopy`.
+- The runner pulls test data from the `CaseData` artifact in `test/Artifacts.toml` and runs Aqua checks (unbound args, undefined exports, ambiguities, stale/compat deps) at module load.

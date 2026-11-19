@@ -4,36 +4,29 @@ CurrentModule = PowerSystemsInvestmentsPortfolios
 
 # Financial Data
 
-## Two Levels of Financial Data
+## Financial Data Lives on Each Technology
 
-PSIP separates financial parameters into two levels:
+Every technology carries a [`TechnologyFinancialData`](@ref).
+It holds the parameters that annualize the technology's overnight capital cost and the rates that convert its costs to a net present value.
+A portfolio holds no financial data of its own: portfolio-wide rates are modeling assumptions, not data.
+A study with one common rate repeats it on every technology.
 
-| Level      | Type                              | Scope            | Controls                            |
-|:---------- |:--------------------------------- |:---------------- |:----------------------------------- |
-| Portfolio  | [`PortfolioFinancialData`](@ref)  | All technologies | Discount rate, inflation, base year |
-| Technology | [`TechnologyFinancialData`](@ref) | One technology   | Capital recovery factor parameters  |
-
-Portfolio-level parameters set the economic context for the entire optimization. Technology-level parameters determine how each technology's overnight capital cost is annualized into a per-year payment.
-
-### `PortfolioFinancialData` Fields
-
-| Field            | Type      | Description                                                                                  |
-|:---------------- |:--------- |:-------------------------------------------------------------------------------------------- |
-| `base_year`      | `Int64`   | Reference year for discounting and inflation; all costs are expressed in this year's dollars |
-| `discount_rate`  | `Float64` | Social or WACC discount rate (fraction per year, e.g., `0.07`)                               |
-| `inflation_rate` | `Float64` | General inflation rate (fraction per year, e.g., `0.025`)                                    |
-| `interest_rate`  | `Float64` | Nominal interest rate for financing (fraction per year)                                      |
+The base year that all costs are discounted to belongs to the investment model.
+PSI reads it from its `DiscountedCashFlow` capital model.
 
 ### `TechnologyFinancialData` Fields
 
-| Field                     | Type      | Description                                                                                      |
-|:------------------------- |:--------- |:------------------------------------------------------------------------------------------------ |
-| `capital_recovery_period` | `Int64`   | Years over which capital cost is recovered                                                       |
-| `technology_base_year`    | `Int64`   | Year in which the overnight capital cost is quoted; used for inflation adjustment to `base_year` |
-| `debt_fraction`           | `Float64` | Share of capital financed by debt (0–1)                                                          |
-| `debt_rate`               | `Float64` | Nominal annual interest rate on the debt portion                                                 |
-| `return_on_equity`        | `Float64` | Required annual return on the equity portion                                                     |
-| `tax_rate`                | `Float64` | Combined marginal state and federal tax rate                                                     |
+| Field                     | Type      | Description                                                                                              |
+|:------------------------- |:--------- |:-------------------------------------------------------------------------------------------------------- |
+| `capital_recovery_period` | `Int64`   | Years over which capital cost is recovered                                                               |
+| `technology_base_year`    | `Int64`   | Year in which the overnight capital cost is quoted; used for inflation adjustment to the model base year |
+| `debt_fraction`           | `Float64` | Share of capital financed by debt (0–1)                                                                  |
+| `debt_rate`               | `Float64` | Nominal annual interest rate on the debt portion                                                         |
+| `return_on_equity`        | `Float64` | Required annual return on the equity portion                                                             |
+| `tax_rate`                | `Float64` | Combined marginal state and federal tax rate                                                             |
+| `discount_rate`           | `Float64` | Rate that discounts future costs to the model base year (fraction per year)                              |
+| `inflation_rate`          | `Float64` | Rate that escalates costs from `technology_base_year` to the model base year (fraction per year)         |
+| `interest_rate`           | `Float64` | Nominal interest rate for financing (fraction per year)                                                  |
 
 ## Capital Recovery Factor
 
@@ -54,13 +47,13 @@ The CRF represents the fraction of the overnight cost that must be recovered eac
 
 ## How PSI Uses These Values
 
-PSI reads financial data from the Portfolio when it builds the model:
+PSI reads financial data from each technology when it builds the model:
 
-  - The `base_year` and `discount_rate` of `PortfolioFinancialData` are used to discount
-    costs in the objective. PSI's `DiscountedCashFlow` capital model supplies only the
-    investment periods.
-  - `TechnologyFinancialData` is used to annualize each technology's capital cost. It is a
-    required field of supply, storage, co-located, and transmission technologies.
+  - Each technology's `discount_rate` discounts its costs to the model base year, which PSI
+    takes from its `DiscountedCashFlow` capital model.
+  - Each technology's `inflation_rate` converts its costs from `technology_base_year` dollars
+    to model base year dollars.
+  - The remaining fields annualize the technology's capital cost.
 
 ## Capital Costs
 
@@ -79,15 +72,14 @@ of multipliers can make the cost change across investment periods.
 
 Capital costs for different technologies may be quoted in different vintage years — for example, wind costs from a 2020 study and solar costs from a 2025 study. Mixing these directly would produce inconsistent cost comparisons.
 
-PSI uses the difference between `technology_base_year` and the portfolio `base_year`, together with the portfolio `inflation_rate`, to escalate or deflate each technology's quoted overnight cost to a consistent present-value basis before computing the annualized cost.
+PSI uses the difference between `technology_base_year` and the model base year, together with the technology's `inflation_rate`, to escalate or deflate each technology's quoted overnight cost to a consistent present-value basis before computing the annualized cost.
 
-For example: a wind technology with `technology_base_year = 2020`, a portfolio `base_year = 2030`, and `inflation_rate = 0.025` would have its overnight capital cost scaled by `(1.025)^10` before the CRF is applied. A technology whose `technology_base_year` is later than `base_year` would be deflated by the same mechanism.
+For example: a wind technology with `technology_base_year = 2020` and `inflation_rate = 0.025`, in a model with base year 2030, would have its overnight capital cost scaled by `(1.025)^10` before the CRF is applied. A technology whose `technology_base_year` is later than the model base year would be deflated by the same mechanism.
 
 This adjustment ensures that all technology candidates are evaluated on a consistent cost basis regardless of when their cost estimates were produced.
 
 ## See Also
 
-  - [`PortfolioFinancialData`](@ref)
   - [`TechnologyFinancialData`](@ref)
   - [`CapitalCost`](@ref)
   - [`StorageCapitalCost`](@ref)

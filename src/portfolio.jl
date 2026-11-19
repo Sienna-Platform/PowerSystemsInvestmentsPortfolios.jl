@@ -29,32 +29,12 @@ mutable struct PortfolioMetadata <: IS.InfrastructureSystemsType
     data_source::Union{Nothing, String}
 end
 
-"""
-    PortfolioFinancialData
-
-Stores financial data about the portfolio.
-
-# Fields
-
-  - `base_year::Int64`: Base economic year. All costs will be converted to a net present value in this year.
-  - `discount_rate::Float64`: Discount rate for financial calculations
-  - `inflation_rate::Float64`: Inflation rate for cost adjustments
-  - `interest_rate::Float64`: Interest rate for financing calculations
-"""
-mutable struct PortfolioFinancialData <: IS.InfrastructureSystemsType
-    base_year::Int64
-    discount_rate::Float64
-    inflation_rate::Float64
-    interest_rate::Float64
-end
-
 mutable struct Portfolio <: IS.ComponentContainer
     aggregation::Type{<:Union{PSY.ACBus, PSY.AggregationTopology}}
     data::IS.SystemData # Inputs to the model
     base_system::PSY.System #Base system storing existing data
     investment_schedule::Union{Nothing, InvestmentScheduleResults} # Investment decisions container i.e., model outputs. Container TBD
     time_series_directory::Union{Nothing, String}
-    financial_data::Union{Nothing, PortfolioFinancialData}
     metadata::PortfolioMetadata
     internal::IS.InfrastructureSystemsInternal
 
@@ -65,7 +45,6 @@ mutable struct Portfolio <: IS.ComponentContainer
         investment_schedule::Union{Nothing, InvestmentScheduleResults},
         internal::IS.InfrastructureSystemsInternal;
         time_series_directory=nothing,
-        financial_data=nothing,
         name=nothing,
         description=nothing,
         data_source=nothing,
@@ -77,7 +56,6 @@ mutable struct Portfolio <: IS.ComponentContainer
             base_system,
             investment_schedule,
             time_series_directory,
-            financial_data,
             PortfolioMetadata(name, description, data_source),
             internal,
         )
@@ -130,84 +108,6 @@ function Portfolio(base_system::PSY.System; kwargs...)
 end
 
 """
-Construct an empty `Portfolio` specifying financial data. Useful for building a Portfolio from scratch.
-"""
-function Portfolio(base_year, discount_rate, inflation_rate, interest_rate; kwargs...)
-    data = PSY._create_system_data_from_kwargs(; kwargs...)
-    return Portfolio(
-        DEFAULT_AGGREGATION,
-        data,
-        DEFAULT_SYSTEM(),
-        nothing,
-        InfrastructureSystemsInternal();
-        financial_data=PortfolioFinancialData(
-            base_year,
-            discount_rate,
-            inflation_rate,
-            interest_rate,
-        ),
-        kwargs...,
-    )
-end
-
-"""
-Construct an empty `Portfolio` specifying financial data and a base system. Useful for building a Portfolio from scratch.
-"""
-function Portfolio(
-    aggregation,
-    base_system,
-    base_year,
-    discount_rate,
-    inflation_rate,
-    interest_rate;
-    kwargs...,
-)
-    data = PSY._create_system_data_from_kwargs(; kwargs...)
-    return Portfolio(
-        aggregation,
-        data,
-        base_system,
-        nothing,
-        InfrastructureSystemsInternal();
-        financial_data=PortfolioFinancialData(
-            base_year,
-            discount_rate,
-            inflation_rate,
-            interest_rate,
-        ),
-        kwargs...,
-    )
-end
-
-"""
-Construct an empty `Portfolio` specifying financial data. Useful for building a Portfolio from scratch and used in the database parser.
-"""
-function Portfolio(
-    aggregation,
-    base_year,
-    discount_rate,
-    inflation_rate,
-    interest_rate;
-    kwargs...,
-)
-    data = PSY._create_system_data_from_kwargs(; kwargs...)
-    return Portfolio(
-        aggregation,
-        data,
-        DEFAULT_SYSTEM(),
-        nothing,
-        InfrastructureSystemsInternal();
-        financial_data=PortfolioFinancialData(
-            base_year,
-            discount_rate,
-            inflation_rate,
-            interest_rate,
-        ),
-        kwargs...,
-    )
-end
-
-"""
 Construct an empty `Portfolio` specifying aggregation and data. Useful for building a Portfolio from scratch and used in the database parser.
 """
 function Portfolio(data, aggregation; kwargs...)
@@ -252,31 +152,6 @@ Get the name of the portfolio.
 get_name(val::Portfolio) = val.metadata.name
 
 """
-Get the financial data of the portfolio.
-"""
-get_financial_data(val::Portfolio) = val.financial_data
-
-"""
-Get the base year of the portfolio.
-"""
-get_base_year(val::Portfolio) = val.financial_data.base_year
-
-"""
-Get the discount rate.
-"""
-get_discount_rate(val::Portfolio) = val.financial_data.discount_rate
-
-"""
-Get the inflation rate.
-"""
-get_inflation_rate(val::Portfolio) = val.financial_data.inflation_rate
-
-"""
-Get the interest rate.
-"""
-get_interest_rate(val::Portfolio) = val.financial_data.interest_rate
-
-"""
 Get the description of the portfolio.
 """
 get_description(val::Portfolio) = val.metadata.description
@@ -296,35 +171,6 @@ Set the description of the portfolio.
 """
 set_description!(val::Portfolio, description::AbstractString) =
     val.metadata.description = description
-
-"""
-Set the financial data of the portfolio.
-"""
-set_financial_data!(val::Portfolio, financial_data::PortfolioFinancialData) =
-    val.financial_data = financial_data
-
-"""
-Set the base year of the portfolio.
-"""
-set_base_year!(val::Portfolio, base_year::Int64) = val.financial_data.base_year = base_year
-
-"""
-Set the discount rate of the portfolio.
-"""
-set_discount_rate!(val::Portfolio, discount_rate::Float64) =
-    val.financial_data.discount_rate = discount_rate
-
-"""
-Set the inflation rate of the portfolio.
-"""
-set_inflation_rate!(val::Portfolio, inflation_rate::Float64) =
-    val.financial_data.inflation_rate = inflation_rate
-
-"""
-Set the interest rate of the portfolio.
-"""
-set_interest_rate!(val::Portfolio, interest_rate::Float64) =
-    val.financial_data.interest_rate = interest_rate
 
 """
 Set the investment schedule of the portfolio.

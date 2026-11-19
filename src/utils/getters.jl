@@ -39,8 +39,8 @@ get_parameter_type(::Type{DemandSideTechnology{T}}) where {T} = T
 
 """
 Calculates the amount of existing capacity (in MW) associated with a given Technology in the Portfolio.
-For generators this is the sum of the devices' maximum active power; for storage and branches
-it is the sum of their ratings.
+For generators this is the sum of the devices' maximum active power, for storage the sum of
+their maximum output (discharge) power, and for branches the sum of their ratings.
 Technology must have an ExistingDevices supplemental attribute attached to it to be non-zero.
 This attribute contains a list of names of existing assets in the base system that correspond to this technology.
 For generators and the loads of a DemandSideTechnology this is the maximum active power, not
@@ -155,7 +155,7 @@ function get_existing_capacity_mwh(p::Portfolio, t::StorageTechnology)
             @error "Not all names in ExistingDevices matched generators in the base system"
         end
 
-        return sum(PSY.get_storage_capacity(t, u"MW*h") for t in comp)
+        return sum(PSY.get_storage_capacity(t, u"MW") for t in comp)
     else
         return 0.0
     end
@@ -267,7 +267,7 @@ function scale_conforming_load(t::ProjectedDemand, p::Portfolio, year::Int64)
         if is_new(t)
             reference_year = get_construction_year(t)
         else
-            reference_year = get_base_year_for_load(t, p)
+            reference_year = base_year
         end
         scaled_demand = peak_demand * (1 + growth_rate)^(year - reference_year)
         return scaled_demand

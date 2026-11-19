@@ -24,7 +24,7 @@ import PowerSystems: get_name
 
 sys = build_system(PSITestSystems, "c_sys5_re")
 
-portfolio = Portfolio(sys; financial_data=PortfolioFinancialData(2025, 0.07, 0.05, 0.03))
+portfolio = Portfolio(sys)
 
 z1 = Area(; name="Zone_1", input_basis=u"NU")
 z2 = Area(; name="Zone_2", input_basis=u"NU")
@@ -38,6 +38,9 @@ tech_financials = TechnologyFinancialData(;
     debt_rate=0.07,
     return_on_equity=0.10,
     tax_rate=0.257,
+    discount_rate=0.07,
+    inflation_rate=0.025,
+    interest_rate=0.05,
 )
 
 t_thermal = SupplyTechnology{PSY.ThermalStandard}(;
@@ -49,7 +52,7 @@ t_thermal = SupplyTechnology{PSY.ThermalStandard}(;
     region=[z1],
     capital_costs=CapitalCost(; capital_cost=LinearCurve(6_937_377.0)),
     operation_costs=ThermalGenerationCost(;
-        variable_operation_cost=FuelCurve(LinearCurve(10.5), 1.12),
+        variable_operation_cost=FuelCurve(LinearCurve(10.5), MMBtu, 1.12),
         fixed=0.0,
         start_up=0.0,
         shut_down=0.0,
