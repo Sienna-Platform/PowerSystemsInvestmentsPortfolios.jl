@@ -37,9 +37,7 @@ get_parameter_type(::Type{ProjectedDemand{T}}) where {T} = T
 get_parameter_type(t::DemandSideTechnology{T}) where {T} = T
 get_parameter_type(::Type{DemandSideTechnology{T}}) where {T} = T
 
-# Capacity (MW, in natural units) that one base-system component contributes to the existing
-# capacity of a technology: maximum active power for injection devices, maximum output for
-# storage, and thermal rating for branches.
+# Existing capacity (MW) of one base-system component
 _existing_capacity(c::PSY.StaticInjection) = PSY.get_max_active_power(c)
 _existing_capacity(c::PSY.Storage) = PSY.get_output_active_power_limits(c).max
 _existing_capacity(c::PSY.Branch) = PSY.get_rating(c)

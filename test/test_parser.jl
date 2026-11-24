@@ -54,7 +54,7 @@
     storage = [t for t in get_technologies(StorageTechnology, portfolio) if is_new(t)]
     @test length(storage) == 3
     battery = first(storage)
-    costs = get_capital_costs_storage(battery)
+    costs = get_capital_costs(battery)
     @test PSIP.get_discharge_capital_cost(costs) == LinearCurve(311360.0)
     @test PSIP.get_energy_capital_cost(costs) == LinearCurve(309930.0)
     @test get_fixed(get_operation_costs(battery)) == 7780.0

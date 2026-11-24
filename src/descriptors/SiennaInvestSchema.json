@@ -585,7 +585,7 @@
                     ],
                     "description": "Storage Technology Type"
                 },
-                "capital_costs_storage": {
+                "capital_costs": {
                     "type": "StorageCapitalCost",
                     "description": "Capital costs for investing in a storage technology. (USD/MWh)",
                     "default": "StorageCapitalCost(nothing)"
@@ -1548,9 +1548,9 @@
                     "default": "CapitalCost(nothing)"
                 },
                 "operation_costs_solar": {
-                    "type": "PSY.OperationalCost",
+                    "type": "PSY.RenewableGenerationCost",
                     "description": "Fixed and variable O&M costs for a technology",
-                    "default": "ThermalGenerationCost(nothing)"
+                    "default": "RenewableGenerationCost(nothing)"
                 },
                 "capacity_limits_solar": {
                     "type": "MinMax",
@@ -1568,9 +1568,9 @@
                     "default": "CapitalCost(nothing)"
                 },
                 "operation_costs_wind": {
-                    "type": "PSY.OperationalCost",
+                    "type": "PSY.RenewableGenerationCost",
                     "description": "Fixed and variable O&M costs for a technology",
-                    "default": "ThermalGenerationCost(nothing)"
+                    "default": "RenewableGenerationCost(nothing)"
                 },
                 "capacity_limits_wind": {
                     "type": "MinMax",
@@ -1588,7 +1588,7 @@
                     "default": "StorageCapitalCost(nothing)"
                 },
                 "operation_costs_storage": {
-                    "type": "PSY.OperationalCost",
+                    "type": "PSY.StorageCost",
                     "description": "Fixed and variable O&M costs for a storage technology",
                     "default": "StorageCost(nothing)"
                 },

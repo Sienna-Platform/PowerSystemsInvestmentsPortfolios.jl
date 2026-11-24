@@ -307,7 +307,7 @@ function build_portfolio()
         power_systems_type="EnergyReservoirStorage",
         prime_mover_type=PrimeMovers.BT,
         available=true,
-        capital_costs_storage=StorageCapitalCost(;
+        capital_costs=StorageCapitalCost(;
             charge_capital_cost=LinearCurve(0.0),
             discharge_capital_cost=LinearCurve(stor_kw_capex * 1000),
             energy_capital_cost=LinearCurve(stor_kwh_capex * 1000),

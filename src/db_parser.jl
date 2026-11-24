@@ -572,12 +572,7 @@ function add_technologies!(
             technology = StorageTechnology{parametric}(;
                 name=rec.prime_mover * string(rec.id),
                 id=rec.id,
-                capital_costs_storage=StorageCapitalCost(
-                    LinearCurve(0.0),
-                    LinearCurve(0.0),
-                    LinearCurve(0.0),
-                    0.0,
-                ),
+                capital_costs=StorageCapitalCost(nothing),
                 prime_mover_type=get(PRIME_MOVER_MAPPING, rec.prime_mover, PrimeMovers.OT),
                 storage_tech=get(STORAGE_MAPPING, rec.fuel, StorageTech.OTHER_THERM),
                 region=regions,
@@ -593,7 +588,7 @@ function add_technologies!(
             technology = SupplyTechnology{parametric}(;
                 name=rec.prime_mover * string(rec.id),
                 id=rec.id,
-                capital_costs=CapitalCost(LinearCurve(0.0), 0.0),
+                capital_costs=CapitalCost(nothing),
                 prime_mover_type=get(PRIME_MOVER_MAPPING, rec.prime_mover, PrimeMovers.OT),
                 fuel=[get(FUEL_MAPPING, rec.fuel, ThermalFuels.OTHER)],
                 co2=Dict(get(FUEL_MAPPING, rec.fuel, ThermalFuels.OTHER) => 0.0),
@@ -881,7 +876,7 @@ function add_generation_units!(
             technology = SupplyTechnology{component_type}(;
                 name=rec.name,
                 id=rec.id,
-                capital_costs=CapitalCost(LinearCurve(0.0), 0.0),
+                capital_costs=CapitalCost(nothing),
                 prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers, rec.prime_mover),
                 fuel=[fuel],
                 region=regions,
@@ -1005,12 +1000,7 @@ function add_storage_units!(
         storage = StorageTechnology{component_type}(;
             name=rec.name,
             id=rec.id,
-            capital_costs_storage=StorageCapitalCost(
-                LinearCurve(0.0),
-                LinearCurve(0.0),
-                LinearCurve(0.0),
-                0.0,
-            ),
+            capital_costs=StorageCapitalCost(nothing),
             prime_mover_type=PSY.get_enum_value(PSY.PrimeMovers, rec.prime_mover),
             storage_tech=PSY.StorageTech(component_attr["storage_technology_type"]),
             region=regions,
@@ -1496,9 +1486,6 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
                         portfolio.base_system,
                     ),
                 )
-                ts_array =
-                    get_time_series_array(SingleTimeSeries, unit, "max_active_power") ./
-                    get_rating(unit)
             else
                 #If technology does not have existing capacity associated with it,
                 #select a similar technology from the base system to get required timeseries
@@ -1511,10 +1498,12 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
                         portfolio.base_system,
                     ),
                 )
-                ts_array =
-                    get_time_series_array(SingleTimeSeries, unit, "max_active_power") ./
-                    get_rating(unit)
             end
+            # A unit with zero maximum active power (zero power factor) has a zero profile
+            max_active_power = get_max_active_power(unit)
+            ts_array =
+                get_time_series_array(SingleTimeSeries, unit, "max_active_power") .*
+                (iszero(max_active_power) ? 0.0 : 1.0 / max_active_power)
             ts = SingleTimeSeries("capacity_factor", ts_array)
             add_time_series!(portfolio, tech, ts)
         end
@@ -1533,7 +1522,7 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
             continue
         end
         cost_data = deserialize_investment_timeseries!(portfolio, tech, stmts, ts_type)
-        capital_costs = get_capital_costs_storage(tech)
+        capital_costs = get_capital_costs(tech)
         set_discharge_capital_cost!(
             capital_costs,
             LinearCurve(cost_data["capcost"] * 1000.0),

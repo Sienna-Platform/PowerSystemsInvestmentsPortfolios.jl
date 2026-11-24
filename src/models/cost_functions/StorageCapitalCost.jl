@@ -2,13 +2,12 @@
 $(TYPEDEF)
 $(TYPEDFIELDS)
 
-    StorageCapitalCost(charge_capital_cost, discharge_capital_cost, energy_capital_cost, interconnection)
+    StorageCapitalCost(charge_capital_cost, discharge_capital_cost, energy_capital_cost, interconnection_cost)
     StorageCapitalCost(; charge_capital_cost, discharge_capital_cost, energy_capital_cost, interconnection_cost)
 
-An investment cost for candidate storage technologies which includes 
+An investment cost for candidate storage technologies which includes
 overnight capital costs and last-mile interconnection costs.
 """
-
 @kwdef mutable struct StorageCapitalCost <: InvestmentCost
     charge_capital_cost::ValueCurve
     discharge_capital_cost::ValueCurve

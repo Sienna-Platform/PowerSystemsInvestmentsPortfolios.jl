@@ -5,10 +5,9 @@ $(TYPEDFIELDS)
     CapitalCost(capital_cost, interconnection_cost)
     CapitalCost(; capital_cost, interconnection_cost)
 
-An investment cost for candidate generation and transmission technologies which includes 
+An investment cost for candidate generation and transmission technologies which includes
 overnight capital costs and last-mile interconnection costs.
 """
-
 @kwdef mutable struct CapitalCost <: InvestmentCost
     capital_cost::ValueCurve
     interconnection_cost::Float64

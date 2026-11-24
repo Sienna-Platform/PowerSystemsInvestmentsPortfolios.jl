@@ -4,6 +4,7 @@ Abstract supertype for all investment cost representations.
 Concrete subtypes:
 
   - [`CapitalCost`](@ref)
+  - [`StorageCapitalCost`](@ref)
 """
 abstract type InvestmentCost <: DeviceParameter end
 

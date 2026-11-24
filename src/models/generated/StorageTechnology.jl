@@ -8,8 +8,8 @@ This file is auto-generated. Do not edit.
     mutable struct StorageTechnology{T <: PSY.Storage} <: ResourceTechnology
         requirements::Vector{Requirement}
         prime_mover_type::PrimeMovers
+        capital_costs::StorageCapitalCost
         lifetime::Int
-        capital_costs_storage::StorageCapitalCost
         available::Bool
         min_discharge_fraction::Float64
         capacity_limits_charge::Union{Nothing, MinMax}
@@ -37,8 +37,8 @@ Candidate storage technology in a region.
 # Arguments
 - `requirements::Vector{Requirement}`: (default: `Vector()`) List of requirements (i.e. reserve margin, capacity requirements, energy share requirements) that are associated with a technology
 - `prime_mover_type::PrimeMovers`: (default: `PrimeMovers.OT`) Prime mover for generator
+- `capital_costs::StorageCapitalCost`: (default: `StorageCapitalCost(nothing)`) Capital costs for investing in a storage technology. (USD/MWh)
 - `lifetime::Int`: (default: `100`) Maximum number of years a technology can be active once installed (years)
-- `capital_costs_storage::StorageCapitalCost`: (default: `StorageCapitalCost(nothing)`) Capital costs for investing in a storage technology. (USD/MWh)
 - `available::Bool`: Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)
 - `min_discharge_fraction::Float64`: (default: `0.0`) Minimum discharge as a fraction of total discharge capacity
 - `capacity_limits_charge::Union{Nothing, MinMax}`: (default: `nothing`) allowable installed power capacity for a storage technology (MW)
@@ -65,10 +65,10 @@ mutable struct StorageTechnology{T <: PSY.Storage} <: ResourceTechnology
     requirements::Vector{Requirement}
     "Prime mover for generator"
     prime_mover_type::PrimeMovers
+    "Capital costs for investing in a storage technology. (USD/MWh)"
+    capital_costs::StorageCapitalCost
     "Maximum number of years a technology can be active once installed (years)"
     lifetime::Int
-    "Capital costs for investing in a storage technology. (USD/MWh)"
-    capital_costs_storage::StorageCapitalCost
     "Indicator of whether the component is connected and online (`true`) or disconnected, offline, or down (`false`)"
     available::Bool
     "Minimum discharge as a fraction of total discharge capacity"
@@ -112,18 +112,18 @@ mutable struct StorageTechnology{T <: PSY.Storage} <: ResourceTechnology
 end
 
 
-function StorageTechnology{T}(; requirements=Vector(), prime_mover_type=PrimeMovers.OT, lifetime=100, capital_costs_storage=StorageCapitalCost(nothing), available, min_discharge_fraction=0.0, capacity_limits_charge=nothing, name, storage_tech, duration_limits=(min=0,max=1000.0), id, losses=0.00, financial_data, operation_costs=StorageCost(nothing), power_systems_type, internal=InfrastructureSystemsInternal(), ext=Dict(), region=Vector(), capacity_limits_energy=(min=0,max=1e8), unit_size_energy=0.0, unit_size_charge=nothing, efficiency=(in=1, out=1), unit_size_discharge=0.0, capacity_limits_discharge=(min=0,max=1e8), ) where T <: PSY.Storage
-    StorageTechnology{T}(requirements, prime_mover_type, lifetime, capital_costs_storage, available, min_discharge_fraction, capacity_limits_charge, name, storage_tech, duration_limits, id, losses, financial_data, operation_costs, power_systems_type, internal, ext, region, capacity_limits_energy, unit_size_energy, unit_size_charge, efficiency, unit_size_discharge, capacity_limits_discharge, )
+function StorageTechnology{T}(; requirements=Vector(), prime_mover_type=PrimeMovers.OT, capital_costs=StorageCapitalCost(nothing), lifetime=100, available, min_discharge_fraction=0.0, capacity_limits_charge=nothing, name, storage_tech, duration_limits=(min=0,max=1000.0), id, losses=0.00, financial_data, operation_costs=StorageCost(nothing), power_systems_type, internal=InfrastructureSystemsInternal(), ext=Dict(), region=Vector(), capacity_limits_energy=(min=0,max=1e8), unit_size_energy=0.0, unit_size_charge=nothing, efficiency=(in=1, out=1), unit_size_discharge=0.0, capacity_limits_discharge=(min=0,max=1e8), ) where T <: PSY.Storage
+    StorageTechnology{T}(requirements, prime_mover_type, capital_costs, lifetime, available, min_discharge_fraction, capacity_limits_charge, name, storage_tech, duration_limits, id, losses, financial_data, operation_costs, power_systems_type, internal, ext, region, capacity_limits_energy, unit_size_energy, unit_size_charge, efficiency, unit_size_discharge, capacity_limits_discharge, )
 end
 
 """Get [`StorageTechnology`](@ref) `requirements`."""
 get_requirements(value::StorageTechnology) = value.requirements
 """Get [`StorageTechnology`](@ref) `prime_mover_type`."""
 get_prime_mover_type(value::StorageTechnology) = value.prime_mover_type
+"""Get [`StorageTechnology`](@ref) `capital_costs`."""
+get_capital_costs(value::StorageTechnology) = value.capital_costs
 """Get [`StorageTechnology`](@ref) `lifetime`."""
 get_lifetime(value::StorageTechnology) = value.lifetime
-"""Get [`StorageTechnology`](@ref) `capital_costs_storage`."""
-get_capital_costs_storage(value::StorageTechnology) = value.capital_costs_storage
 """Get [`StorageTechnology`](@ref) `available`."""
 get_available(value::StorageTechnology) = value.available
 """Get [`StorageTechnology`](@ref) `min_discharge_fraction`."""
@@ -169,10 +169,10 @@ get_capacity_limits_discharge(value::StorageTechnology) = value.capacity_limits_
 set_requirements!(value::StorageTechnology, val) = value.requirements = val
 """Set [`StorageTechnology`](@ref) `prime_mover_type`."""
 set_prime_mover_type!(value::StorageTechnology, val) = value.prime_mover_type = val
+"""Set [`StorageTechnology`](@ref) `capital_costs`."""
+set_capital_costs!(value::StorageTechnology, val) = value.capital_costs = val
 """Set [`StorageTechnology`](@ref) `lifetime`."""
 set_lifetime!(value::StorageTechnology, val) = value.lifetime = val
-"""Set [`StorageTechnology`](@ref) `capital_costs_storage`."""
-set_capital_costs_storage!(value::StorageTechnology, val) = value.capital_costs_storage = val
 """Set [`StorageTechnology`](@ref) `available`."""
 set_available!(value::StorageTechnology, val) = value.available = val
 """Set [`StorageTechnology`](@ref) `min_discharge_fraction`."""
