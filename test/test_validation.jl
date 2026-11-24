@@ -113,6 +113,22 @@ end
         @test(!validate_technology(supply)),
     )
     set_min_generation_fraction!(supply, min_generation_fraction)
+
+    outage_factors = get_outage_factors(supply)
+    for (factors, message) in (
+        ((planned=-0.2, forced=0.0), r"Planned outage derating must be in \[0, 1\]"),
+        ((planned=0.0, forced=1.1), r"Forced outage derating must be in \[0, 1\]"),
+    )
+        set_outage_factors!(supply, factors)
+        @test_logs(
+            (:error, message),
+            min_level = Logging.Error,
+            @test(!validate_technology(supply)),
+        )
+    end
+    set_outage_factors!(supply, (planned=1.0, forced=1.0))
+    @test validate_technology(supply)
+    set_outage_factors!(supply, outage_factors)
 end
 
 @testset "Colocated supply-storage validation" begin
@@ -136,7 +152,7 @@ end
         inverter_efficiency=0.96,
         power_systems_type="RenewableDispatch",
         inverter_supply_ratio=1.0,
-        capital_costs_inverter=LinearCurve(0.0),
+        capital_costs_inverter=CapitalCost(LinearCurve(0.0), 0.0),
         available=true,
         region=RegionTopology[attached_region],
     )

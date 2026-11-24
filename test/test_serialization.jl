@@ -85,6 +85,58 @@ end
     @test port2.metadata.description == description
 end
 
+@testset "Test serialization of co-located technologies" begin
+    port = Portfolio(; financial_data=PortfolioFinancialData(2020, 0.07, 0.03, 0.05))
+    ref_bus = ACBus(nothing)
+    set_bustype!(ref_bus, ACBusTypes.REF)
+    add_component!(get_base_system(port), ref_bus)
+    zone = Zone(; name="zone1", id=1)
+    add_region!(port, zone)
+    colocated = ColocatedSupplyStorageTechnology{RenewableDispatch}(;
+        name="colocated",
+        id=2,
+        available=true,
+        region=RegionTopology[zone],
+        financial_data=TechnologyFinancialData(;
+            capital_recovery_period=30,
+            technology_base_year=2025,
+            debt_fraction=0.5,
+            debt_rate=0.07,
+            return_on_equity=0.1,
+            tax_rate=0.257,
+        ),
+        power_systems_type="RenewableDispatch",
+        capital_costs_storage=StorageCapitalCost(
+            LinearCurve(10.0),
+            LinearCurve(20.0),
+            LinearCurve(30.0),
+            4.0,
+        ),
+        operation_costs_storage=StorageCost(;
+            charge_variable_cost=CostCurve(LinearCurve(1.0)),
+            discharge_variable_cost=CostCurve(LinearCurve(2.0)),
+            fixed=3.0,
+        ),
+        operation_costs_inverter=StorageCost(),
+        capital_costs_wind=CapitalCost(LinearCurve(150.0), 5.0),
+        capital_costs_solar=CapitalCost(LinearCurve(130.0), 6.0),
+        capital_costs_inverter=CapitalCost(LinearCurve(70.0), 7.0),
+        capacity_limits_wind=(min=1.0, max=900.0),
+        capacity_limits_solar=(min=2.0, max=950.0),
+        capacity_power_limits=(min=3.0, max=600.0),
+        capacity_energy_limits=(min=4.0, max=1200.0),
+        efficiency_storage=(in=0.95, out=0.9),
+        inverter_efficiency=0.96,
+        inverter_supply_ratio=1.1,
+    )
+    add_technology!(port, colocated)
+
+    port2 = validate_serialization(port)
+    colocated2 = get_technology(typeof(colocated), port2, "colocated")
+    @test !isnothing(colocated2)
+    @test IS.compare_values(colocated, colocated2; compare_uuids=false)
+end
+
 @testset "Test serialization/deserialization of investment schedule" begin
     portfolio = build_portfolio()
 

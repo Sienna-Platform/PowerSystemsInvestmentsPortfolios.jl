@@ -63,7 +63,7 @@
         region=[zone_a],
     )
     supply_req = Requirement[req_a, req_b]
-    supply_capital = LinearCurve(22.0)
+    supply_capital = CapitalCost(LinearCurve(22.0), 1.0)
     supply_co2 = Dict(ThermalFuels.COAL => 0.9, ThermalFuels.OTHER => 0.4)
     supply_cofire_start = Dict(
         ThermalFuels.COAL => (min=0.2, max=0.6),
@@ -79,7 +79,7 @@
 
     # SupplyTechnology: all fields
     PSIP.set_requirements!(supply, supply_req)
-    PSIP.set_outage_factor!(supply, 0.93)
+    PSIP.set_outage_factors!(supply, (planned=0.05, forced=0.05))
     PSIP.set_prime_mover_type!(supply, PrimeMovers.OT)
     PSIP.set_capital_costs!(supply, supply_capital)
     PSIP.set_lifetime!(supply, 35)
@@ -104,7 +104,7 @@
     PSIP.set_capacity_limits!(supply, (min=5.0, max=600.0))
 
     @test PSIP.get_requirements(supply) === supply_req
-    @test PSIP.get_outage_factor(supply) == 0.93
+    @test PSIP.get_outage_factors(supply) == (planned=0.05, forced=0.05)
     @test PSIP.get_prime_mover_type(supply) == PrimeMovers.OT
     @test PSIP.get_capital_costs(supply) === supply_capital
     @test PSIP.get_lifetime(supply) == 35
@@ -139,9 +139,8 @@
         region=[zone_a],
     )
     storage_req = Requirement[req_a]
-    storage_charge_curve = LinearCurve(15.0)
-    storage_discharge_curve = LinearCurve(18.0)
-    storage_energy_curve = LinearCurve(11.0)
+    storage_capital =
+        StorageCapitalCost(LinearCurve(15.0), LinearCurve(18.0), LinearCurve(11.0), 2.0)
     storage_internal = IS.InfrastructureSystemsInternal()
     storage_ext = Dict("storage" => "meta")
     storage_regions = RegionTopology[zone_b]
@@ -158,7 +157,7 @@
     PSIP.set_storage_tech!(storage, StorageTech.LIB)
     PSIP.set_duration_limits!(storage, (min=2.0, max=12.0))
     PSIP.set_losses!(storage, 0.02)
-    PSIP.set_capital_costs_energy!(storage, storage_energy_curve)
+    PSIP.set_capital_costs!(storage, storage_capital)
     PSIP.set_financial_data!(storage, tech_financial_data)
     PSIP.set_operation_costs!(storage, storage_cost)
     PSIP.set_power_systems_type!(storage, "EnergyReservoirStorageUpdated")
@@ -171,8 +170,6 @@
     PSIP.set_efficiency!(storage, (in=0.94, out=0.91))
     PSIP.set_unit_size_discharge!(storage, 8.5)
     PSIP.set_capacity_limits_discharge!(storage, (min=6.0, max=500.0))
-    PSIP.set_capital_costs_charge!(storage, storage_charge_curve)
-    PSIP.set_capital_costs_discharge!(storage, storage_discharge_curve)
 
     @test PSIP.get_requirements(storage) === storage_req
     @test PSIP.get_prime_mover_type(storage) == PrimeMovers.BT
@@ -185,7 +182,7 @@
     @test PSIP.get_storage_tech(storage) == StorageTech.LIB
     @test PSIP.get_duration_limits(storage) == (min=2.0, max=12.0)
     @test PSIP.get_losses(storage) == 0.02
-    @test PSIP.get_capital_costs_energy(storage) === storage_energy_curve
+    @test PSIP.get_capital_costs(storage) === storage_capital
     @test PSIP.get_financial_data(storage) === tech_financial_data
     @test PSIP.get_operation_costs(storage) === storage_cost
     @test PSIP.get_power_systems_type(storage) == "EnergyReservoirStorageUpdated"
@@ -198,16 +195,12 @@
     @test PSIP.get_efficiency(storage) == (in=0.94, out=0.91)
     @test PSIP.get_unit_size_discharge(storage) == 8.5
     @test PSIP.get_capacity_limits_discharge(storage) == (min=6.0, max=500.0)
-    @test PSIP.get_capital_costs_charge(storage) === storage_charge_curve
-    @test PSIP.get_capital_costs_discharge(storage) === storage_discharge_curve
 
     # Also test optional fields can be set back to nothing.
     PSIP.set_capacity_limits_charge!(storage, nothing)
     PSIP.set_unit_size_charge!(storage, nothing)
-    PSIP.set_capital_costs_charge!(storage, nothing)
     @test isnothing(PSIP.get_capacity_limits_charge(storage))
     @test isnothing(PSIP.get_unit_size_charge(storage))
-    @test isnothing(PSIP.get_capital_costs_charge(storage))
 
     demand_requirement = DemandRequirement{PSY.PowerLoad}(
         name="demand_requirement",
@@ -318,7 +311,7 @@
         available=true,
     )
     aggregate_requirements = Requirement[req_a]
-    aggregate_capital = LinearCurve(700.0)
+    aggregate_capital = CapitalCost(LinearCurve(700.0), 3.0)
     aggregate_internal = IS.InfrastructureSystemsInternal()
     aggregate_ext = Dict("aggregate_transport" => "meta")
 
@@ -363,7 +356,7 @@
         available=true,
     )
     nodal_ac_requirements = Requirement[req_b]
-    nodal_ac_capital = LinearCurve(900.0)
+    nodal_ac_capital = CapitalCost(LinearCurve(900.0), 4.0)
     nodal_ac_internal = IS.InfrastructureSystemsInternal()
     nodal_ac_ext = Dict("nodal_ac_transport" => "meta")
 
@@ -412,7 +405,7 @@
         available=true,
     )
     nodal_hvdc_requirements = Requirement[req_a, req_b]
-    nodal_hvdc_capital = LinearCurve(1200.0)
+    nodal_hvdc_capital = CapitalCost(LinearCurve(1200.0), 5.0)
     nodal_hvdc_internal = IS.InfrastructureSystemsInternal()
     nodal_hvdc_ext = Dict("nodal_hvdc_transport" => "meta")
     nodal_hvdc_line_loss = LinearCurve(0.06)
@@ -453,70 +446,52 @@
         id=80,
         financial_data=tech_financial_data,
         power_systems_type="RenewableDispatch",
-        operation_costs_power=storage_cost,
-        operation_costs_energy=storage_cost,
+        operation_costs_storage=storage_cost,
         operation_costs_inverter=storage_cost,
-        operation_costs_solar=thermal_cost,
-        operation_costs_wind=thermal_cost,
+        operation_costs_solar=RenewableGenerationCost(nothing),
+        operation_costs_wind=RenewableGenerationCost(nothing),
         inverter_efficiency=0.96,
         inverter_supply_ratio=1.0,
-        capital_costs_inverter=LinearCurve(0.0),
+        capital_costs_inverter=CapitalCost(LinearCurve(0.0), 0.0),
         available=true,
         region=[zone_a],
     )
     colocated_requirements = Requirement[req_a]
-    colocated_power_cost = StorageCost(
+    colocated_storage_cost = StorageCost(
         charge_variable_cost=CostCurve(LinearCurve(1.0)),
         discharge_variable_cost=CostCurve(LinearCurve(2.0)),
         fixed=3.0,
-    )
-    colocated_energy_cost = StorageCost(
-        charge_variable_cost=CostCurve(LinearCurve(1.5)),
-        discharge_variable_cost=CostCurve(LinearCurve(2.5)),
-        fixed=3.5,
     )
     colocated_inverter_cost = StorageCost(
         charge_variable_cost=CostCurve(LinearCurve(0.8)),
         discharge_variable_cost=CostCurve(LinearCurve(1.8)),
         fixed=2.2,
     )
-    colocated_solar_cost = ThermalGenerationCost(
-        variable=CostCurve(LinearCurve(4.0)),
-        fixed=1.0,
-        start_up=0.5,
-        shut_down=0.1,
-    )
-    colocated_wind_cost = ThermalGenerationCost(
-        variable=CostCurve(LinearCurve(3.0)),
-        fixed=1.2,
-        start_up=0.4,
-        shut_down=0.2,
-    )
-    colocated_capital_power = LinearCurve(200.0)
-    colocated_capital_energy = LinearCurve(90.0)
-    colocated_capital_wind = LinearCurve(150.0)
-    colocated_capital_solar = LinearCurve(130.0)
-    colocated_capital_inverter = LinearCurve(70.0)
+    colocated_solar_cost = RenewableGenerationCost(nothing)
+    colocated_wind_cost = RenewableGenerationCost(nothing)
+    colocated_capital_storage =
+        StorageCapitalCost(LinearCurve(200.0), LinearCurve(210.0), LinearCurve(90.0), 6.0)
+    colocated_capital_wind = CapitalCost(LinearCurve(150.0), 7.0)
+    colocated_capital_solar = CapitalCost(LinearCurve(130.0), 8.0)
+    colocated_capital_inverter = CapitalCost(LinearCurve(70.0), 9.0)
     colocated_internal = IS.InfrastructureSystemsInternal()
     colocated_ext = Dict("colocated" => "meta")
     colocated_regions = RegionTopology[node_a]
 
     # ColocatedSupplyStorageTechnology: all fields
     PSIP.set_requirements!(colocated_supply_storage, colocated_requirements)
-    PSIP.set_operation_costs_power!(colocated_supply_storage, colocated_power_cost)
+    PSIP.set_operation_costs_storage!(colocated_supply_storage, colocated_storage_cost)
     PSIP.set_lifetime_storage!(colocated_supply_storage, 26)
     PSIP.set_operation_costs_solar!(colocated_supply_storage, colocated_solar_cost)
     PSIP.set_capacity_limits_wind!(colocated_supply_storage, (min=10.0, max=900.0))
     PSIP.set_name!(colocated_supply_storage, "colocated_supply_storage_updated")
-    PSIP.set_capital_costs_power!(colocated_supply_storage, colocated_capital_power)
+    PSIP.set_capital_costs_storage!(colocated_supply_storage, colocated_capital_storage)
     PSIP.set_capacity_power_limits!(colocated_supply_storage, (min=5.0, max=600.0))
     PSIP.set_lifetime_wind!(colocated_supply_storage, 30)
     PSIP.set_capacity_energy_limits!(colocated_supply_storage, (min=20.0, max=1200.0))
     PSIP.set_duration_limits!(colocated_supply_storage, (min=2.0, max=10.0))
     PSIP.set_min_inverter_capacity!(colocated_supply_storage, 15.0)
     PSIP.set_id!(colocated_supply_storage, 180)
-    PSIP.set_operation_costs_energy!(colocated_supply_storage, colocated_energy_cost)
-    PSIP.set_capital_costs_energy!(colocated_supply_storage, colocated_capital_energy)
     PSIP.set_operation_costs_inverter!(colocated_supply_storage, colocated_inverter_cost)
     PSIP.set_financial_data!(colocated_supply_storage, tech_financial_data)
     PSIP.set_available!(colocated_supply_storage, false)
@@ -537,12 +512,14 @@
     PSIP.set_capital_costs_solar!(colocated_supply_storage, colocated_capital_solar)
 
     @test PSIP.get_requirements(colocated_supply_storage) === colocated_requirements
-    @test PSIP.get_operation_costs_power(colocated_supply_storage) === colocated_power_cost
+    @test PSIP.get_operation_costs_storage(colocated_supply_storage) ===
+          colocated_storage_cost
     @test PSIP.get_lifetime_storage(colocated_supply_storage) == 26
     @test PSIP.get_operation_costs_solar(colocated_supply_storage) === colocated_solar_cost
     @test PSIP.get_capacity_limits_wind(colocated_supply_storage) == (min=10.0, max=900.0)
     @test PSIP.get_name(colocated_supply_storage) == "colocated_supply_storage_updated"
-    @test PSIP.get_capital_costs_power(colocated_supply_storage) === colocated_capital_power
+    @test PSIP.get_capital_costs_storage(colocated_supply_storage) ===
+          colocated_capital_storage
     @test PSIP.get_capacity_power_limits(colocated_supply_storage) == (min=5.0, max=600.0)
     @test PSIP.get_lifetime_wind(colocated_supply_storage) == 30
     @test PSIP.get_capacity_energy_limits(colocated_supply_storage) ==
@@ -550,10 +527,6 @@
     @test PSIP.get_duration_limits(colocated_supply_storage) == (min=2.0, max=10.0)
     @test PSIP.get_min_inverter_capacity(colocated_supply_storage) == 15.0
     @test PSIP.get_id(colocated_supply_storage) == 180
-    @test PSIP.get_operation_costs_energy(colocated_supply_storage) ===
-          colocated_energy_cost
-    @test PSIP.get_capital_costs_energy(colocated_supply_storage) ===
-          colocated_capital_energy
     @test PSIP.get_operation_costs_inverter(colocated_supply_storage) ===
           colocated_inverter_cost
     @test PSIP.get_financial_data(colocated_supply_storage) === tech_financial_data
