@@ -24,16 +24,12 @@ import InfrastructureSystems:
     get_available,
     DeviceParameter
 
-#################################################################################
-
 using DocStringExtensions
 
 @template (FUNCTIONS, METHODS) = """
                                  $(TYPEDSIGNATURES)
                                  $(DOCSTRING)
                                  """
-
-#################################################################################
 
 # Using PowerSystems in order to support deserializing with PSY parametric typing
 using PowerSystems

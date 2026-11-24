@@ -133,7 +133,7 @@ end
 
     port2 = validate_serialization(port)
     colocated2 = get_technology(typeof(colocated), port2, "colocated")
-    @test colocated2 !== nothing
+    @test !isnothing(colocated2)
     @test IS.compare_values(colocated, colocated2; compare_uuids=false)
 end
 

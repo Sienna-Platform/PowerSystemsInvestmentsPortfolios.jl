@@ -168,6 +168,16 @@ function validate_technology(technology::SupplyTechnology)
         get_min_generation_fraction(technology),
         "Supply minimum generation fraction",
     )
+    is_valid &= _validate_fraction(
+        technology,
+        get_outage_factors(technology).forced,
+        "Forced outage derating",
+    )
+    is_valid &= _validate_fraction(
+        technology,
+        get_outage_factors(technology).planned,
+        "Planned outage derating",
+    )
     return is_valid
 end
 

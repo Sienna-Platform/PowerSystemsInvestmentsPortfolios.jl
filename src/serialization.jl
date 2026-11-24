@@ -175,17 +175,7 @@ function serialize(technology::T) where {T <: _CONTAINS_SHOULD_ENCODE}
 
     # Build OpenAPI struct from modeling struct
     for field in fieldnames(api_type)
-        if technology isa SupplyTechnology && field == :outage_factor
-            continue
-        end
-        if technology isa StorageTechnology &&
-           field in (:capital_costs_energy, :capital_costs_charge, :capital_costs_discharge)
-            continue
-        end
-        if technology isa ColocatedSupplyStorageTechnology &&
-           field in _COLOCATED_LEGACY_STORAGE_FIELDS
-            continue
-        end
+        field in _legacy_api_fields(technology) && continue
         if field in ENCODED_FIELDS
             value = serialize_custom_types(field, technology)
         else
@@ -198,22 +188,10 @@ function serialize(technology::T) where {T <: _CONTAINS_SHOULD_ENCODE}
         string(name) => serialize(getproperty(api_struct, name)) for
         name in fieldnames(typeof(api_struct))
     )
-    if technology isa StorageTechnology
-        for field in
-            ("capital_costs_energy", "capital_costs_charge", "capital_costs_discharge")
-            delete!(data, field)
-        end
-        data["capital_costs_storage"] = serialize(get_capital_costs_storage(technology))
-    elseif technology isa ColocatedSupplyStorageTechnology
-        for field in _COLOCATED_LEGACY_STORAGE_FIELDS
-            delete!(data, string(field))
-        end
-        data["capital_costs_storage"] = serialize(get_capital_costs_storage(technology))
-        data["operation_costs_storage"] = serialize(get_operation_costs_storage(technology))
-    elseif technology isa SupplyTechnology
-        delete!(data, "outage_factor")
-        data["outage_factors"] = serialize(get_outage_factors(technology))
+    for field in _legacy_api_fields(technology)
+        delete!(data, string(field))
     end
+    _serialize_custom_fields!(data, technology)
     # Associations and time-series metadata refer to the original component UUID.
     data["internal"] = serialize(IS.get_internal(technology))
     data["ext"] = serialize(get_ext(technology))
@@ -224,6 +202,34 @@ function serialize(technology::T) where {T <: _CONTAINS_SHOULD_ENCODE}
     end
 
     return data
+end
+
+# Fields of the generated OpenAPI structs that PSIP stores in other fields
+_legacy_api_fields(::Any) = ()
+_legacy_api_fields(::SupplyTechnology) = (:outage_factor,)
+_legacy_api_fields(::StorageTechnology) =
+    (:capital_costs_energy, :capital_costs_charge, :capital_costs_discharge)
+_legacy_api_fields(::ColocatedSupplyStorageTechnology) = _COLOCATED_LEGACY_STORAGE_FIELDS
+
+_serialize_custom_fields!(::Dict{String, Any}, ::Any) = nothing
+
+function _serialize_custom_fields!(data::Dict{String, Any}, technology::SupplyTechnology)
+    data["outage_factors"] = serialize(get_outage_factors(technology))
+    return
+end
+
+function _serialize_custom_fields!(data::Dict{String, Any}, technology::StorageTechnology)
+    data["capital_costs"] = serialize(get_capital_costs(technology))
+    return
+end
+
+function _serialize_custom_fields!(
+    data::Dict{String, Any},
+    technology::ColocatedSupplyStorageTechnology,
+)
+    data["capital_costs_storage"] = serialize(get_capital_costs_storage(technology))
+    data["operation_costs_storage"] = serialize(get_operation_costs_storage(technology))
+    return
 end
 
 """
@@ -523,12 +529,7 @@ function deserialize_attributes(
         #attr = deserialize(type, attr_dict)
 
         api_attr = deserialize_openapi_struct(type, attr_dict)
-        attr = build_model_struct(
-            api_attr,
-            portfolio,
-            attr_dict["__metadata__"];
-            serialized=attr_dict,
-        )
+        attr = build_model_struct(api_attr, portfolio, attr_dict)
 
         uuid = IS.get_uuid(attr)
         if haskey(mgr.data[type], uuid)
@@ -597,12 +598,7 @@ function deserialize_components!(portfolio::Portfolio, raw)
                 handle_deserialization_special_cases!(component, type)
                 #TODO: See if component cache is needed
                 api_component = deserialize_openapi_struct(type, component)
-                model_component = build_model_struct(
-                    api_component,
-                    portfolio,
-                    component["__metadata__"];
-                    serialized=component,
-                )
+                model_component = build_model_struct(api_component, portfolio, component)
 
                 #TODO: skip_validation currently set to true, review the IS validation
                 IS.add_component!(portfolio.data, model_component; skip_validation=true)
@@ -618,14 +614,81 @@ function deserialize_components!(portfolio::Portfolio, raw)
     deserialize_and_add!()
 end
 
-function build_model_struct(
-    base_struct,
-    portfolio::Portfolio,
-    metadata::Dict{String, Any};
-    serialized=nothing,
+_build_custom_fields!(::Dict{Symbol, Any}, ::Type, serialized) = nothing
+
+function _build_custom_fields!(
+    vals::Dict{Symbol, Any},
+    struct_type::Type{<:SupplyTechnology},
+    serialized,
 )
+    delete!(vals, :outage_factor)
+    (!isnothing(serialized) && haskey(serialized, "outage_factors")) || throw(
+        IS.DataFormatError("$(struct_type) requires planned and forced outage_factors"),
+    )
+    vals[:outage_factors] = IS.deserialize(
+        fieldtype(struct_type, :outage_factors),
+        serialized["outage_factors"],
+    )
+    return
+end
+
+# The generated OpenAPI storage schema predates StorageCapitalCost
+function _build_custom_fields!(
+    vals::Dict{Symbol, Any},
+    ::Type{<:StorageTechnology},
+    serialized,
+)
+    energy = pop!(vals, :capital_costs_energy)
+    charge = pop!(vals, :capital_costs_charge)
+    discharge = pop!(vals, :capital_costs_discharge)
+    if !isnothing(serialized) && haskey(serialized, "capital_costs")
+        vals[:capital_costs] =
+            IS.deserialize(StorageCapitalCost, serialized["capital_costs"])
+    else
+        vals[:capital_costs] = StorageCapitalCost(
+            something(charge, LinearCurve(0.0)),
+            something(discharge, LinearCurve(0.0)),
+            something(energy, LinearCurve(0.0)),
+            0.0,
+        )
+    end
+    return
+end
+
+# The generated OpenAPI co-located schema has separate power and energy costs
+function _build_custom_fields!(
+    vals::Dict{Symbol, Any},
+    ::Type{<:ColocatedSupplyStorageTechnology},
+    serialized,
+)
+    energy = pop!(vals, :capital_costs_energy)
+    power = pop!(vals, :capital_costs_power)
+    pop!(vals, :operation_costs_energy)
+    power_cost = pop!(vals, :operation_costs_power)
+    if !isnothing(serialized) && haskey(serialized, "capital_costs_storage")
+        vals[:capital_costs_storage] =
+            IS.deserialize(StorageCapitalCost, serialized["capital_costs_storage"])
+    else
+        vals[:capital_costs_storage] = StorageCapitalCost(
+            LinearCurve(0.0),
+            something(power, LinearCurve(0.0)),
+            something(energy, LinearCurve(0.0)),
+            0.0,
+        )
+    end
+    if !isnothing(serialized) && haskey(serialized, "operation_costs_storage")
+        vals[:operation_costs_storage] =
+            IS.deserialize(StorageCost, serialized["operation_costs_storage"])
+    elseif !isnothing(power_cost)
+        vals[:operation_costs_storage] = power_cost
+    end
+    return
+end
+
+function build_model_struct(base_struct, portfolio::Portfolio, serialized::Dict)
     vals = Dict{Symbol, Any}()
     struct_type = typeof(base_struct)
+    metadata = serialized["__metadata__"]
 
     #TODO: Add get_component wrappers for IS functions
     for (name, type) in zip(fieldnames(struct_type), fieldtypes(struct_type))
@@ -638,65 +701,15 @@ function build_model_struct(
 
     struct_type_string = metadata["type"]
     struct_type = getproperty(PowerSystemsInvestmentsPortfolios, Symbol(struct_type_string))
-    if serialized !== nothing
-        if haskey(serialized, "internal")
-            vals[:internal] =
-                IS.deserialize(InfrastructureSystemsInternal, serialized["internal"])
-        end
-        if haskey(serialized, "ext")
-            vals[:ext] = serialized["ext"]
-        end
+    if haskey(serialized, "internal")
+        vals[:internal] =
+            IS.deserialize(InfrastructureSystemsInternal, serialized["internal"])
     end
-    if struct_type <: SupplyTechnology
-        delete!(vals, :outage_factor)
-        serialized !== nothing && haskey(serialized, "outage_factors") ||
-            error("SupplyTechnology requires explicit planned/forced outage_factors")
-        vals[:outage_factors] = IS.deserialize(
-            fieldtype(struct_type, :outage_factors),
-            serialized["outage_factors"],
-        )
+    if haskey(serialized, "ext")
+        vals[:ext] = serialized["ext"]
     end
-    # The generated OpenAPI storage schema predates StorageCapitalCost.
-    if struct_type <: StorageTechnology
-        energy = pop!(vals, :capital_costs_energy)
-        charge = pop!(vals, :capital_costs_charge)
-        discharge = pop!(vals, :capital_costs_discharge)
-        if serialized !== nothing && haskey(serialized, "capital_costs_storage")
-            vals[:capital_costs_storage] =
-                IS.deserialize(StorageCapitalCost, serialized["capital_costs_storage"])
-        else
-            vals[:capital_costs_storage] = StorageCapitalCost(
-                charge === nothing ? LinearCurve(0.0) : charge,
-                discharge === nothing ? LinearCurve(0.0) : discharge,
-                energy === nothing ? LinearCurve(0.0) : energy,
-                0.0,
-            )
-        end
-    end
-    # The generated OpenAPI co-located schema has separate power and energy costs.
-    if struct_type <: ColocatedSupplyStorageTechnology
-        energy = pop!(vals, :capital_costs_energy)
-        power = pop!(vals, :capital_costs_power)
-        pop!(vals, :operation_costs_energy)
-        power_cost = pop!(vals, :operation_costs_power)
-        if serialized !== nothing && haskey(serialized, "capital_costs_storage")
-            vals[:capital_costs_storage] =
-                IS.deserialize(StorageCapitalCost, serialized["capital_costs_storage"])
-        else
-            vals[:capital_costs_storage] = StorageCapitalCost(
-                LinearCurve(0.0),
-                power === nothing ? LinearCurve(0.0) : power,
-                energy === nothing ? LinearCurve(0.0) : energy,
-                0.0,
-            )
-        end
-        if serialized !== nothing && haskey(serialized, "operation_costs_storage")
-            vals[:operation_costs_storage] =
-                IS.deserialize(StorageCost, serialized["operation_costs_storage"])
-        elseif power_cost !== nothing
-            vals[:operation_costs_storage] = power_cost
-        end
-    end
+
+    _build_custom_fields!(vals, struct_type, serialized)
     if !hasfield(struct_type, :id)
         delete!(vals, :id)
     end

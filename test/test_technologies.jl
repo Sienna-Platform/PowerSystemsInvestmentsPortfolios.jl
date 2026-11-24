@@ -157,7 +157,7 @@
     PSIP.set_storage_tech!(storage, StorageTech.LIB)
     PSIP.set_duration_limits!(storage, (min=2.0, max=12.0))
     PSIP.set_losses!(storage, 0.02)
-    PSIP.set_capital_costs_storage!(storage, storage_capital)
+    PSIP.set_capital_costs!(storage, storage_capital)
     PSIP.set_financial_data!(storage, tech_financial_data)
     PSIP.set_operation_costs!(storage, storage_cost)
     PSIP.set_power_systems_type!(storage, "EnergyReservoirStorageUpdated")
@@ -182,7 +182,7 @@
     @test PSIP.get_storage_tech(storage) == StorageTech.LIB
     @test PSIP.get_duration_limits(storage) == (min=2.0, max=12.0)
     @test PSIP.get_losses(storage) == 0.02
-    @test PSIP.get_capital_costs_storage(storage) === storage_capital
+    @test PSIP.get_capital_costs(storage) === storage_capital
     @test PSIP.get_financial_data(storage) === tech_financial_data
     @test PSIP.get_operation_costs(storage) === storage_cost
     @test PSIP.get_power_systems_type(storage) == "EnergyReservoirStorageUpdated"
@@ -448,8 +448,8 @@
         power_systems_type="RenewableDispatch",
         operation_costs_storage=storage_cost,
         operation_costs_inverter=storage_cost,
-        operation_costs_solar=thermal_cost,
-        operation_costs_wind=thermal_cost,
+        operation_costs_solar=RenewableGenerationCost(nothing),
+        operation_costs_wind=RenewableGenerationCost(nothing),
         inverter_efficiency=0.96,
         inverter_supply_ratio=1.0,
         capital_costs_inverter=CapitalCost(LinearCurve(0.0), 0.0),
@@ -467,18 +467,8 @@
         discharge_variable_cost=CostCurve(LinearCurve(1.8)),
         fixed=2.2,
     )
-    colocated_solar_cost = ThermalGenerationCost(
-        variable=CostCurve(LinearCurve(4.0)),
-        fixed=1.0,
-        start_up=0.5,
-        shut_down=0.1,
-    )
-    colocated_wind_cost = ThermalGenerationCost(
-        variable=CostCurve(LinearCurve(3.0)),
-        fixed=1.2,
-        start_up=0.4,
-        shut_down=0.2,
-    )
+    colocated_solar_cost = RenewableGenerationCost(nothing)
+    colocated_wind_cost = RenewableGenerationCost(nothing)
     colocated_capital_storage =
         StorageCapitalCost(LinearCurve(200.0), LinearCurve(210.0), LinearCurve(90.0), 6.0)
     colocated_capital_wind = CapitalCost(LinearCurve(150.0), 7.0)
