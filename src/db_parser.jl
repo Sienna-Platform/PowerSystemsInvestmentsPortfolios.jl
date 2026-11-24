@@ -1480,9 +1480,6 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
                         portfolio.base_system,
                     ),
                 )
-                ts_array =
-                    get_time_series_array(SingleTimeSeries, unit, "max_active_power") ./
-                    get_max_active_power(unit)
             else
                 #If technology does not have existing capacity associated with it,
                 #select a similar technology from the base system to get required timeseries
@@ -1495,10 +1492,12 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
                         portfolio.base_system,
                     ),
                 )
-                ts_array =
-                    get_time_series_array(SingleTimeSeries, unit, "max_active_power") ./
-                    get_max_active_power(unit)
             end
+            # A unit with zero maximum active power (zero power factor) has a zero profile
+            max_active_power = get_max_active_power(unit)
+            ts_array =
+                get_time_series_array(SingleTimeSeries, unit, "max_active_power") .*
+                (iszero(max_active_power) ? 0.0 : 1.0 / max_active_power)
             ts = SingleTimeSeries("capacity_factor", ts_array)
             add_time_series!(portfolio, tech, ts)
         end

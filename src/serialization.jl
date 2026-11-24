@@ -619,10 +619,10 @@ _build_custom_fields!(::Dict{Symbol, Any}, ::Type, serialized) = nothing
 function _build_custom_fields!(
     vals::Dict{Symbol, Any},
     struct_type::Type{<:SupplyTechnology},
-    serialized,
+    serialized::Dict,
 )
     delete!(vals, :outage_factor)
-    (!isnothing(serialized) && haskey(serialized, "outage_factors")) || throw(
+    haskey(serialized, "outage_factors") || throw(
         IS.DataFormatError("$(struct_type) requires planned and forced outage_factors"),
     )
     vals[:outage_factors] = IS.deserialize(
@@ -636,12 +636,12 @@ end
 function _build_custom_fields!(
     vals::Dict{Symbol, Any},
     ::Type{<:StorageTechnology},
-    serialized,
+    serialized::Dict,
 )
     energy = pop!(vals, :capital_costs_energy)
     charge = pop!(vals, :capital_costs_charge)
     discharge = pop!(vals, :capital_costs_discharge)
-    if !isnothing(serialized) && haskey(serialized, "capital_costs")
+    if haskey(serialized, "capital_costs")
         vals[:capital_costs] =
             IS.deserialize(StorageCapitalCost, serialized["capital_costs"])
     else
@@ -659,13 +659,13 @@ end
 function _build_custom_fields!(
     vals::Dict{Symbol, Any},
     ::Type{<:ColocatedSupplyStorageTechnology},
-    serialized,
+    serialized::Dict,
 )
     energy = pop!(vals, :capital_costs_energy)
     power = pop!(vals, :capital_costs_power)
     pop!(vals, :operation_costs_energy)
     power_cost = pop!(vals, :operation_costs_power)
-    if !isnothing(serialized) && haskey(serialized, "capital_costs_storage")
+    if haskey(serialized, "capital_costs_storage")
         vals[:capital_costs_storage] =
             IS.deserialize(StorageCapitalCost, serialized["capital_costs_storage"])
     else
@@ -676,7 +676,7 @@ function _build_custom_fields!(
             0.0,
         )
     end
-    if !isnothing(serialized) && haskey(serialized, "operation_costs_storage")
+    if haskey(serialized, "operation_costs_storage")
         vals[:operation_costs_storage] =
             IS.deserialize(StorageCost, serialized["operation_costs_storage"])
     elseif !isnothing(power_cost)
@@ -688,7 +688,7 @@ end
 function build_model_struct(base_struct, portfolio::Portfolio, serialized::Dict)
     vals = Dict{Symbol, Any}()
     struct_type = typeof(base_struct)
-    metadata = serialized["__metadata__"]
+    metadata = IS.get_serialization_metadata(serialized)
 
     #TODO: Add get_component wrappers for IS functions
     for (name, type) in zip(fieldnames(struct_type), fieldtypes(struct_type))
