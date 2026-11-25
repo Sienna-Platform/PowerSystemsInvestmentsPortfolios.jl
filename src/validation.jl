@@ -302,6 +302,86 @@ function validate_technology(technology::AggregateTransportTechnology)
     return is_valid
 end
 
+function validate_technology(technology::ProjectedDemand)
+    is_valid = _validate_nonnegative_value(
+        technology,
+        get_peak_demand_mw(technology),
+        "Peak demand",
+    )
+    is_valid &= _validate_fraction(
+        technology,
+        get_max_demand_curtailment(technology),
+        "Demand curtailment",
+    )
+    is_valid &= _validate_fraction(
+        technology,
+        get_flexible_fraction(technology),
+        "Demand flexibility",
+    )
+    is_valid &= _validate_fraction(
+        technology,
+        get_shift_efficiency(technology),
+        "Demand shifting efficiency";
+        strictly_positive=true,
+    )
+    is_valid &= _validate_nonnegative_value(
+        technology,
+        get_max_demand_delay(technology),
+        "Maximum demand delay",
+    )
+    is_valid &= _validate_nonnegative_value(
+        technology,
+        get_max_demand_advance(technology),
+        "Maximum demand advance",
+    )
+    is_valid &= _validate_positive_value(
+        technology,
+        get_value_of_lost_load(technology),
+        "Demand value of lost load",
+    )
+    return is_valid
+end
+
+function validate_technology(technology::DemandSideTechnology)
+    is_valid = _validate_positive_value(
+        technology,
+        get_lifetime(technology),
+        "Demand side technology lifetime",
+    )
+    is_valid &= _validate_positive_value(
+        technology,
+        get_technology_efficiency(technology),
+        "Demand side technology efficiency",
+    )
+    is_valid &= _validate_fraction(
+        technology,
+        get_min_power(technology),
+        "Demand side technology minimum power",
+    )
+    ramp_limits = get_ramp_limits(technology)
+    is_valid &= _validate_nonnegative_value(
+        technology,
+        ramp_limits.up,
+        "Demand side technology ramp up limit",
+    )
+    is_valid &= _validate_nonnegative_value(
+        technology,
+        ramp_limits.down,
+        "Demand side technology ramp down limit",
+    )
+    is_valid &= _validate_nonnegative_limits(
+        technology,
+        get_capacity_limits(technology),
+        "Demand side technology capacity limits",
+    )
+    is_valid &= _validate_nonnegative_value(
+        technology,
+        get_unit_size(technology),
+        "Demand side technology unit size",
+    )
+    return is_valid
+end
+
 IS.validate_struct(technology::Technology) = validate_technology(technology)
 
 """

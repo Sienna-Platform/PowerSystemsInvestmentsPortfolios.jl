@@ -992,6 +992,13 @@ function get_supplemental_attributes(
 end
 
 """
+Return the components a supplemental attribute is attached to.
+"""
+function get_attached_components(p::Portfolio, attribute::IS.SupplementalAttribute)
+    return IS.get_associated_components(p.data, attribute)
+end
+
+"""
 Return the internal of a supplemental attribute, required to add to IS for SupplementalAttributes to work
 """
 IS.get_internal(val::IS.SupplementalAttribute) = val.internal

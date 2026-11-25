@@ -23,7 +23,7 @@ const QUERIES = Dict(
     :demand_requirements => "SELECT * FROM loads",
     :entity_type => "SELECT entity_type FROM entities WHERE id = ?",
     :investment_timeseries => "SELECT * FROM time_series_associations WHERE owner_type = ?",
-    :ts_data => "SELECT * FROM static_time_series WHERE uuid = ?",
+    :ts_data => "SELECT idx, value FROM static_time_series WHERE uuid = ? ORDER BY idx",
     :reservoir => "SELECT * FROM hydro_reservoir_connections WHERE source_id = ? OR sink_id = ?",
     :reservoir_names => "SELECT * FROM hydro_reservoir WHERE id = ?",
     # add additional queries here as needed
@@ -50,6 +50,7 @@ const FUEL_MAPPING = Dict(
     "NG" => ThermalFuels.NATURAL_GAS,
     "NATURAL_GAS" => ThermalFuels.NATURAL_GAS,
     "Nuclear" => ThermalFuels.NUCLEAR,
+    "NUCLEAR" => ThermalFuels.NUCLEAR,
     "Coal" => ThermalFuels.COAL,
     "COAL" => ThermalFuels.COAL,
     "Oil" => ThermalFuels.DISTILLATE_FUEL_OIL,
@@ -1007,6 +1008,7 @@ function add_storage_units!(
             available=true,
             power_systems_type=string(nameof(component_type)),
             operation_costs=ops_cost,
+            efficiency=PSY.get_efficiency(storage_unit),
             capacity_limits_discharge=(min=0, max=rec.rating),
             capacity_limits_energy=(min=0, max=component_attr["storage_capacity"]),
         )
@@ -1030,7 +1032,6 @@ function add_demand_requirements!(
                 ).entity_type,
             ),
         )
-        component_attr = get(attributes, rec.id, Dict{String, Any}())
 
         if get_aggregation(portfolio) == PSY.ACBus
             area = rec.balancing_topology
@@ -1045,10 +1046,9 @@ function add_demand_requirements!(
                 ).area
         end
 
-        demand = DemandRequirement{component_type}(;
+        demand = ProjectedDemand{component_type}(;
             name=rec.name,
             id=rec.id,
-            new_demand_mw=component_attr["active_power"], #TODO: Change to "max_active_power" later when DB is fixed
             region=collect(
                 IS.get_components(x -> get_id(x) == area, RegionTopology, portfolio.data),
             ),
@@ -1056,6 +1056,8 @@ function add_demand_requirements!(
             power_systems_type=string(nameof(component_type)),
         )
         add_technology!(portfolio, demand)
+        existing = ExistingDevices(id=rec.id, existing_devices=[rec.name])
+        add_supplemental_attribute!(portfolio, demand, existing)
     end
 end
 
@@ -1369,6 +1371,35 @@ function add_demand_technologies!(
     stmts::Dict,
 ) end
 
+function deserialize_investment_timeseries!(
+    portfolio::Portfolio,
+    tech::Technology,
+    stmts::Dict,
+    ts_type::String,
+)
+    cost_data = Dict()
+    for ts_association in
+        IS.execute(stmts[:investment_timeseries], [ts_type], IS.LOG_GROUP_SERIALIZATION)
+        rows = Tables.columntable(
+            IS.execute(
+                stmts[:ts_data],
+                [ts_association.time_series_uuid],
+                IS.LOG_GROUP_SERIALIZATION,
+            ),
+        )
+        ts_data = TimeSeries.TimeArray(Dates.DateTime.(rows.idx, 1, 1), rows.value)
+        cost_year = get_base_year(portfolio)
+        cost_data[ts_association.name] =
+            first(TimeSeries.values(ts_data[Dates.DateTime(cost_year, 1, 1)]))
+
+        if is_new(tech)
+            ts = SingleTimeSeries(ts_association.name, ts_data; resolution=Dates.Year(1))
+            add_time_series!(portfolio, tech, ts)
+        end
+    end
+    return cost_data
+end
+
 function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
     supply_technologies = get_technologies(SupplyTechnology, portfolio)
     for tech in supply_technologies
@@ -1377,43 +1408,11 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
         ts_type = get(PRIME_MOVER_TO_TIMESERIES, [prime_mover, fuel], nothing)
         cost_data = Dict()
         if !isnothing(ts_type)
-            for ts_association in IS.execute(
-                stmts[:investment_timeseries],
-                [ts_type],
-                IS.LOG_GROUP_SERIALIZATION,
-            )
-                timestamps = [
-                    Dates.DateTime(row.idx, 1, 1) for row in IS.execute(
-                        stmts[:ts_data],
-                        [ts_association.time_series_uuid],
-                        IS.LOG_GROUP_SERIALIZATION,
-                    )
-                ]
-                values = [
-                    row.value for row in IS.execute(
-                        stmts[:ts_data],
-                        [ts_association.time_series_uuid],
-                        IS.LOG_GROUP_SERIALIZATION,
-                    )
-                ]
-                ts_data = TimeSeries.TimeArray(timestamps, values)
-                cost_year = get_base_year(portfolio)
-                cost_data[ts_association.name] =
-                    first(TimeSeries.values(ts_data[Dates.DateTime(cost_year, 1, 1)]))
-
-                if is_new(tech)
-                    ts = SingleTimeSeries(
-                        ts_association.name,
-                        ts_data;
-                        resolution=Dates.Year(1),
-                    )
-                    add_time_series!(portfolio, tech, ts)
-                end
-            end
+            cost_data = deserialize_investment_timeseries!(portfolio, tech, stmts, ts_type)
         end
         if is_new(tech)
             if haskey(cost_data, "fuel_price")
-                capex = CapitalCost(LinearCurve(cost_data["capcost"] * 1000.0), 0.0)
+                capex = LinearCurve(cost_data["capcost"] * 1000.0)
                 if haskey(cost_data, "heatrate")
                     heat_rate = LinearCurve(cost_data["heatrate"])
                 else
@@ -1431,14 +1430,14 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
                     shut_down=0.0,
                 )
                 set_operation_costs!(tech, opex)
-                set_capital_costs!(tech, capex)
+                set_capital_cost!(get_capital_costs(tech), capex)
             else
-                capex = CapitalCost(LinearCurve(cost_data["capcost"] * 1000.0), 0.0)
+                capex = LinearCurve(cost_data["capcost"] * 1000.0)
                 opex = RenewableGenerationCost(
                     variable=CostCurve(LinearCurve(0.0), LinearCurve(cost_data["vom"])),
                 )
                 set_operation_costs!(tech, opex)
-                set_capital_costs!(tech, capex)
+                set_capital_cost!(get_capital_costs(tech), capex)
             end
         elseif !is_new(tech)
             ops = get_operation_costs(tech)
@@ -1503,8 +1502,33 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
         end
     end
 
+    for tech in get_technologies(StorageTechnology, portfolio)
+        if !is_new(tech)
+            continue
+        end
+        ts_type = get(
+            PRIME_MOVER_TO_TIMESERIES,
+            [get_prime_mover_type(tech), ThermalFuels.OTHER],
+            nothing,
+        )
+        if isnothing(ts_type)
+            continue
+        end
+        cost_data = deserialize_investment_timeseries!(portfolio, tech, stmts, ts_type)
+        capital_costs = get_capital_costs(tech)
+        set_discharge_capital_cost!(
+            capital_costs,
+            LinearCurve(cost_data["capcost"] * 1000.0),
+        )
+        set_energy_capital_cost!(
+            capital_costs,
+            LinearCurve(cost_data["capcost_energy"] * 1000.0),
+        )
+        set_fixed!(get_operation_costs(tech), cost_data["fom"] * 1000.0)
+    end
+
     #Duplicate hourly demand profile on the portfolio level
-    demands = get_technologies(DemandRequirement, portfolio)
+    demands = get_technologies(ProjectedDemand, portfolio)
     for demand in demands
         unit = first(
             IS.get_components(
@@ -1513,12 +1537,13 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
                 portfolio.base_system,
             ),
         )
-        if get_max_active_power(unit) != 0
-            ts_array =
-                get_time_series_array(SingleTimeSeries, unit, "max_active_power") ./
-                get_max_active_power(unit)
-        else
-            ts_array = get_time_series_array(SingleTimeSeries, unit, "max_active_power")
+        # Normalized to the peak that PowerSystemsInvestments scales demand series by
+        peak = get_peak_demand_mw(portfolio, demand)
+        ts_array = with_units_base(portfolio.base_system, "NATURAL_UNITS") do
+            get_time_series_array(SingleTimeSeries, unit, "max_active_power")
+        end
+        if !iszero(peak)
+            ts_array = ts_array ./ peak
         end
         ts = SingleTimeSeries("demand", ts_array)
         add_time_series!(portfolio, demand, ts)

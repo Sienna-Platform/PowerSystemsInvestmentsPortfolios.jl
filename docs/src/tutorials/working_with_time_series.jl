@@ -81,13 +81,16 @@ t_wind = SupplyTechnology{PSY.RenewableDispatch}(;
 )
 add_technology!(portfolio, t_wind)
 
-t_demand = DemandRequirement{PSY.PowerLoad}(;
+t_demand = ProjectedDemand{PSY.PowerLoad}(;
     name="demand_zone1",
     id=3,
     available=true,
     power_systems_type="PowerLoad",
     region=[z1],
     value_of_lost_load=50_000.0,
+    # A demand without ExistingDevices is new, so it needs a peak and a conformity
+    peak_demand_mw=1_000.0,
+    conformity=PSY.LoadConformity.CONFORMING,
 )
 add_technology!(portfolio, t_demand)
 
@@ -197,11 +200,12 @@ ts_wind_ops_2028 = SingleTimeSeries(
 add_time_series!(portfolio, t_wind, ts_wind_ops_2024; year="2024", rep_day=1)
 add_time_series!(portfolio, t_wind, ts_wind_ops_2028; year="2028", rep_day=1)
 
-# ### Demand profile — note the key name is `"ops_peak_load"`
+# ### Demand profile — note the key name is `"ops_demand"`
 #
 # !!! note "Demand time series key"
-#     Demand time series must use the key name `"ops_peak_load"`. This is the name
-#     `PowerSystemsInvestments.jl` looks for when building demand constraints.
+#     Demand time series must use the key name `"ops_demand"` and be normalized to the
+#     demand's peak (1.0 at the peak hour). `PowerSystemsInvestments.jl` scales them by the
+#     demand's peak demand when it initializes the demand.
 
 demand_shape = [
     0.58,
@@ -223,7 +227,7 @@ demand_shape = [
     0.84,
     0.88,
     0.91,
-    0.92,
+    1.00,
     0.90,
     0.85,
     0.76,
@@ -231,9 +235,9 @@ demand_shape = [
 ]
 
 ts_demand_2024 =
-    SingleTimeSeries("ops_peak_load", TimeArray(ops_timestamps_2024, demand_shape))
+    SingleTimeSeries("ops_demand", TimeArray(ops_timestamps_2024, demand_shape))
 ts_demand_2028 =
-    SingleTimeSeries("ops_peak_load", TimeArray(ops_timestamps_2028, demand_shape))
+    SingleTimeSeries("ops_demand", TimeArray(ops_timestamps_2028, demand_shape))
 
 add_time_series!(portfolio, t_demand, ts_demand_2024; year="2024", rep_day=1)
 add_time_series!(portfolio, t_demand, ts_demand_2028; year="2028", rep_day=1)
@@ -272,14 +276,9 @@ wind_cf_ta = get_time_series_array(
 println("\nWind capacity factors (2024, rep_day=1):")
 println(wind_cf_ta)
 
-demand_values = get_time_series_values(
-    SingleTimeSeries,
-    t_demand,
-    "ops_peak_load";
-    year="2024",
-    rep_day=1,
-)
-println("\nDemand peak load shape (first 6 hours):")
+demand_values =
+    get_time_series_values(SingleTimeSeries, t_demand, "ops_demand"; year="2024", rep_day=1)
+println("\nDemand shape (first 6 hours):")
 println(round.(demand_values[1:6]; digits=3))
 
 # ### Iterate over all time series in the portfolio
@@ -299,7 +298,7 @@ println("\nOperational capacity factor series count: ", length(wind_series))
 # |-------------|-----------|-----------------|
 # | `"inv_capex"` | Investment | `SupplyTechnology`, `StorageTechnology`, `TransmissionTechnology` |
 # | `"ops_variable_cap_factor"` | Operational | `SupplyTechnology`, `StorageTechnology`, `TransmissionTechnology` |
-# | `"ops_peak_load"` | Operational | `DemandRequirement` |
+# | `"ops_demand"` | Operational | `ProjectedDemand` |
 #
 # Names are conventions understood by `PowerSystemsInvestments.jl`. Using non-standard
 # names will cause the optimizer to ignore the data unless it is explicitly referenced in
