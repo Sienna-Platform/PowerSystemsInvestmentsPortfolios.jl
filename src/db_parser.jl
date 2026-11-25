@@ -23,7 +23,7 @@ const QUERIES = Dict(
     :demand_requirements => "SELECT * FROM loads",
     :entity_type => "SELECT entity_type FROM entities WHERE id = ?",
     :investment_timeseries => "SELECT * FROM time_series_associations WHERE owner_type = ?",
-    :ts_data => "SELECT * FROM static_time_series WHERE uuid = ?",
+    :ts_data => "SELECT idx, value FROM static_time_series WHERE uuid = ? ORDER BY idx",
     :reservoir => "SELECT * FROM hydro_reservoir_connections WHERE source_id = ? OR sink_id = ?",
     :reservoir_names => "SELECT * FROM hydro_reservoir WHERE id = ?",
     # add additional queries here as needed
@@ -1380,21 +1380,14 @@ function deserialize_investment_timeseries!(
     cost_data = Dict()
     for ts_association in
         IS.execute(stmts[:investment_timeseries], [ts_type], IS.LOG_GROUP_SERIALIZATION)
-        timestamps = [
-            Dates.DateTime(row.idx, 1, 1) for row in IS.execute(
+        rows = Tables.columntable(
+            IS.execute(
                 stmts[:ts_data],
                 [ts_association.time_series_uuid],
                 IS.LOG_GROUP_SERIALIZATION,
-            )
-        ]
-        values = [
-            row.value for row in IS.execute(
-                stmts[:ts_data],
-                [ts_association.time_series_uuid],
-                IS.LOG_GROUP_SERIALIZATION,
-            )
-        ]
-        ts_data = TimeSeries.TimeArray(timestamps, values)
+            ),
+        )
+        ts_data = TimeSeries.TimeArray(Dates.DateTime.(rows.idx, 1, 1), rows.value)
         cost_year = get_base_year(portfolio)
         cost_data[ts_association.name] =
             first(TimeSeries.values(ts_data[Dates.DateTime(cost_year, 1, 1)]))
@@ -1544,12 +1537,13 @@ function deserialize_portfolio_timeseries!(portfolio::Portfolio, stmts::Dict)
                 portfolio.base_system,
             ),
         )
-        if get_max_active_power(unit) != 0
-            ts_array =
-                get_time_series_array(SingleTimeSeries, unit, "max_active_power") ./
-                get_max_active_power(unit)
-        else
-            ts_array = get_time_series_array(SingleTimeSeries, unit, "max_active_power")
+        # Normalized to the peak that PowerSystemsInvestments scales demand series by
+        peak = get_peak_demand_mw(portfolio, demand)
+        ts_array = with_units_base(portfolio.base_system, "NATURAL_UNITS") do
+            get_time_series_array(SingleTimeSeries, unit, "max_active_power")
+        end
+        if !iszero(peak)
+            ts_array = ts_array ./ peak
         end
         ts = SingleTimeSeries("demand", ts_array)
         add_time_series!(portfolio, demand, ts)

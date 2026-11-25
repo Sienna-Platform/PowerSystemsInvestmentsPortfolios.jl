@@ -18,7 +18,7 @@ end
     source = get_technology(SupplyTechnology{ThermalStandard}, portfolio2, "cheap_thermal")
     retrofit = only(PSIP.get_supplemental_attributes(RetrofitPotential, source))
     @test get_retrofit_efficiency(retrofit) == 0.9
-    @test Set(PSIP.get_name.(get_associated_technologies(portfolio2, retrofit))) ==
+    @test Set(PSIP.get_name.(get_attached_components(portfolio2, retrofit))) ==
           Set(["cheap_thermal", "expensive_thermal"])
 end
 

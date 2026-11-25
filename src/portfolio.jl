@@ -992,10 +992,9 @@ function get_supplemental_attributes(
 end
 
 """
-Return the technologies a supplemental attribute is attached to.
+Return the components a supplemental attribute is attached to.
 """
-function get_associated_technologies(p::Portfolio, attribute::IS.SupplementalAttribute)
-    # Filtering by the abstract Technology type finds none of the parametric technologies
+function get_attached_components(p::Portfolio, attribute::IS.SupplementalAttribute)
     return IS.get_associated_components(p.data, attribute)
 end
 

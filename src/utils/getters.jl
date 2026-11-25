@@ -80,11 +80,12 @@ function get_existing_capacity_mw(
         end
 
         comp = PSY.get_component.(get_parameter_type(t), Ref(p.base_system), gen_names)
-
-        # Check if any of the components returned nothing
-        filtered_comp = filter(x -> !isnothing(x), comp)
-        if length(filtered_comp) != length(gen_names)
-            @error "Not all names in ExistingDevices matched generators in the base system"
+        missing_names = gen_names[isnothing.(comp)]
+        if !isempty(missing_names)
+            error(
+                "ExistingDevices of $(get_name(t)) lists $(join(missing_names, ", ")), which " *
+                "are not $(get_parameter_type(t)) components of the base system",
+            )
         end
 
         existing_capacity = with_units_base(get_base_system(p), "NATURAL_UNITS") do
@@ -100,7 +101,7 @@ end
 """
 Capacity (MW) of the existing units of a source technology that a RetrofitPotential lists as
 eligible for retrofit: their maximum active power, as [`get_existing_capacity_mw`](@ref) counts
-them. Errors if a listed unit isn't in the base system.
+them. Errors if a listed unit is repeated or isn't in the base system.
 
 # Arguments
 
@@ -114,6 +115,10 @@ function get_retrofit_capacity_mw(
     attribute::RetrofitPotential,
 )
     names = get_eligible_generators(attribute)
+    repeated = unique(filter(n -> count(==(n), names) > 1, names))
+    if !isempty(repeated)
+        error("Retrofit units $(join(repeated, ", ")) of $(get_name(source)) are repeated")
+    end
     units = PSY.get_component.(get_parameter_type(source), Ref(get_base_system(p)), names)
     missing_units = names[isnothing.(units)]
     if !isempty(missing_units)
@@ -169,7 +174,7 @@ Calculates the peak demand (in MW) associated with a given Technology in the Por
 
 A technology with an ExistingDevices supplemental attribute takes its peak demand from the
 existing loads it lists in the base system: the maximum over time of their summed
-`"max_active_power"` profiles, each scaled by the load's maximum active power. The loads
+`"max_active_power"` profiles in MW (with their scaling factor multipliers applied). The loads
 do not peak at the same time, so this is at most the sum of their maximum active power. A
 load without a `"max_active_power"` time series counts at its maximum active power in every
 time step. A technology without ExistingDevices returns its `peak_demand_mw`.
@@ -232,10 +237,7 @@ function _coincident_peak_demand(t::ProjectedDemand, loads::Vector)
             )
         end
     end
-    total = sum(
-        PSY.get_max_active_power(load) .* TimeSeries.values(profile) for
-        (load, profile) in zip(with_profile, profiles)
-    )
+    total = sum(TimeSeries.values(profile) for profile in profiles)
     return maximum(total) + constant
 end
 
@@ -243,30 +245,21 @@ _has_load_profile(load) =
     IS.has_time_series(load, PSY.SingleTimeSeries, LOAD_PROFILE_NAME) ||
     IS.has_time_series(load, PSY.Deterministic, LOAD_PROFILE_NAME)
 
-# Normalized profile of a load: its SingleTimeSeries, or else its forecast windows in order
+# Profile of a load in MW: its SingleTimeSeries, or else its forecast windows in order
 function _load_profile(load)
     if IS.has_time_series(load, PSY.SingleTimeSeries, LOAD_PROFILE_NAME)
-        return IS.get_time_series_array(
-            PSY.SingleTimeSeries,
-            load,
-            LOAD_PROFILE_NAME;
-            ignore_scaling_factors=true,
-        )
+        return IS.get_time_series_array(PSY.SingleTimeSeries, load, LOAD_PROFILE_NAME)
     end
     forecast = IS.get_time_series(PSY.Deterministic, load, LOAD_PROFILE_NAME)
-    if IS.get_interval(forecast) < IS.get_horizon(forecast)
+    if IS.get_count(forecast) > 1 && IS.get_interval(forecast) < IS.get_horizon(forecast)
         error(
             "The \"$(LOAD_PROFILE_NAME)\" forecast of $(PSY.get_name(load)) has " *
             "overlapping windows, so it cannot be used as a load profile",
         )
     end
     windows = [
-        IS.get_time_series_array(
-            load,
-            forecast;
-            start_time=initial_time,
-            ignore_scaling_factors=true,
-        ) for initial_time in IS.get_initial_times(forecast)
+        IS.get_time_series_array(load, forecast; start_time=initial_time) for
+        initial_time in IS.get_initial_times(forecast)
     ]
     return vcat(windows...)
 end

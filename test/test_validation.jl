@@ -131,6 +131,59 @@ end
     set_outage_factors!(supply, outage_factors)
 end
 
+@testset "Demand validation" begin
+    p_5bus = build_portfolio()
+    demand = first(get_technologies(ProjectedDemand, p_5bus))
+    for (setter!, value, message) in (
+        (PSIP.set_peak_demand_mw!, -1.0, r"Peak demand must be finite and nonnegative"),
+        (PSIP.set_max_demand_curtailment!, 1.5, r"Demand curtailment must be in \[0, 1\]"),
+        (PSIP.set_flexible_fraction!, -0.1, r"Demand flexibility must be in \[0, 1\]"),
+        (
+            PSIP.set_shift_efficiency!,
+            0.0,
+            r"Demand shifting efficiency must be in \(0, 1\]",
+        ),
+        (
+            set_max_demand_delay!,
+            -2.0,
+            r"Maximum demand delay must be finite and nonnegative",
+        ),
+        (
+            set_value_of_lost_load!,
+            0.0,
+            r"Demand value of lost load must be finite and positive",
+        ),
+    )
+        original = deepcopy(demand)
+        setter!(demand, value)
+        @test_logs(
+            (:error, message),
+            min_level = Logging.Error,
+            @test(!validate_technology(demand)),
+        )
+        demand = original
+    end
+    @test validate_technology(demand)
+
+    demand_side = get_technology(DemandSideTechnology{PowerLoad}, p_5bus, "test_demand")
+    for (setter!, value, message) in (
+        (PSIP.set_technology_efficiency!, 0.0, r"efficiency must be finite and positive"),
+        (PSIP.set_min_power!, 1.2, r"minimum power must be in \[0, 1\]"),
+        (PSIP.set_ramp_limits!, (up=-0.1, down=1.0), r"ramp up limit must be finite"),
+        (PSIP.set_capacity_limits!, (min=40.0, max=10.0), r"must be in ascending order"),
+    )
+        original = deepcopy(demand_side)
+        setter!(demand_side, value)
+        @test_logs(
+            (:error, message),
+            min_level = Logging.Error,
+            @test(!validate_technology(demand_side)),
+        )
+        demand_side = original
+    end
+    @test validate_technology(demand_side)
+end
+
 @testset "Colocated supply-storage validation" begin
     port = Portfolio()
     attached_region = Zone(; name="colocated_region", id=20)

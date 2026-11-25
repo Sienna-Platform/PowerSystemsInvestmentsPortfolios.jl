@@ -84,11 +84,14 @@ end
     retrofit = only(PSIP.get_supplemental_attributes(RetrofitPotential, source))
 
     # The attribute is shared by the source and its retrofit option
-    @test Set(PSIP.get_name.(get_associated_technologies(p_5bus, retrofit))) ==
+    @test Set(PSIP.get_name.(get_attached_components(p_5bus, retrofit))) ==
           Set(["cheap_thermal", "expensive_thermal"])
     @test get_retrofit_efficiency(retrofit) == 0.9
     # The eligible units are the source's existing units
     @test get_retrofit_capacity_mw(p_5bus, source, retrofit) == 730.0
+    units = get_eligible_generators(retrofit)
+    PSIP.set_eligible_generators!(retrofit, [units; first(units)])
+    @test_throws r"are repeated" get_retrofit_capacity_mw(p_5bus, source, retrofit)
     PSIP.set_eligible_generators!(retrofit, ["missing_unit"])
     @test_throws r"missing_unit" get_retrofit_capacity_mw(p_5bus, source, retrofit)
 end
@@ -181,7 +184,12 @@ end
 
     # Forecast windows that do not overlap are joined into one profile
     t0 = DateTime("2025-01-01T00:00:00")
-    forecast(windows) = Deterministic("max_active_power", windows, Hour(1))
+    forecast(windows) = Deterministic(
+        "max_active_power",
+        windows,
+        Hour(1);
+        scaling_factor_multiplier=PSY.get_max_active_power,
+    )
     port, demand = peak_demand_portfolio(
         [
             ("load1", 100.0, forecast(Dict(t0 => [1.0, 0.5], t0 + Hour(2) => [0.2, 0.3]))),
@@ -197,6 +205,18 @@ end
         ["load1"],
     )
     @test_throws r"overlapping" get_peak_demand_mw(port, demand)
+
+    # A single forecast window does not overlap
+    port, demand = peak_demand_portfolio(
+        [("load1", 100.0, forecast(Dict(t0 => [0.6, 0.8, 0.3])))],
+        ["load1"],
+    )
+    @test get_peak_demand_mw(port, demand) ≈ 80.0
+
+    # A profile without a scaling factor multiplier is in MW
+    mw_profile = SingleTimeSeries("max_active_power", TimeArray(stamps, [50.0, 90.0, 20.0]))
+    port, demand = peak_demand_portfolio([("load1", 100.0, mw_profile)], ["load1"])
+    @test get_peak_demand_mw(port, demand) ≈ 90.0
 end
 
 @testset "get_heat_rate / get_fuel_cost / get_variable_cost" begin

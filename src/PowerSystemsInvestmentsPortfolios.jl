@@ -134,7 +134,7 @@ export add_supplemental_attribute!
 export remove_supplemental_attribute!
 export get_supplemental_attribute
 export get_supplemental_attributes
-export get_associated_technologies
+export get_attached_components
 export to_json
 export from_json
 export MinMax
