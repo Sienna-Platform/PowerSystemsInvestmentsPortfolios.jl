@@ -216,6 +216,9 @@ t_demand = ProjectedDemand{PSY.PowerLoad}(;
     power_systems_type="PowerLoad",
     region=[z1],
     value_of_lost_load=50_000.0,   # $/MWh
+    # A demand without ExistingDevices is new, so it needs a peak and a conformity
+    peak_demand_mw=1_000.0,        # MW
+    conformity=PSY.LoadConformity.CONFORMING,
 )
 
 add_technology!(portfolio, t_demand)
